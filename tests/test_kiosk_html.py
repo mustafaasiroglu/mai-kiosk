@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-KIOSK_HTML = ROOT / "yildiz-ai-kiosk.html"
+KIOSK_HTML = ROOT / "index.html"
 
 
 class DocumentParser(HTMLParser):
