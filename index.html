@@ -762,6 +762,7 @@ h1, h2, h3, h4 { margin: 0; font-family: var(--font-display); letter-spacing: -.
 #connection-dialog:not([open]) { display: none; }
 #connection-dialog::backdrop { background: rgba(3, 3, 10, .7); backdrop-filter: blur(8px); }
 #connection-form { display: grid; gap: 12px; }
+#connection-form[hidden], #connection-choice[hidden] { display: none; }
 #connection-form label { display: grid; gap: 4px; font-size: max(14px, var(--fs-sm)); }
 #connection-form input { width: 100%; padding: 10px 12px; border: 1px solid var(--line2); border-radius: 8px; background: #0e0d1f; color: inherit; font: inherit; }
 #connection-dialog p, #connection-dialog .btn { font-size: max(14px, var(--fs-sm)); }
@@ -922,8 +923,12 @@ body.lite .pack-float { transform: rotate(-7deg); }
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <dialog id="connection-dialog" class="modal" aria-labelledby="connection-title" aria-describedby="connection-help">
   <h3 id="connection-title">Kioska hoş geldin</h3>
-  <p id="connection-help">Microsoft Foundry ile canlı görsel üret veya anahtar girmeden demo modunda devam et.</p>
-  <form id="connection-form" method="dialog" autocomplete="off">
+  <p id="connection-help">Devam etmek için bir mod seç.</p>
+  <div id="connection-choice" class="btn-row">
+    <button type="button" class="btn btn-glass" id="connection-demo">Demo</button>
+    <button type="button" class="btn btn-ai" id="connection-live">Canlı</button>
+  </div>
+  <form id="connection-form" method="dialog" autocomplete="off" hidden>
     <label>Foundry endpoint
       <input name="endpoint" type="url" required placeholder="https://kaynak-adı.services.ai.azure.com" spellcheck="false">
     </label>
@@ -936,10 +941,10 @@ body.lite .pack-float { transform: rotate(-7deg); }
     <label>Lab metin modeli dağıtım adı (isteğe bağlı)
       <input name="labModel" placeholder="MAI-Thinking-1" spellcheck="false">
     </label>
-    <p>Anahtar sayfa yenilenince silinir. Canlı modda, görsel üretimi için seçtiğin fotoğraf Foundry’ye gönderilir.</p>
+    <p>Ayarlar ve anahtar bu tarayıcıda saklanır. Yalnızca güvendiğin cihazda kullan. Canlı modda seçtiğin fotoğraf Foundry’ye gönderilir.</p>
     <p id="connection-error" role="alert" hidden></p>
     <div class="btn-row">
-      <button type="button" class="btn btn-glass" id="connection-demo">Demo modunda devam et</button>
+      <button type="button" class="btn btn-glass" id="connection-back">Geri</button>
       <button type="submit" class="btn btn-ai">Canlı modda devam et</button>
     </div>
   </form>
@@ -4975,6 +4980,8 @@ function perfGuard() {
 }
 function chooseConnection(start) {
   const dialog = $('#connection-dialog'), form = $('#connection-form'), error = $('#connection-error');
+  const choice = $('#connection-choice'), help = $('#connection-help'), title = $('#connection-title');
+  const storageKey = 'mai-kiosk-foundry';
   const finish = () => {
     form.reset();
     dialog.close();
@@ -4982,6 +4989,34 @@ function chooseConnection(start) {
   };
   dialog.addEventListener('cancel', (event) => event.preventDefault());
   $('#connection-demo').addEventListener('click', finish, { once: true });
+  $('#connection-live').addEventListener('click', () => {
+    choice.hidden = true;
+    form.hidden = false;
+    title.textContent = 'Canlı mod ayarları';
+    help.textContent = 'Microsoft Foundry bağlantı bilgilerini gir.';
+    error.hidden = true;
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const settings = JSON.parse(saved);
+        for (const name of ['endpoint', 'key', 'imageModel', 'labModel']) {
+          if (typeof settings?.[name] === 'string') form.elements[name].value = settings[name];
+        }
+      }
+    } catch (e) {
+      console.error('Kayıtlı bağlantı ayarları okunamadı:', e);
+      error.textContent = 'Kayıtlı ayarlar okunamadı. Bilgileri yeniden girin ve tarayıcı depolama izinlerini kontrol edin.';
+      error.hidden = false;
+    }
+    form.elements.endpoint.focus();
+  });
+  $('#connection-back').addEventListener('click', () => {
+    form.hidden = true;
+    choice.hidden = false;
+    title.textContent = 'Kioska hoş geldin';
+    help.textContent = 'Devam etmek için bir mod seç.';
+    $('#connection-live').focus();
+  });
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     const data = new FormData(form);
@@ -4993,9 +5028,20 @@ function chooseConnection(start) {
       error.hidden = false;
       return;
     }
+    const labDeployment = data.get('labModel').trim();
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({
+        endpoint: match[1], key: apiKey, imageModel: imageDeployment, labModel: labDeployment,
+      }));
+    } catch (e) {
+      console.error('Bağlantı ayarları kaydedilemedi:', e);
+      error.textContent = 'Ayarlar tarayıcıya kaydedilemedi. Tarayıcı depolama izinlerini kontrol edin.';
+      error.hidden = false;
+      return;
+    }
     Object.assign(CONFIG.ai, {
       mode: 'live', endpoint: match[1], apiKey, imageDeployment, modelLabel: imageDeployment,
-      labDeployment: data.get('labModel').trim(),
+      labDeployment,
     });
     finish();
   });
