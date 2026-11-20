@@ -14,9 +14,11 @@ başlar; Foundry’deki gerçek dağıtım adını kullanın. Lezzet Laboratuvar
 aynı kaynaktaki `MAI-Thinking-1` dağıtım adını isteğe bağlı olarak girin.
 Bu alan boşsa Lab metni cihazda hazırlanır, ambalaj görseli yine MAI ile üretilir.
 
-Anahtar yalnızca açık sayfanın belleğinde tutulur; sayfayı yenilemek ayarları
-temizler. Tarayıcı anahtarı gizleyemez: canlı modu yalnızca güvendiğiniz
-cihazda ve test anahtarıyla kullanın. Doğrudan tarayıcı bağlantısı için Foundry
+Açılışta Demo veya Canlı seçin. Canlı bağlantı ayarları ve anahtar tarayıcının
+yerel depolamasında saklanır ve yenilemeden sonra Canlı seçildiğinde tekrar
+gösterilir. Anahtar bu cihazdaki tarayıcı verilerine erişebilenlerce okunabilir;
+canlı modu yalnızca güvendiğiniz cihazda ve test anahtarıyla kullanın. Ayarları
+silmek için sitenin tarayıcı verilerini temizleyin. Doğrudan tarayıcı bağlantısı için Foundry
 uç noktası, sayfanın origin’i ile `api-key` ve `Content-Type` başlıklarına CORS
 izni vermelidir. Uç nokta CORS’a izin vermiyorsa bu statik sürümde demo
 modunu kullanın.
