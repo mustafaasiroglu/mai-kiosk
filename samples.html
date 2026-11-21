@@ -84,25 +84,8 @@
   <p id="empty" hidden>Bu filtrelere uygun örnek bulunamadı.</p>
   <noscript><p>Galeriyi görmek için JavaScript'i etkinleştirin. Görseller <a href="samples/reference.jpg">samples klasöründe</a> saklanır.</p></noscript>
 </main>
+<script src="samples.js"></script>
 <script>
-  const photoCases = [
-    { id: 'photo-snowglobe', title: 'Yılbaşı Kar Küresi', product: 'Cocostar' },
-    { id: 'photo-adface', title: 'Reklam Yüzü', product: 'Çikolatalı Gofret' },
-    { id: 'photo-blocky', title: 'Blok Dünyası', product: 'Biskrem' },
-    { id: 'photo-factory', title: 'Çikolata Fabrikası', product: 'Halley' },
-    { id: 'photo-space', title: 'Uzay Yolculuğu', product: 'Cocostar' },
-    { id: 'photo-popart', title: 'Pop Art Afiş', product: 'Çikolatalı Gofret' },
-  ];
-  // Yeni denemeler sona eklenir; id aynı senaryoda değişmez.
-  const attempts = [
-    ...photoCases.map(sample => ({ ...sample, kind: 'photo', path: `samples/baseline/${sample.id}` })),
-    { id: 'lab', title: 'Lezzet Laboratuvarı', product: 'Fıstık & Tuzlu Karamel Gofret', kind: 'pack', path: 'samples/baseline/pack' },
-    { id: 'career', title: 'Kariyer Yıldız Haritası', product: 'Temsili veri analisti profili', kind: 'career', path: 'samples/baseline/career' },
-    ...photoCases.map(sample => ({ ...sample, kind: 'photo', path: `samples/promotional/${sample.id}`, prompt: true })),
-    ...photoCases.map(sample => ({ ...sample, kind: 'photo', path: `samples/reference-photo/${sample.id}`, prompt: true })),
-    { id: 'lab', title: 'Lezzet Laboratuvarı', product: 'Antep Fıstığı & Tuzlu Karamel · Gofret', kind: 'pack', path: 'samples/reference-photo/pack-wafer', prompt: true },
-    { id: 'lab', title: 'Lezzet Laboratuvarı', product: 'Vişne & Bitter Kakao · Kek', kind: 'pack', path: 'samples/reference-photo/pack-cake', prompt: true },
-  ];
   const kind = document.querySelector('#kind');
   const search = document.querySelector('#search');
   const gallery = document.querySelector('#gallery');
@@ -114,7 +97,7 @@
   };
   function render() {
     const query = search.value.trim().toLocaleLowerCase('tr-TR');
-    const samples = [...new Map(attempts.map(sample => [sample.id, sample])).values()];
+    const samples = latestSamples();
     const visible = samples.filter(sample =>
       (kind.value === 'all' || sample.kind === kind.value) &&
       `${sample.title} ${sample.product}`.toLocaleLowerCase('tr-TR').includes(query)
@@ -145,11 +128,11 @@
       const output = text('a', 'Kiosk çıktısı');
       output.href = `${base}.jpg`;
       const raw = text('a', 'Ham PNG');
-      raw.href = `${base}-raw.png`;
+      raw.href = sample.raw || `${base}-raw.png`;
       links.append(output, raw);
       if (sample.prompt) {
         const prompt = text('a', 'Prompt');
-        prompt.href = `${base}.json`;
+        prompt.href = sample.prompt;
         links.append(prompt);
       }
       content.append(links);

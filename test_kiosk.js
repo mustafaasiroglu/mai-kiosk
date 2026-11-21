@@ -5,6 +5,7 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8').replace(/\r\n/g, '\n');
+const sampleSource = fs.readFileSync(path.join(__dirname, 'samples.js'), 'utf8');
 const sourceBetween = (start, end) => {
   const offset = html.indexOf(start);
   assert.notEqual(offset, -1);
@@ -138,7 +139,7 @@ test('photo prompts preserve the holding-and-pointing pose across styles and var
   }
 });
 
-test('live and demo photos omit left-hand captions but retain the product thumbnail', async () => {
+test('photo compositors omit left-hand captions and product thumbnails but retain the signature band', async () => {
   const pack = {};
   const bands = [];
   const canvas = { getContext: () => ({ save() {}, restore() {} }), toDataURL: () => 'image' };
@@ -150,17 +151,77 @@ test('live and demo photos omit left-hand captions but retain the product thumbn
     hashStr: () => 0,
     PHOTO_RENDERERS: { snowglobe() {} },
     coverDraw() {},
-    drawBrandBand: (_g, _w, _h, options) => bands.push(options),
+    drawBrandBand: (_g, _w, _h, options = {}) => bands.push(options),
   });
   vm.runInContext(sourceBetween('async function renderPhotoMock(', '/* ---------- Kariyer infografi'), context);
   await context.renderPhotoMock({ photo: 'reference', product: { id: 'snack' }, theme: { id: 'snowglobe' } });
-  await context.composePhoto('generated', { id: 'snack' }, { id: 'snowglobe' });
+  await context.composePhoto('generated');
   assert.equal(bands.length, 2);
   for (const options of bands) {
-    assert.equal(options.pack, pack);
+    assert.equal(options.pack, undefined);
     assert.equal(options.title, undefined);
     assert.equal(options.sub, undefined);
   }
+});
+
+test('Demo camera uses sample_photo.jpeg without requesting webcam access, including retakes', () => {
+  const elements = Object.fromEntries(['video', '.cam-shot', '.cam-count', '.cam-flash'].map(selector => [selector, {}]));
+  let click;
+  const el = { dataset: {}, classList: { add() {} }, addEventListener: (_type, handler) => { click = handler; } };
+  const context = vm.createContext({
+    API: { live: false }, STATE: { photo: {} }, SCREENS: {},
+    $: selector => elements[selector],
+    Camera: { stream: null, start: () => assert.fail('Demo must not request webcam access'), stop() {} },
+    Sound: { tap() {} },
+  });
+  vm.runInContext(sampleSource, context);
+  vm.runInContext(sourceBetween('function demoPortrait()', '/* ---------- Fotoğraf temaları'), context);
+  vm.runInContext(sourceBetween("SCREENS['photo.camera'] =", "SCREENS['photo.gen'] ="), context);
+  context.SCREENS['photo.camera'].mount(el, { alive: true, cleanup() {} });
+  assert.equal(context.STATE.photo.photo, 'sample_photo.jpeg');
+  assert.equal(elements['.cam-shot'].src, 'sample_photo.jpeg');
+  assert.equal(el.dataset.state, 'review');
+  click({ target: { closest: () => ({ dataset: { act: 'retake' } }) } });
+  assert.equal(context.STATE.photo.photo, 'sample_photo.jpeg');
+  assert.equal(el.dataset.state, 'review');
+});
+
+test('Demo returns saved gallery outputs and matching Lab copy without generating images or text', async () => {
+  const record = JSON.parse(fs.readFileSync(path.join(__dirname, 'samples', 'reference-photo', 'pack-cake.json'), 'utf8'));
+  const paths = [];
+  const context = vm.createContext({
+    CONFIG: { ai: { mode: 'mock' }, mock: { speed: 0 } }, sleep: async () => {},
+    fetch: async path => {
+      paths.push(path);
+      return { ok: true, json: async () => record, blob: async () => ({ path, type: 'image/jpeg' }) };
+    },
+    FileReader: class { readAsDataURL(blob) { this.result = 'saved:' + blob.path; this.onload(); } },
+    MAI: { generate: () => assert.fail('No model call in Demo'), edit: () => assert.fail('No model call in Demo') },
+    Chat: { json: () => assert.fail('No text model call in Demo') },
+    mockConcept: () => assert.fail('Demo must use the copy belonging to its saved output'),
+    renderPhotoMock: () => assert.fail('Demo must not draw a synthetic photo'),
+    renderInfographic: () => assert.fail('Demo must not draw a synthetic career output'),
+    renderPackaging: () => assert.fail('Demo must not draw a synthetic package'),
+  });
+  vm.runInContext(sampleSource, context);
+  vm.runInContext(sourceBetween('const LAB_COPY_LIMITS =', '/* ---------- Mock üreticiler'), context);
+  vm.runInContext(sourceBetween('const SavedSamples =', 'function shareUrlFor(') + '\nglobalThis.api = API;', context);
+  for (const id of ['snowglobe', 'adface', 'blocky', 'factory', 'space', 'popart']) {
+    assert.equal(await context.api.photo.generate({ photo: 'other input', product: {}, theme: { id }, variation: 3 }, { fast: true }), `saved:samples/photo-${id}.jpg`);
+  }
+  assert.equal(await context.api.career.infographic({ profile: {}, style: {} }, { fast: true }), 'saved:samples/baseline/career.jpg');
+  const concept = await context.api.lab.concept({ base: {}, flavors: [], moment: {} });
+  assert.equal(concept.name, record.concept.name);
+  assert.equal(concept.slogan, record.concept.slogan);
+  assert.equal(await context.api.lab.packaging(concept, { fast: true }), 'saved:samples/reference-photo/pack-cake.jpg');
+  assert.ok(paths.includes('samples/reference-photo/pack-cake.json'));
+  context.fetch = async () => ({ ok: false, status: 404 });
+  await assert.rejects(context.api.photo.generate({ theme: { id: 'snowglobe' } }, { fast: true }), /Kayıtlı örnek yüklenemedi/);
+  context.fetch = async () => ({ ok: true, blob: async () => ({ type: 'text/html' }) });
+  await assert.rejects(context.api.photo.generate({ theme: { id: 'snowglobe' } }, { fast: true }), /bir görsel değil/);
+  context.CONFIG.ai.mode = 'live';
+  await assert.rejects(context.api.lab.packaging(concept), /Foundry endpoint/);
+  await assert.rejects(context.api.career.infographic({ profile: {}, style: {} }), /Foundry endpoint/);
 });
 
 test('Minecraft package references become low-resolution pixel images while other themes retain the source', async () => {
@@ -253,20 +314,22 @@ test('Laboratory generation waits for copy and never requests an image when copy
   let task, releaseCopy;
   const copyReady = new Promise(resolve => { releaseCopy = resolve; });
   const context = vm.createContext({
+    DOMException,
     STATE: { lab: {} },
     SCREENS: {},
     $: () => null,
     FlaskViz() {},
     labStages: () => [],
     labPicks: () => ({ base: { name: 'Gofret' }, flavors: [{ name: 'Fıstık', color: 'green' }], moment: { name: 'Mola' } }),
-    runGenView: (_el, _ctx, options) => { task = options.task; return Promise.resolve(); },
+    runGenView: (_el, _ctx, options) => { task = options.task; return new Promise(() => {}); },
     API: { live: true, lab: {
       concept: async () => { order.push('copy'); await copyReady; return { name: 'Generated name' }; },
       packaging: async concept => { assert.equal(concept.name, 'Generated name'); order.push('image'); return 'generated image'; },
     } },
   });
   vm.runInContext(sourceBetween("SCREENS['lab.gen'] =", "SCREENS['lab.result'] ="), context);
-  context.SCREENS['lab.gen'].mount({}, { alive: false, tips: [] });
+  const ctx = { alive: true, tips: [] };
+  context.SCREENS['lab.gen'].mount({}, ctx);
   const generation = task();
   assert.deepEqual(order, ['copy']);
   releaseCopy();
@@ -274,6 +337,13 @@ test('Laboratory generation waits for copy and never requests an image when copy
   assert.deepEqual(order, ['copy', 'image']);
   context.API.lab.concept = async () => { throw new Error('Copy validation failed'); };
   await assert.rejects(task(), /Copy validation failed/);
+  assert.deepEqual(order, ['copy', 'image']);
+  let releaseAbandoned;
+  context.API.lab.concept = () => new Promise(resolve => { releaseAbandoned = resolve; });
+  const abandoned = task();
+  ctx.alive = false;
+  releaseAbandoned({ name: 'Abandoned copy' });
+  await assert.rejects(abandoned, error => error.name === 'AbortError');
   assert.deepEqual(order, ['copy', 'image']);
 });
 
@@ -311,7 +381,7 @@ test('live Laboratory packaging passes the official logo to image edits and fail
   await assert.rejects(context.API.lab.packaging(concept), /resmi ürün logosu ayarlanmamış/);
 });
 
-test('demo Laboratory packaging draws the real logo instead of a typeset imitation', async () => {
+test('canvas packaging renderer draws the real logo instead of a typeset imitation', async () => {
   const logo = { naturalWidth: 1200, naturalHeight: 384 }, images = [], text = [];
   const gradient = { addColorStop() {} };
   const g = new Proxy({
@@ -340,6 +410,7 @@ test('demo Laboratory packaging draws the real logo instead of a typeset imitati
 });
 
 test('inline application and gallery scripts parse', () => {
+  new vm.Script(sampleSource);
   for (const name of ['index.html', 'samples.html']) {
     const content = fs.readFileSync(path.join(__dirname, name), 'utf8');
     for (const match of content.matchAll(/<script>([\s\S]*?)<\/script>/g)) new vm.Script(match[1]);
@@ -361,11 +432,12 @@ test('gallery shows only the latest attempt per scenario, then applies experienc
     querySelector: selector => nodes[selector],
     createElement: () => new Element(),
   } });
+  vm.runInContext(sampleSource, context);
   vm.runInContext(scripts.at(-1)[1], context);
   assert.equal(nodes['#gallery'].children.length, 8);
   assert.equal(nodes['#count'].textContent, '8 / 8 örnek');
   const paths = () => nodes['#gallery'].children.map(card => card.children[0].href);
-  assert.equal(paths().filter(url => url.includes('reference-photo/photo-')).length, 6);
+  assert.equal(paths().filter(url => /^samples\/photo-/.test(url)).length, 6);
   assert.ok(paths().includes('samples/reference-photo/pack-cake.jpg'));
   assert.ok(!paths().includes('samples/reference-photo/pack-wafer.jpg'));
   nodes['#kind'].value = 'photo';
@@ -391,10 +463,11 @@ test('gallery shows only the latest attempt per scenario, then applies experienc
   assert.equal(nodes['#gallery'].children.length, 1);
   assert.equal(nodes['#empty'].hidden, true);
   nodes['#kind'].value = 'all';
-  vm.runInContext("attempts.push({ id: 'lab', title: 'Lezzet Laboratuvarı', product: 'Newest test', kind: 'pack', path: 'samples/new-lab', prompt: true });", context);
+  const attemptCount = vm.runInContext('SAMPLE_ATTEMPTS.length', context);
+  vm.runInContext("SAMPLE_ATTEMPTS.push({ id: 'lab', title: 'Lezzet Laboratuvarı', product: 'Newest test', kind: 'pack', path: 'samples/new-lab', prompt: 'samples/new-lab.json' });", context);
   context.render();
   assert.equal(nodes['#gallery'].children.length, 8);
   assert.ok(paths().includes('samples/new-lab.jpg'));
   assert.ok(!paths().includes('samples/reference-photo/pack-cake.jpg'));
-  assert.equal(vm.runInContext('attempts.length', context), 23);
+  assert.equal(vm.runInContext('SAMPLE_ATTEMPTS.length', context), attemptCount + 1);
 });

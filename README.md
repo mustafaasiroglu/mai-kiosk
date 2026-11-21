@@ -7,6 +7,11 @@ tarayıcıda çalışır; derleme veya sunucu uygulaması gerekmez.
 
 Yerelde `python local_server.py` çalıştırıp `http://localhost:8000/`
 adresini açın. Demo modu Foundry anahtarı istemez ve model çağrısı yapmaz.
+Demo kamera açmadan `sample_photo.jpeg` dosyasını gösterir; Fotoğraf, Kariyer
+ve Laboratuvar sonuçlarında galerideki kayıtlı gerçek çıktıları kullanır.
+Seçimler ve yeniden gösterme, bu hazır görselleri değiştirmez; arayüz bunu belirtir.
+Laboratuvar adı, sloganı ve hikâyesi de gösterilen çıktının JSON kaydından okunur.
+Örnek dosyalarının okunabilmesi için kiosk HTTP üzerinden açılmalıdır.
 
 Repo kökündeki `.env` dosyası varsa Canlı seçildiğinde bağlantı formu otomatik
 doldurulur. `FOUNDRY_ENDPOINT`, `FOUNDRY_API_KEY`,
@@ -32,15 +37,15 @@ dağıtımları eski `/mai/v1/chat/completions` API'sini kullanır.
 Canlı Laboratuvar önce LLM ile ad, slogan, hikâye ve İngilizce görsel yönlendirmesi
 üretir; alanları ve uzunluklarını doğruladıktan sonra ambalaj görselini oluşturur.
 Metin modeli hatasında cihazda hazırlanmış metne sessizce dönülmez; hata ekranı
-gösterilir ve görsel çağrısı yapılmaz. Demo modu tamamen cihazda çalışmaya devam eder.
+gösterilir ve görsel çağrısı yapılmaz. Demo yalnızca statik örnek dosyalarını okur.
 
 Laboratuvar ambalajları, Ülker'in [resmi sitesindeki logoyu](https://www.ulker.com.tr/documents/1200px-ulker_logo_2_svg.png)
 yerel `assets/ulker-logo.png` dosyasından kullanır (`CONFIG.event.productLogo`).
 Canlı üretimde logo, oranı korunarak PNG referansına yerleştirilir ve
 `images/edits` çağrısına gönderilir; prompt logonun harflerini, renklerini ve
 beyaz konturunu korumasını ister. Modelin logoyu birebir aktarması garanti değildir.
-Demo ambalajında aynı dosya doğrudan çizilir; logo yüklenemezse üretim hata verir,
-temsili yazı logosuna dönülmez. Önceden üretilmiş galeri örnekleri değiştirilmez.
+Logo yüklenemezse canlı üretim hata verir; temsili yazı logosuna dönülmez.
+Demo için yeniden üretim yapılmaz; mevcut kayıtlı ambalaj gösterilir.
 
 Açılışta Demo Modu veya Canlı Mod seçin. Üstteki durum etiketi seçime göre
 **Demo Modu** veya **Live Mode** gösterir. Sağdaki kalıcı **Ayarlar** menüsünden
@@ -70,11 +75,15 @@ altı fotoğraf teması, Kariyer ve Lezzet Laboratuvarı için birer kart.
 Galeri ana sayfayla aynı renkleri kullanır; ortak renkler `kiosk-theme.css`
 dosyasında tanımlıdır. Deneyim ve arama filtreleri vardır; sürüm ayrımı yoktur.
 Yeni denemeleri farklı dosya adlarıyla `samples/` altında saklayıp
-`samples.html` içindeki `attempts` listesine ekleyin. Aynı senaryonun `id`
+`samples.js` içindeki `SAMPLE_ATTEMPTS` listesine ekleyin. Aynı senaryonun `id`
 değerini koruyun; en sona eklenen kayıt öncekinin yerini galeride alır.
 Eski kayıtlar ve dosyalar silinmez; yeni testlerde her senaryo için tek örnek yeterlidir.
-Güncel görseller `samples/reference-photo/`, eski çizim tabanlı denemeler
-`samples/baseline/` ve `samples/promotional/` altında saklanır;
+Bu liste galeri ve Demo sonuçları için ortaktır. `path` uzantısız JPEG yoludur;
+`raw` ve `prompt` alanları farklı konumdaki ham PNG ve JSON dosyalarını gösterebilir.
+Fotoğraf kayıtlarının `productId` değeri görseldeki gerçek ürüne karşılık gelmelidir.
+Güncel fotoğraf JPEG'leri `samples/photo-*.jpg`; kaynak PNG'leri ve Laboratuvar
+örnekleri `samples/reference-photo/` altında saklanır. Eski çizim tabanlı denemeler
+`samples/baseline/` ve `samples/promotional/` altında korunur;
 her örneğin ham PNG ve kioskta oluşturulan JPEG çıktısı bulunur.
 Güncel portrelerin kamera girdisi `sample_photo.jpeg`, eski denemelerin
 referansı `samples/reference_old.jpg` dosyasıdır. Yeni Laboratuvar
@@ -83,13 +92,15 @@ saklanır. Anahtar bu örneklere eklenmez. Bu dosyalar herkese açık Pages
 yayınına girdiğinden fotoğrafları ve üretilen sonuçları yalnızca ilgili
 kişinin yayımlama izniyle bu klasöre koyun.
 
-Fotoğraf çıktıları ürün minyatürünü ve Microsoft/etkinlik imzasını korur;
-sol alttaki ürün ve tema başlıkları kaldırılmıştır. Canlı fotoğraf promptu
+Fotoğraf çıktıları Microsoft/etkinlik imzasını korur; sol altta ürün minyatürü,
+ürün adı veya tema başlığı yoktur. Güncel fotoğraflar `samples/photo-*.jpg`
+altında ham çıktılardan yeniden birleştirilmiştir; eski dosyalar korunur.
+Canlı fotoğraf promptu
 tek elde ürün, diğer elle ürünü gösterme pozunu kullanır. Reklam Yüzü ve
 diğer 3D temalarda vinyl/clay karakter yaklaşımı, Blok ve Pop Art
 temalarında kendi görsel stilleri korunur.
-Minecraft temasında hem modele gönderilen ambalaj referansı hem de alt banttaki
-ürün minyatürü düşük çözünürlükte piksel olarak hazırlanır; prompt ürünün de
+Minecraft temasında modele gönderilen ambalaj referansı düşük çözünürlükte
+piksel olarak hazırlanır; prompt ürünün de
 voxel/pixel-art dünyasına ait olmasını ister.
 
 Yerel kontroller: `node --test test_kiosk.js` ve

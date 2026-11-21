@@ -981,6 +981,7 @@ body.lite .pack-float { transform: rotate(-7deg); }
   </form>
 </dialog>
 <noscript><div class="noscript">Bu deneyim için JavaScript gereklidir.</div></noscript>
+<script src="samples.js"></script>
 <script>
 /* ==========================================================================
    Ülker ürün ambalajları — beyaz zemini temizlenmiş, şeffaf PNG (dosyaya gömülü).
@@ -2042,8 +2043,16 @@ function baseArt(id) {
 
   if (id === 'bar') {
     let seg = '';
-    for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) seg += `<rect x="${36 + i * 33}" y="${42 + j * 34}" width="28" height="29" rx="5" fill="#5a2e1a"/><path d="M${39 + i * 33} ${46 + j * 34} h22" stroke="#8a5236" stroke-width="3" stroke-linecap="round"/>`;
-    return `${open}<rect x="30" y="36" width="140" height="76" rx="10" fill="#3b1d10"/>${seg}<path d="M150 36 L178 30 L170 60 Z" fill="#e8e0d4"/></svg>`;
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) {
+      const x = 36 + i * 33, y = 40 + j * 32;
+      seg += `<rect x="${x}" y="${y}" width="29" height="28" rx="4" fill="var(--cp-chocolate-face)"/>
+        <path d="M${x + 4} ${y + 4}h20" stroke="var(--cp-chocolate-highlight)" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M${x + 25} ${y + 7}v17H${x + 5}" fill="none" stroke="var(--cp-chocolate-edge)" stroke-width="2" stroke-linecap="round"/>
+        <rect x="${x + 6}" y="${y + 8}" width="17" height="11" rx="2" fill="var(--cp-chocolate-dark)" opacity=".28"/>`;
+    }
+    return `${open}<ellipse cx="100" cy="117" rx="76" ry="10" fill="var(--cp-overlay)" opacity=".4"/>
+      <g transform="rotate(-8 100 74)"><rect x="30" y="43" width="140" height="72" rx="9" fill="var(--cp-chocolate-edge)"/>
+      <rect x="30" y="34" width="140" height="72" rx="9" fill="var(--cp-chocolate-dark)"/>${seg}</g></svg>`;
   }
   return `${open}<path d="M40 70 Q40 40 70 40 H150 Q170 40 170 60 V112 H40 Z" fill="#8a4a22"/>
     <rect x="40" y="70" width="130" height="42" fill="#f2c26b"/><rect x="40" y="84" width="130" height="10" fill="#fff4dc"/>
@@ -2818,21 +2827,13 @@ function burstPath(g, x, y, r1, r2, n) {
 }
 
 /* Marka bandı (tüm paylaşılabilir görsellerin altına) */
-function drawBrandBand(g, W, H, { title = '', sub = '', pack = null, pixelatedPack = false } = {}) {
+function drawBrandBand(g, W, H, { title = '', sub = '' } = {}) {
   g.save();
   const top = H - 200;
   const gr = g.createLinearGradient(0, top, 0, H);
   gr.addColorStop(0, 'rgba(6,6,16,0)'); gr.addColorStop(0.55, 'rgba(6,6,16,.55)'); gr.addColorStop(1, 'rgba(6,6,16,.86)');
   g.fillStyle = gr; g.fillRect(0, top, W, H - top);
-  let x = 44;
-  if (pack) {
-    const f = packFit(pack, 150, 76);
-    g.save(); g.translate(x + f.w / 2, H - 72); g.rotate(-0.08);
-    g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = 18; g.shadowOffsetY = 6;
-    g.imageSmoothingEnabled = !pixelatedPack;
-    g.drawImage(pack, -f.w / 2, -f.h / 2, f.w, f.h); g.restore();
-    x += f.w + 18;
-  }
+  const x = 44;
   // sağdaki imza bloğunu önce ölç; başlık ve alt yazı ona çarpmadan sığsın
   const rx = W - 44, partner = CONFIG.event.partnerName, foot = `Microsoft AI ile üretildi · ${CONFIG.event.hashtag}`;
   g.font = cfont(650, 27); const pw2 = g.measureText(partner).width, mw = g.measureText('Microsoft').width;
@@ -2852,42 +2853,9 @@ function drawBrandBand(g, W, H, { title = '', sub = '', pack = null, pixelatedPa
   g.restore();
 }
 
-/* Kamera yoksa / tasarım önizlemesinde kullanılan demo portre */
-let __demoPortrait = null;
+/* Kayıtlı örnek fotoğraf; Demo Modu kamera açmaz. */
 function demoPortrait() {
-  if (__demoPortrait) return __demoPortrait;
-  const W = 900, H = 1125, c = makeCanvas(W, H), g = c.getContext('2d');
-  let gr = g.createRadialGradient(W * 0.5, H * 0.36, 60, W * 0.5, H * 0.5, H * 0.85);
-  gr.addColorStop(0, '#f4f0ea'); gr.addColorStop(1, '#b4aec8');
-  g.fillStyle = gr; g.fillRect(0, 0, W, H);
-  softDot(g, W * 0.25, H * 0.18, 460, '#ffffff', 0.5);
-  g.fillStyle = '#2f3b6b';
-  g.beginPath(); g.moveTo(80, H); g.bezierCurveTo(96, 860, 230, 772, 450, 762); g.bezierCurveTo(670, 772, 804, 860, 820, H); g.closePath(); g.fill();
-  g.fillStyle = '#26315a'; g.beginPath(); g.moveTo(450, 900); g.lineTo(450, H); g.lineTo(440, H); g.closePath(); g.fill();
-  g.fillStyle = '#e2ad86'; rr(g, 390, 600, 120, 196, 46); g.fill();
-  g.fillStyle = '#f0f0f5'; g.beginPath(); g.moveTo(370, 772); g.lineTo(450, 890); g.lineTo(530, 772); g.lineTo(505, 766); g.lineTo(450, 850); g.lineTo(395, 766); g.closePath(); g.fill();
-  g.fillStyle = '#e6b18a';
-  g.beginPath(); g.ellipse(290, 482, 26, 44, 0, 0, TAU); g.fill();
-  g.beginPath(); g.ellipse(610, 482, 26, 44, 0, 0, TAU); g.fill();
-  gr = g.createLinearGradient(0, 290, 0, 680); gr.addColorStop(0, '#f3c6a0'); gr.addColorStop(1, '#dfa47c');
-  g.fillStyle = gr; g.beginPath(); g.ellipse(450, 474, 162, 198, 0, 0, TAU); g.fill();
-  g.fillStyle = '#3a2a22';
-  g.beginPath(); g.moveTo(286, 480); g.bezierCurveTo(262, 300, 360, 238, 456, 240); g.bezierCurveTo(566, 242, 650, 312, 616, 480);
-  g.bezierCurveTo(604, 404, 566, 356, 504, 344); g.bezierCurveTo(432, 380, 352, 376, 312, 424); g.closePath(); g.fill();
-  g.strokeStyle = '#3a2a22'; g.lineWidth = 12; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(370, 442); g.quadraticCurveTo(396, 428, 424, 438); g.stroke();
-  g.beginPath(); g.moveTo(476, 438); g.quadraticCurveTo(504, 428, 530, 442); g.stroke();
-  g.fillStyle = '#2b2220';
-  g.beginPath(); g.arc(398, 482, 12, 0, TAU); g.fill();
-  g.beginPath(); g.arc(502, 482, 12, 0, TAU); g.fill();
-  g.fillStyle = '#fff'; g.beginPath(); g.arc(402, 478, 3.5, 0, TAU); g.fill(); g.beginPath(); g.arc(506, 478, 3.5, 0, TAU); g.fill();
-  g.strokeStyle = 'rgba(150,90,60,.55)'; g.lineWidth = 6;
-  g.beginPath(); g.moveTo(452, 494); g.quadraticCurveTo(438, 542, 458, 550); g.stroke();
-  g.strokeStyle = '#a2503d'; g.lineWidth = 9;
-  g.beginPath(); g.moveTo(396, 588); g.quadraticCurveTo(450, 630, 504, 588); g.stroke();
-  softDot(g, 356, 560, 48, '#ff8a8a', 0.26); softDot(g, 544, 560, 48, '#ff8a8a', 0.26);
-  __demoPortrait = c.toDataURL('image/jpeg', 0.9);
-  return __demoPortrait;
+  return SAMPLE_PHOTO_SOURCE;
 }
 
 /* ---------- Fotoğraf temaları: temsili çıktı ---------- */
@@ -3153,13 +3121,13 @@ async function renderPhotoMock({ photo, product, theme, variation = 0 }) {
   const rnd = mulberry32(hashStr(theme.id + product.id) + variation * 7919);
   const fn = PHOTO_RENDERERS[theme.id] || PHOTO_RENDERERS.snowglobe;
   g.save(); g.imageSmoothingEnabled = theme.id !== 'blocky'; fn(g, W, H, img, product, pack, rnd, variation); g.restore();
-  drawBrandBand(g, W, H, { pack, pixelatedPack: theme.id === 'blocky' });
+  drawBrandBand(g, W, H);
   return c.toDataURL('image/jpeg', 0.9);
 }
-async function composePhoto(aiDataUrl, product, theme) {
+async function composePhoto(aiDataUrl) {
   const W = 1080, H = 1350, c = makeCanvas(W, H), g = c.getContext('2d');
   coverDraw(g, await loadImage(aiDataUrl), 0, 0, W, H);
-  drawBrandBand(g, W, H, { pack: await photoPackImage(product, theme), pixelatedPack: theme.id === 'blocky' });
+  drawBrandBand(g, W, H);
   return c.toDataURL('image/jpeg', 0.9);
 }
 
@@ -3673,6 +3641,41 @@ function mockConcept(base, flavors, moment, variation = 0) {
   };
 }
 
+const SavedSamples = {
+  async response(path) {
+    const response = await fetch(path);
+    if (!response.ok) throw new Error('Kayıtlı örnek yüklenemedi (HTTP ' + response.status + '): ' + path);
+    return response;
+  },
+  async image(id) {
+    const blob = await (await this.response(sampleFor(id).path + '.jpg')).blob();
+    if (!blob.type.startsWith('image/')) throw new Error('Kayıtlı örnek dosyası bir görsel değil.');
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') resolve(reader.result);
+        else reject(new Error('Kayıtlı örnek görsel okunamadı.'));
+      };
+      reader.onerror = () => reject(new Error('Kayıtlı örnek görsel okunamadı.', { cause: reader.error }));
+      reader.readAsDataURL(blob);
+    });
+  },
+  async labConcept() {
+    const sample = sampleFor('lab');
+    if (!sample.prompt) throw new Error('Laboratuvar örneğinin konsept kaydı yok.');
+    const record = await (await this.response(sample.prompt)).json();
+    const copy = validateLabCopy(record.concept);
+    if (!Array.isArray(record.concept.notes) || !Array.isArray(record.concept.flavorColors)) {
+      throw new Error('Laboratuvar örneğinin konsept kaydı eksik.');
+    }
+    return { ...record.concept, ...copy };
+  },
+};
+
+function photoDisplayProduct() {
+  return byId(PRODUCTS, API.live ? STATE.photo.productId : sampleFor('photo-' + STATE.photo.themeId).productId);
+}
+
 /* ---------- Dışa açık API ---------- */
 const API = {
   get live() { return CONFIG.ai.mode === 'live'; },
@@ -3691,10 +3694,10 @@ const API = {
           refs.push(dataUrlToBlob(c.toDataURL('image/png')));
         }
         const ai = await MAI.edit(buildPhotoPrompt(product, theme, variation), refs);
-        return composePhoto(ai, product, theme);
+        return composePhoto(ai);
       }
       if (!opts.fast) await API.wait(8200);
-      return renderPhotoMock({ photo, product, theme, variation });
+      return SavedSamples.image('photo-' + theme.id);
     },
   },
   career: {
@@ -3719,18 +3722,19 @@ const API = {
       return mockSummary(profile);
     },
     async infographic({ profile, style, variation = 0 }, opts = {}) {
-      if (API.live && CONFIG.ai.endpoint) {
+      if (API.live) {
+        if (!CONFIG.ai.endpoint) throw new Error('Canlı üretim için Foundry endpoint’i ayarlanmamış.');
         const bgUrl = await MAI.generate(buildInfographicPrompt(profile, style), 896, 1120);
         return renderInfographic(profile, style.id, { variation, bg: await loadImage(bgUrl) });
       }
       if (!opts.fast) await API.wait(8600);
-      return renderInfographic(profile, style.id, { variation });
+      return SavedSamples.image('career');
     },
   },
   lab: {
     async concept({ base, flavors, moment, variation = 0 }) {
-      const mock = mockConcept(base, flavors, moment, variation);
       if (API.live) {
+        const mock = mockConcept(base, flavors, moment, variation);
         if (!CONFIG.ai.labDeployment.trim()) throw new Error('Canlı Laboratuvar için ayarlardan bir metin modeli dağıtımı seçin.');
         const r = await Chat.json(
           'Sen premium bir atıştırmalık markasının yaratıcı ürün geliştiricisi ve Türkçe metin yazarısın. Seçilen temel, lezzetler ve tüketim anını birlikte yorumla. Özgün, kolay telaffuz edilen ve raf üzerinde ayırt edilebilen bir ürün adı üret; mevcut ürün adlarını kopyalama. Slogan kısa, doğal Türkçe ve seçilen ana özgü olsun; klişe dolgu ifadeleri kullanma. Hikâye en fazla iki kısa cümleyle lezzet deneyimini anlatsın. Sağlık, besin değeri veya performans iddiası, yeni bir içerik ya da gerçek dışı ürün özelliği ekleme. visualDirection alanını İngilizce tek kısa cümleyle, yaklaşık 30 kelime olarak yaz: renk paleti, seçilen içeriklerin ambalajdaki yerleşimi ve ışık; yeni metin veya slogan ekleme. Her alanı karakter sınırının rahatça altında tut; uzun taslak değil, doğrudan baskıya hazır kısa metin üret. Yalnızca JSON döndür: name, slogan, story, visualDirection. Karakter sınırları: ' + JSON.stringify(LAB_COPY_LIMITS),
@@ -3739,15 +3743,16 @@ const API = {
         return { ...mock, ...validateLabCopy(r) };
       }
       await API.wait(300);
-      return mock;
+      return SavedSamples.labConcept();
     },
     async packaging(concept, opts = {}) {
-      if (API.live && CONFIG.ai.endpoint) {
+      if (API.live) {
+        if (!CONFIG.ai.endpoint) throw new Error('Canlı üretim için Foundry endpoint’i ayarlanmamış.');
         const logo = await packagingLogoReference();
         return composePack(await MAI.edit(buildPackPrompt(concept), [logo]), concept);
       }
       if (!opts.fast) await API.wait(7600);
-      return renderPackaging(concept, { variation: opts.variation || 0 });
+      return SavedSamples.image('lab');
     },
   },
   share: {
@@ -4237,12 +4242,13 @@ function resultViewHTML({ img, alt, title = '', text = '', extra = '', regenLabe
     <div class="res-side">
       <div class="eyebrow acc rise" style="--i:1">Adım 4 · Sonuç</div>
       ${extra || `<h2 class="rise" style="--i:2">${title}</h2><p class="lead rise" style="--i:3">${text}</p>`}
+      ${API.live ? '' : '<p class="fine demo-sample-note">Demo Modu: kayıtlı gerçek örnek gösterilir; seçimler ve yeniden üretme bu görseli değiştirmez.</p>'}
       <div class="qr-card rise" style="--i:4">
         <div class="qr-box"><div class="spinner"></div></div>
         <div class="qr-copy"><b>${icon('phone')} Telefonuna al</b><span>Telefonunun kamerasını QR koda tut; görselin açılsın, indir ya da LinkedIn ve Instagram’da paylaş.</span><small class="qr-url">Bağlantı hazırlanıyor…</small></div>
       </div>
       <div class="btn-row rise" style="--i:5">
-        <button class="btn btn-lg btn-primary" data-act="regen">${icon('refresh')} ${regenLabel}</button>
+        <button class="btn btn-lg btn-primary" data-act="regen">${icon('refresh')} ${API.live ? regenLabel : 'Örneği tekrar göster'}</button>
         <button class="btn btn-lg btn-glass" data-act="restart">${icon('restart')} Baştan başla</button>
       </div>
       <p class="fine rise" style="--i:6">${icon('shield')} ${esc(CONFIG.share.retentionText)}</p>
@@ -4423,7 +4429,7 @@ SCREENS['photo.theme'] = {
     return `<div class="scr-head">
       <div class="eyebrow acc rise">Adım 2 · Sahneni seç</div>
       <h2 class="rise" style="--i:1">Hikâyen hangi dünyada geçsin?</h2>
-      <p class="lead rise" style="--i:2">Yapay zekâ seni seçtiğin sahneye, ${esc(CONFIG.event.productBrand + ' ' + p.name)} ile birlikte yerleştirecek.</p>
+      <p class="lead rise" style="--i:2">${API.live ? `Yapay zekâ seni seçtiğin sahneye, ${esc(CONFIG.event.productBrand + ' ' + p.name)} ile birlikte yerleştirecek.` : 'Demo Modu, seçtiğin temanın daha önce üretilmiş gerçek örneğini gösterir.'}</p>
     </div>
     <div class="grid-3 theme-grid${sel ? ' has-selection' : ''}">${THEMES.map((t, i) => `
       <button class="choice theme-card rise${sel === t.id ? ' is-selected' : ''}" style="--i:${3 + i}" data-theme="${t.id}">
@@ -4458,11 +4464,11 @@ SCREENS['photo.camera'] = {
   exp: 'photo', step: 3, title: 'Fotoğraf çekimi',
   guard: () => (!STATE.photo.productId ? 'photo.quiz' : !STATE.photo.themeId ? 'photo.theme' : null),
   render() {
-    const p = byId(PRODUCTS, STATE.photo.productId), t = byId(THEMES, STATE.photo.themeId);
+    const p = photoDisplayProduct(), t = byId(THEMES, STATE.photo.themeId);
     return `<div class="cam-layout">
       <div class="cam-frame rise">
         <video playsinline muted autoplay></video>
-        <img class="cam-shot" alt="Çektiğin fotoğraf">
+        <img class="cam-shot" alt="${API.live ? 'Çektiğin fotoğraf' : 'Kayıtlı örnek fotoğraf'}">
         <div class="cam-guide">${cameraGuideSVG()}</div>
         <div class="cam-corners"><i></i><i></i><i></i><i></i></div>
         <span class="chip cam-hint">${icon('user')} Belden yukarın kadrajda olsun</span>
@@ -4492,7 +4498,7 @@ SCREENS['photo.camera'] = {
           <button class="btn btn-lg btn-glass" data-act="retry">${icon('refresh')} Tekrar dene</button>
           <button class="btn btn-lg btn-primary" data-act="demo">${icon('user')} Örnek fotoğrafla devam et</button>
         </div>
-        <p class="consent rise" style="--i:6">Devam ederek fotoğrafının yalnızca bu tasarımı üretmek için işlenmesini kabul edersin. <button class="link-btn inline" data-act="kvkk">Aydınlatma metni</button></p>
+        <p class="consent rise" style="--i:6">${API.live ? 'Devam ederek fotoğrafının yalnızca bu tasarımı üretmek için işlenmesini kabul edersin.' : 'Demo Modu kayıtlı örnek fotoğrafı kullanır; kameraya erişilmez.'} <button class="link-btn inline" data-act="kvkk">Aydınlatma metni</button></p>
       </div>
     </div>`;
   },
@@ -4501,6 +4507,10 @@ SCREENS['photo.camera'] = {
     const video = $('video', el), shot = $('.cam-shot', el), cnt = $('.cam-count', el), flash = $('.cam-flash', el);
     const set = (s) => { el.dataset.state = s; };
     const start = () => {
+      if (!API.live) {
+        STATE.photo.photo = demoPortrait(); shot.src = STATE.photo.photo; set('review');
+        return;
+      }
       set('loading');
       Camera.start(video).then(() => { if (!ctx.alive) { Camera.stop(); return; } set('live'); })
         .catch(() => { if (ctx.alive) set('error'); });
@@ -4537,12 +4547,12 @@ SCREENS['photo.gen'] = {
   exp: 'photo', step: 4, noIdle: true, title: 'Yapay zekâ tasarlıyor',
   guard: () => (!STATE.photo.productId ? 'photo.quiz' : !STATE.photo.themeId ? 'photo.theme' : !STATE.photo.photo ? 'photo.camera' : null),
   render(ctx) {
-    const p = byId(PRODUCTS, STATE.photo.productId), t = byId(THEMES, STATE.photo.themeId);
+    const p = photoDisplayProduct(), t = byId(THEMES, STATE.photo.themeId);
     ctx.tips = tipsFor('photo');
     return genViewHTML({ stages: photoStages(p, t), etaSec: API.live ? 20 : 10, sticker: packSVG(p), tips: ctx.tips });
   },
   mount(el, ctx) {
-    const s = STATE.photo, p = byId(PRODUCTS, s.productId), t = byId(THEMES, s.themeId);
+    const s = STATE.photo, p = photoDisplayProduct(), t = byId(THEMES, s.themeId);
     ParticlePortrait($('.gen-canvas', el), ctx, { src: s.photo, palette: t.palette });
     runGenView(el, ctx, {
       stages: photoStages(p, t), estimateMs: API.live ? 20000 : 9500, tipsCount: ctx.tips.length, onRetry: () => App.go('photo.gen'),
@@ -4555,15 +4565,15 @@ SCREENS['photo.result'] = {
   exp: 'photo', step: 4, title: 'Sonuç',
   guard: () => (STATE.photo.result ? null : 'photo.quiz'),
   render() {
-    const s = STATE.photo, p = byId(PRODUCTS, s.productId), t = byId(THEMES, s.themeId);
+    const s = STATE.photo, p = photoDisplayProduct(), t = byId(THEMES, s.themeId);
     return resultViewHTML({
       img: s.result, alt: `${t.name} temasında, ${p.name} ile yapay zekâ anı fotoğrafı`,
       title: 'Tatlı anın hazır!',
-      text: `${esc(t.name)} sahnesinde, ${esc(CONFIG.event.productBrand + ' ' + p.name)} ile sen. Beğenmezsen yeniden üret; beğendiysen hemen telefonuna al.`,
+      text: API.live ? `${esc(t.name)} sahnesinde, ${esc(CONFIG.event.productBrand + ' ' + p.name)} ile sen. Beğenmezsen yeniden üret; beğendiysen hemen telefonuna al.` : `${esc(t.name)} temasının ${esc(CONFIG.event.productBrand + ' ' + p.name)} ile daha önce oluşturulmuş örneği.`,
     });
   },
   mount(el, ctx) {
-    const s = STATE.photo, p = byId(PRODUCTS, s.productId), t = byId(THEMES, s.themeId);
+    const s = STATE.photo, p = photoDisplayProduct(), t = byId(THEMES, s.themeId);
     mountResult(el, ctx, {
       exp: 'photo', img: s.result, meta: { product: p.id, theme: t.id },
       colors: [p.colors[0], p.colors[2], '#ffd166', '#ffffff', '#ff4d6d'],
@@ -4864,9 +4874,9 @@ SCREENS['career.result'] = {
   render() {
     const s = STATE.career, st = byId(CAREER_STYLES, s.styleId);
     return resultViewHTML({
-      img: s.result, alt: `${s.profile.name} için ${st.name} tarzında kariyer infografiği`,
+      img: s.result, alt: API.live ? `${s.profile.name} için ${st.name} tarzında kariyer infografiği` : 'Kayıtlı kariyer infografiği örneği',
       title: 'Kariyer yıldız haritan hazır!',
-      text: `Yolculuğun, ${esc(st.name.toLocaleLowerCase('tr-TR'))} tarzında tek bir görselde. Farklı bir yorum için yeniden üretebilir ya da hemen telefonuna alabilirsin.`,
+      text: API.live ? `Yolculuğun, ${esc(st.name.toLocaleLowerCase('tr-TR'))} tarzında tek bir görselde. Farklı bir yorum için yeniden üretebilir ya da hemen telefonuna alabilirsin.` : 'Daha önce oluşturulmuş kariyer infografiği örneğini incele veya telefonuna al.',
     });
   },
   mount(el, ctx) {
@@ -5024,6 +5034,7 @@ SCREENS['lab.gen'] = {
       stages: labStages(), estimateMs: API.live ? 20000 : 9000, tipsCount: ctx.tips.length, onRetry: () => App.go('lab.gen'),
       task: async () => {
         const concept = await API.lab.concept({ base, flavors, moment, variation: s.variation || 0 });
+        if (!ctx.alive) throw new DOMException('Deneyim kapatıldı.', 'AbortError');
         const img = await API.lab.packaging(concept, { variation: s.variation || 0 });
         return { concept, img };
       },
@@ -5081,12 +5092,7 @@ async function shareFile(d, fileOnly, url) {
   return false;
 }
 async function sampleImage(exp) {
-  if (exp === 'career') {
-    const p = mockProfile(mockPeople('Deniz Yıldız', true)[0]); Object.assign(p, mockSummary(p));
-    return renderInfographic(p, 'constellation');
-  }
-  if (exp === 'lab') return renderPackaging(mockConcept(LAB_BASES[1], [LAB_FLAVORS[1], LAB_FLAVORS[2]], LAB_MOMENTS[1], 0));
-  return renderPhotoMock({ photo: demoPortrait(), product: PRODUCTS[0], theme: THEMES[0], variation: 0 });
+  return SavedSamples.image(exp === 'photo' ? 'photo-snowglobe' : exp);
 }
 
 const MobilePage = {
@@ -5151,7 +5157,13 @@ const MobilePage = {
     const d = this.data(exp, '');
     root.innerHTML = this.html(d);
     this.mount(root, d);
-    sampleImage(exp).then((img) => { d.img = img; root.innerHTML = this.html(d); }).catch(() => {});
+    sampleImage(exp).then((img) => { d.img = img; root.innerHTML = this.html(d); }).catch((error) => {
+      console.error('Kayıtlı paylaşım örneği yüklenemedi:', error);
+      const message = document.createElement('p');
+      message.className = 'm-foot'; message.setAttribute('role', 'alert');
+      message.textContent = 'Örnek görsel yüklenemedi. Sayfayı yenileyin.';
+      root.append(message);
+    });
   },
 };
 
@@ -5173,7 +5185,10 @@ const PhonePreview = {
     fit(); window.addEventListener('resize', fit);
     const screen = $('.phone-screen', stage);
     MobilePage.mount(screen, d, { pageUrl: ls ? ls.url : shareUrlFor(exp, 'onizleme') });
-    if (!d.img) sampleImage(exp).then((img) => { d.img = img; screen.innerHTML = MobilePage.html(d); });
+    if (!d.img) sampleImage(exp).then((img) => { d.img = img; screen.innerHTML = MobilePage.html(d); }).catch((error) => {
+      console.error('Kayıtlı paylaşım örneği yüklenemedi:', error);
+      Toast.show('Örnek görsel yüklenemedi. Yeniden deneyin.');
+    });
     const close = () => { window.removeEventListener('resize', fit); stage.remove(); };
     stage.addEventListener('click', (e) => { if (e.target === stage || e.target.closest('[data-close]')) close(); });
     this.close = close;
