@@ -116,6 +116,148 @@ test('settings reflect sound and busy state and report fullscreen failures expli
   assert.equal(element('[data-settings="mode"]').disabled, false);
 });
 
+test('career native name input and virtual keyboard stay synchronized without double typing', () => {
+  const nodes = new Map(), transitions = [];
+  const node = selector => {
+    if (!nodes.has(selector)) nodes.set(selector, {
+      value: '', listeners: {}, classList: { add() {}, remove() {}, toggle() {} },
+      attributes: {}, setAttribute(k, v) { this.attributes[k] = v; },
+      addEventListener(type, fn) { this.listeners[type] = fn; },
+    });
+    return nodes.get(selector);
+  };
+  let onKey;
+  const context = vm.createContext({
+    SCREENS: {}, STATE: { career: {} }, CONFIG: { ai: {} }, API: { live: false },
+    $: node, Modal: { cur: null }, Sound: { key() {}, tap() {} },
+    App: { go: id => transitions.push(id) }, setTimeout: fn => fn(),
+    window: { addEventListener: (_type, fn) => { onKey = fn; }, removeEventListener() {} },
+  });
+  vm.runInContext(sourceBetween('const trUp =', 'function slugTR('), context);
+  vm.runInContext(sourceBetween('const KB_ROWS =', 'const displayName ='), context);
+  vm.runInContext(sourceBetween('const nameValid =', 'function avatarHTML('), context);
+  vm.runInContext(sourceBetween("SCREENS['career.name'] =", "SCREENS['career.search'] ="), context);
+  const el = node('screen');
+  context.SCREENS['career.name'].mount(el, { cleanup() {} });
+  const input = node('.career-name-entry'), keyboard = node('.kbd');
+  input.value = 'Ayşe'; input.listeners.input();
+  assert.equal(node('[data-act="search"]').disabled, true);
+  input.value = 'ayşe yılmaz'; input.listeners.input();
+  assert.equal(node('.key.go').disabled, false);
+  onKey({ key: 'z', target: { closest: () => input } });
+  assert.equal(context.STATE.career.name, 'ayşe yılmaz');
+  const key = node('key'); key.dataset = { key: 'back' };
+  keyboard.listeners.pointerdown({ target: { closest: () => key }, preventDefault() {} });
+  assert.equal(input.value, 'ayşe yılma');
+  key.dataset.key = 'z';
+  keyboard.listeners.click({ detail: 0, target: { closest: () => key } });
+  keyboard.listeners.click({ detail: 1, target: { closest: () => key } });
+  assert.equal(input.value, 'ayşe yılmaz');
+  node('.career-name-form').listeners.submit({ preventDefault() {} });
+  assert.equal(context.STATE.career.name, 'Ayşe Yılmaz');
+  assert.deepEqual(transitions, ['career.search']);
+  assert.equal(context.STATE.career.picked, null);
+  onKey({ key: 'Enter', target: { closest: () => node('family') } });
+  assert.deepEqual(transitions, ['career.search']);
+});
+
+test('career choices restore the selected profile and expose the selected style accessibly', () => {
+  const nodes = new Map(), cards = [];
+  const node = selector => {
+    if (!nodes.has(selector)) nodes.set(selector, {
+      attributes: {}, classList: { add() {}, toggle() {} },
+      setAttribute(k, v) { this.attributes[k] = v; },
+    });
+    return nodes.get(selector);
+  };
+  const people = [{ id: 'p0', name: 'Deniz Yıldız', headline: 'Analist' }, { id: 'p1', name: 'Deniz Yıldız', headline: 'Tasarımcı' }];
+  const context = vm.createContext({
+    SCREENS: {}, STATE: { career: { results: people, picked: people[1], profile: people[1], styleId: 'metro' } },
+    API: { live: false },
+    $: node, $$: selector => selector === '[data-person]' ? cards : [], icon: () => '', esc: String, avatarHTML: () => '',
+    careerSearchIsLive: () => false, Sound: { select() {} },
+    CAREER_STYLES: [{ id: 'metro', name: 'Metro', desc: 'Duraklar', thumbnail: 'metro.jpg' }],
+  });
+  vm.runInContext(sourceBetween("SCREENS['career.pick'] =", "SCREENS['career.analyze'] ="), context);
+  vm.runInContext(sourceBetween("SCREENS['career.style'] =", "SCREENS['career.gen'] ="), context);
+  const markup = context.SCREENS['career.pick'].render();
+  assert.match(markup, /data-person="p1" aria-pressed="true"/);
+  assert.doesNotMatch(markup, /data-act="confirm" disabled/);
+  assert.match(context.SCREENS['career.style'].render(), /data-style="metro" aria-pressed="true"/);
+  cards.push(node('p0'), node('p1'));
+  cards[0].dataset = { person: 'p0' }; cards[1].dataset = { person: 'p1' };
+  let click;
+  context.SCREENS['career.pick'].mount({ addEventListener: (_type, fn) => { click = fn; } });
+  click({ target: { closest: selector => selector === '[data-person]' ? cards[0] : null } });
+  assert.equal(context.STATE.career.picked, people[0]);
+  assert.equal(cards[0].attributes['aria-pressed'], 'true');
+  assert.equal(cards[1].attributes['aria-pressed'], 'false');
+  assert.equal(node('[data-selected-copy]').textContent, 'Analist');
+});
+
+test('career analysis reports failures without automatic profile substitution and handles empty categories', async () => {
+  const nodes = new Map(), transitions = [], errors = [];
+  const node = selector => {
+    if (!nodes.has(selector)) nodes.set(selector, {
+      disabled: true, children: [], attributes: {}, classList: { add() {} },
+      setAttribute(k, v) { this.attributes[k] = v; },
+      replaceChildren() { this.children = []; }, appendChild(child) { this.children.push(child); },
+    });
+    return nodes.get(selector);
+  };
+  const picked = { id: 'p0', name: 'Example' };
+  let calls = 0, click;
+  const context = vm.createContext({
+    SCREENS: {}, STATE: { career: { picked } }, $: node, $$: () => [],
+    Sound: { tap() {}, key() {}, success() {} }, icon: () => '', esc: String,
+    document: { createElement: () => ({}) }, console: { error: e => errors.push(e) },
+    App: { go: id => transitions.push(id) },
+    mockPeople: () => assert.fail('Do not silently replace the selected profile'),
+    API: { career: {
+      profile: async () => { calls++; throw new Error('Offline'); },
+      summarize: async () => ({ summary: 'Summary', power: 'Power' }),
+    } },
+    typeText: async (el, text) => { el.textContent = text; },
+  });
+  vm.runInContext(sourceBetween("SCREENS['career.analyze'] =", "SCREENS['career.style'] ="), context);
+  const el = { addEventListener: (_type, fn) => { click = fn; } };
+  const ctx = { alive: true, sleep: async () => {} };
+  context.SCREENS['career.analyze'].mount(el, ctx);
+  await new Promise(setImmediate);
+  assert.equal(calls, 1); assert.equal(errors.length, 1);
+  assert.equal(context.STATE.career.picked, picked);
+  assert.equal(node('.career-analysis-error').hidden, false);
+  assert.equal(node('[data-act="next"]').disabled, true);
+  click({ target: { closest: s => s === '[data-act="retry-analysis"]' } });
+  assert.deepEqual(transitions, ['career.analyze']);
+  nodes.clear();
+  context.API.career.profile = async () => ({ ...picked, experience: [], education: [], skills: [], certifications: [] });
+  context.SCREENS['career.analyze'].mount(el, ctx);
+  await new Promise(setImmediate);
+  for (const cat of ['experience', 'education', 'skills', 'certs']) {
+    assert.equal(node(`[data-items="${cat}"]`).children[0].textContent, 'Bu başlıkta bilgi yok.');
+  }
+  assert.equal(node('[data-act="next"]').disabled, false);
+  assert.equal(node('.ai-summary').attributes['aria-busy'], 'false');
+});
+
+test('four career thumbnails retain matching generation prompts and the same example profile', () => {
+  const context = vm.createContext({});
+  vm.runInContext(sourceBetween('const CAREER_STYLES =', 'const LAB_BASES =') + '\nglobalThis.styles = CAREER_STYLES;', context);
+  vm.runInContext(sourceBetween('function buildInfographicPrompt(', 'async function packagingLogoReference('), context);
+  assert.equal(new Set(Array.from(context.styles, s => s.thumbnail)).size, 4);
+  let profile;
+  for (const style of context.styles) {
+    const base = style.thumbnail.replace(/\.jpg$/, '');
+    fs.accessSync(path.join(__dirname, style.thumbnail));
+    fs.accessSync(path.join(__dirname, base + '-raw.png'));
+    const record = JSON.parse(fs.readFileSync(path.join(__dirname, base + '.json'), 'utf8'));
+    assert.equal(record.prompt, context.buildInfographicPrompt(record.profile, style));
+    if (profile) assert.deepEqual(record.profile, profile);
+    profile = record.profile;
+  }
+});
+
 test('photo prompts preserve the holding-and-pointing pose across styles and variations', () => {
   const context = vm.createContext({ CONFIG: { event: { productBrand: 'Brand' } } });
   vm.runInContext(sourceBetween('function buildPhotoPrompt(', 'function buildInfographicPrompt('), context);
@@ -209,7 +351,7 @@ test('Demo returns saved gallery outputs and matching Lab copy without generatin
   for (const id of ['snowglobe', 'adface', 'blocky', 'factory', 'space', 'popart']) {
     assert.equal(await context.api.photo.generate({ photo: 'other input', product: {}, theme: { id }, variation: 3 }, { fast: true }), `saved:samples/photo-${id}.jpg`);
   }
-  assert.equal(await context.api.career.infographic({ profile: {}, style: {} }, { fast: true }), 'saved:samples/baseline/career.jpg');
+  assert.equal(await context.api.career.infographic({ profile: {}, style: {} }, { fast: true }), 'saved:samples/career-styles/constellation.jpg');
   const concept = await context.api.lab.concept({ base: {}, flavors: [], moment: {} });
   assert.equal(concept.name, record.concept.name);
   assert.equal(concept.slogan, record.concept.slogan);

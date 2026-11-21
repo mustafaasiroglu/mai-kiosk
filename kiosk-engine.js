@@ -124,14 +124,14 @@ const THEMES = [
 
 /* ---------- Kariyer haritası stilleri ---------- */
 const CAREER_STYLES = [
-  { id: 'constellation', name: 'Takımyıldız', desc: 'Her durak gökyüzünde parlayan bir yıldız.', palette: ['#7cc7ff', '#ffffff', '#ffd27a', '#8b7bff'],
-    bgPrompt: 'a deep navy night sky with a subtle glowing constellation path of stars rising along the left side, soft nebula clouds' },
-  { id: 'metro', name: 'Metro Hattı', desc: 'Kariyerin, durakları olan bir metro hattı.', palette: ['#e3061b', '#0078d4', '#1b1b2f', '#ffffff'],
-    bgPrompt: 'a clean, minimal light-cream background with a subtle transit-map line motif in red and blue along the left edge' },
-  { id: 'game', name: 'Oyun Haritası', desc: 'Seviye atlayan bir kahramanın yolculuğu.', palette: ['#5cc04a', '#ffcc00', '#2f7de1', '#ffffff'],
-    bgPrompt: 'a bright, friendly 2D game world map with a winding trail, rolling green hills and small checkpoint flags along the left side' },
-  { id: 'magazine', name: 'Dergi Kapağı', desc: 'Yılın profesyoneli kapağında sen varsın.', palette: ['#ff4d6d', '#7a1cff', '#ffd166', '#ffffff'],
-    bgPrompt: 'a bold, glossy magazine-cover background with a vibrant pink-to-violet gradient and abstract editorial shapes' },
+  { id: 'constellation', name: 'Takımyıldız', desc: 'Her durak gökyüzünde parlayan bir yıldız.', thumbnail: 'samples/career-styles/constellation.jpg', palette: ['#7cc7ff', '#ffffff', '#ffd27a', '#8b7bff'],
+    bgPrompt: 'a sophisticated midnight-navy celestial atlas, fine scattered stars, restrained icy-blue nebula haze and a few warm gold highlights; delicate luminous astronomy details confined to the left edge; elegant, spacious and editorial, not a busy fantasy space scene' },
+  { id: 'metro', name: 'Metro Hattı', desc: 'Kariyerin, durakları olan bir metro hattı.', thumbnail: 'samples/career-styles/metro.jpg', palette: ['#e3061b', '#0078d4', '#1b1b2f', '#ffffff'],
+    bgPrompt: 'a premium Swiss-design transit atlas on warm ivory paper, a very faint precise square grid and restrained red and cobalt-blue route fragments at the outer left edge; clean vector-like geometry, crisp intersections and subtle paper texture; no dense network of routes' },
+  { id: 'game', name: 'Oyun Haritası', desc: 'Seviye atlayan bir kahramanın yolculuğu.', thumbnail: 'samples/career-styles/game.jpg', palette: ['#5cc04a', '#ffcc00', '#2f7de1', '#ffffff'],
+    bgPrompt: 'a polished friendly 2.5D adventure-map environment, airy pale-blue sky, layered grassy green islands, soft clouds and a few tiny golden collectibles on the far left; clean rounded game-art shapes and gentle dimensional shading; the central and right regions remain light and quiet, without characters or a large game interface' },
+  { id: 'magazine', name: 'Dergi Kapağı', desc: 'Yılın profesyoneli kapağında sen varsın.', thumbnail: 'samples/career-styles/magazine.jpg', palette: ['#ff4d6d', '#7a1cff', '#ffd166', '#ffffff'],
+    bgPrompt: 'a premium contemporary editorial-cover backdrop, rich coral-pink fading into violet, sculptural translucent folds and one restrained warm-gold accent near the outer edge; dramatic but refined studio lighting, clean uninterrupted negative space, no portrait or cover typography' },
 ];
 
 /* ---------- Lezzet laboratuvarı ---------- */
@@ -2583,7 +2583,7 @@ function buildPhotoPrompt(p, t, variation) {
   ].filter(Boolean).join(' ');
 }
 function buildInfographicPrompt(profile, style) {
-  return `Background artwork for a vertical 4:5 career infographic poster about a ${profile.headline} professional. Style: ${style.bgPrompt}. Keep large calm areas on the right two-thirds and at the top for text overlays. Absolutely no text, letters, numbers, logos or people.`;
+  return `Create high-quality background artwork for a vertical 4:5 career infographic poster about a ${profile.headline} professional. Art direction: ${style.bgPrompt}. The kiosk will add the name, timeline, milestones and skills itself: keep the top quarter and right two-thirds calm, uncluttered and easy to read. Decorative details belong along the outer left and bottom edges, never crossing the future text area. One coherent full-bleed composition, sharp detail, no panels or hard horizontal divisions. Absolutely no text, letters, numbers, logos, watermarks or people.`;
 }
 async function packagingLogoReference() {
   if (!CONFIG.event.productLogo) throw new Error('Laboratuvar için resmi ürün logosu ayarlanmamış.');
@@ -3151,8 +3151,15 @@ function mountKeyboard(root, ctx, { get, set, submit, max = 40 }) {
     b.classList.add('is-press'); setTimeout(() => b.classList.remove('is-press'), 130);
     Sound.key(); press(b.dataset.key);
   });
+  root.addEventListener('click', (e) => {
+    if (e.detail !== 0) return;
+    const b = e.target.closest('[data-key]');
+    if (!b || b.disabled) return;
+    Sound.key(); press(b.dataset.key);
+  });
   const onKey = (e) => {
     if (Modal.cur || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target?.closest?.('input, textarea, button, [contenteditable="true"]')) return;
     if (e.key === 'Backspace') { e.preventDefault(); press('back'); }
     else if (e.key === 'Enter') { e.preventDefault(); if (!$('.key.go', root).disabled) press('go'); }
     else if (e.key === ' ') { e.preventDefault(); press(' '); }
@@ -3604,6 +3611,7 @@ SCREENS['photo.result'] = {
    ========================================================================== */
 const careerStages = (st) => ['Kariyer durakların yerleştiriliyor', 'Deneyimlerin yıldızlara dönüşüyor', 'Yeteneklerin parlatılıyor', `${st.name} tasarımı çiziliyor`, 'Son dokunuşlar yapılıyor'];
 const nameValid = (v) => { const w = String(v || '').trim().split(/\s+/).filter((x) => x.length >= 2); return w.length >= 2; };
+const careerSearchIsLive = () => API.live && Boolean(CONFIG.ai.peopleSearchUrl);
 function avatarHTML(p, cls = '') {
   return `<div class="avatar ${cls}" style="--h:${p.hue || 210}">${esc(initials(p.name))}${p.photoUrl ? `<img src="${esc(p.photoUrl)}" alt="" referrerpolicy="no-referrer">` : ''}</div>`;
 }
@@ -3638,32 +3646,47 @@ SCREENS['career.name'] = {
     return `<div class="scr-head center">
       <div class="eyebrow acc rise">Adım 1 · Tanışalım</div>
       <h2 class="rise" style="--i:1">Adın ve soyadın nedir?</h2>
-      <p class="lead rise" style="--i:2">Adınla oluşturulan temsili kariyer profilini bir yıldız haritasına dönüştürelim.</p>
+      <p class="lead rise" style="--i:2">${careerSearchIsLive() ? 'Profilini bulalım, kariyer yolculuğunu bir tasarıma dönüştürelim.' : 'Adınla örnek kariyerleri keşfet; ardından dört tasarım dilinden birini seç.'}</p>
     </div>
-    <div class="name-field rise" style="--i:3">
-      <div class="name-input" data-empty="${v ? 'false' : 'true'}" role="textbox" aria-label="Ad ve soyad">${icon('user')}<span class="ni-text">${esc(displayName(v))}</span><span class="caret"></span><span class="ni-ph">Örn. Ayşe Yılmaz</span></div>
-      <button class="toggle-chip${fam ? ' is-on' : ''}" data-act="family" aria-pressed="${fam}"><span class="tg"><i></i></span>${esc(CONFIG.event.partnerName)} ailesindenim</button>
+    <div class="career-entry-layout rise" style="--i:3">
+      <form class="career-name-form">
+        <label class="career-name-label" for="career-name">Adın ve soyadın</label>
+        <div class="name-input">${icon('user')}<input id="career-name" class="career-name-entry" type="text" value="${esc(v)}" maxlength="40" autocomplete="name" autocapitalize="words" spellcheck="false" placeholder="Örn. Ayşe Yılmaz" aria-describedby="career-name-hint"></div>
+        <div class="career-name-options">
+          <button type="button" class="toggle-chip${fam ? ' is-on' : ''}" data-act="family" aria-pressed="${fam}"><span class="tg"><i></i></span>${esc(CONFIG.event.partnerName)} ailesindenim</button>
+          <button type="submit" class="btn btn-primary" data-act="search" disabled>Profilleri gör ${icon('arrowRight')}</button>
+        </div>
+        <p id="career-name-hint" class="fine career-name-hint" role="status"></p>
+      </form>
+      <aside class="career-welcome">
+        <div class="career-welcome-art">${styleArt('constellation')}</div>
+        <div><h3>Her durak bir yıldız.</h3><ol class="career-path"><li><b>1</b> Profilini seç</li><li><b>2</b> Yolculuğunu keşfet</li><li><b>3</b> Tasarımını telefonuna al</li></ol></div>
+      </aside>
     </div>
     <div class="kbd rise" style="--i:4">${keyboardHTML('Ara')}</div>
-    <p class="fine rise" style="--i:5;justify-content:center;margin-top:1.8vmin">${icon('shield')} Yalnızca herkese açık profil bilgilerini kullanırız; hiçbir bilgi kaydedilmez.</p>`;
+    <p class="fine rise" style="--i:5;justify-content:center;margin-top:1.8vmin">${icon('shield')} ${careerSearchIsLive() ? 'Yalnızca herkese açık profil bilgileri kullanılır.' : 'Temsili profiller kullanılır; gerçek bir profil araması yapılmaz.'}</p>`;
   },
   mount(el, ctx) {
-    const txt = $('.ni-text', el), box = $('.name-input', el), go = $('.key.go', el);
+    const input = $('.career-name-entry', el), go = $('.key.go', el), search = $('[data-act="search"]', el), hint = $('#career-name-hint', el);
     const paint = () => {
       const v = STATE.career.name || '';
-      txt.textContent = displayName(v);
-      box.dataset.empty = v ? 'false' : 'true';
-      go.disabled = !nameValid(v);
+      if (input.value !== v) input.value = v;
+      go.disabled = search.disabled = !nameValid(v);
+      const message = nameValid(v) ? 'Hazırsın. Profil seçeneklerine geçebilirsin.' : 'Ad ve soyadını en az ikişer harfle yaz.';
+      if (hint.textContent !== message) hint.textContent = message;
     };
+    const submit = () => {
+      if (!nameValid(STATE.career.name)) return;
+      STATE.career.name = titleTR(STATE.career.name);
+      STATE.career.results = null; STATE.career.picked = null; STATE.career.profile = null;
+      App.go('career.search');
+    };
+    input.addEventListener('input', () => { STATE.career.name = input.value; paint(); });
+    $('.career-name-form', el).addEventListener('submit', (e) => { e.preventDefault(); submit(); });
     mountKeyboard($('.kbd', el), ctx, {
       get: () => STATE.career.name || '',
       set: (v) => { STATE.career.name = v; paint(); },
-      submit: () => {
-        if (!nameValid(STATE.career.name)) return;
-        STATE.career.name = titleTR(STATE.career.name);
-        STATE.career.results = null; STATE.career.picked = null; STATE.career.profile = null;
-        App.go('career.search');
-      },
+      submit,
     });
     el.addEventListener('click', (e) => {
       const f = e.target.closest('[data-act="family"]');
@@ -3683,19 +3706,25 @@ SCREENS['career.search'] = {
   render() {
     const name = STATE.career.name;
     const blips = [[10, 16, 210], [74, 8, 320], [80, 64, 40], [14, 70, 150], [46, 86, 270]];
-    return `<div class="search-wrap">
+    return `<div class="career-search">
+      <div class="career-search-art">
       <div class="radar rise">
         <div class="radar-ring"></div><div class="radar-ring r2"></div><div class="radar-ring r3"></div>
         <div class="radar-sweep"></div><div class="radar-pulse"></div>
         ${blips.map(([x, y, h], i) => `<div class="blip" style="left:${x}%;top:${y}%;--h:${h};animation-delay:${(i * 0.55).toFixed(2)}s">${esc(initials(name))}</div>`).join('')}
         <div class="radar-core">${icon('search')}</div>
       </div>
+      <span class="career-source-note">${icon(careerSearchIsLive() ? 'globe' : 'user')} ${careerSearchIsLive() ? 'Herkese açık profiller' : 'Temsili kariyer profilleri'}</span>
+      </div><div>
+      <div class="eyebrow acc">Adım 2 · Profil seçenekleri</div>
       <h2 class="search-title rise" style="--i:1">“${esc(name)}” aranıyor…</h2>
+      <p class="lead">${careerSearchIsLive() ? 'Olası eşleşmeleri bir araya getiriyoruz. Bir sonraki adımda profilini sen seçeceksin.' : 'Bu deneyim için örnek kariyerler hazırlanıyor; gerçek kişilere ait bir arama yapılmıyor.'}</p>
       <ol class="search-steps rise" style="--i:2">
-        <li class="is-active">${icon('globe')}<span>WebIQ ile web’de herkese açık profiller aranıyor</span><span class="state">${icon('check')}</span></li>
-        <li>${icon('linkedin')}<span>Örnek profiller hazırlanıyor</span><span class="state">${icon('check')}</span></li>
+        <li class="is-active">${icon('search')}<span>${careerSearchIsLive() ? 'Herkese açık profil eşleşmeleri aranıyor' : 'Adına uygun temsili profiller hazırlanıyor'}</span><span class="state">${icon('check')}</span></li>
+        <li>${icon('briefcase')}<span>Kariyer başlıkları bir araya getiriliyor</span><span class="state">${icon('check')}</span></li>
         <li>${icon('sparkle')}<span>En olası sonuçlar sıralanıyor</span><span class="state">${icon('check')}</span></li>
       </ol>
+      </div>
     </div>`;
   },
   mount(el, ctx) {
@@ -3720,25 +3749,27 @@ SCREENS['career.pick'] = {
   exp: 'career', step: 2, title: 'Profil seçimi',
   guard: () => (STATE.career.results && STATE.career.results.length ? null : 'career.name'),
   render() {
-    const list = STATE.career.results.slice(0, 4);
+    const list = STATE.career.results.slice(0, 4), picked = list.find(p => p.id === STATE.career.picked?.id);
     return `<div class="scr-head">
       <div class="eyebrow acc rise">Adım 2 · Profilini seç</div>
-      <h2 class="rise" style="--i:1">Hangisi sensin?</h2>
-      <p class="lead rise" style="--i:2">“${esc(STATE.career.name)}” için ${list.length} herkese açık profil bulduk. Kendini seç, gerisini yapay zekâya bırak.</p>
+      <h2 class="rise" style="--i:1">${careerSearchIsLive() ? 'Profilini buldun mu?' : 'Hangi kariyer sana daha yakın?'}</h2>
+      <p class="lead rise" style="--i:2">${careerSearchIsLive() ? `“${esc(STATE.career.name)}” için ${list.length} olası eşleşme. Unvan, kurum ve konum bilgilerini kontrol ederek seç.` : `${list.length} temsili kariyer, dört farklı yolculuk. İncelemek istediğin örnek profili seç.`}</p>
     </div>
-    <div class="grid-4 people-grid">${list.map((p, i) => `
-      <button class="choice person-card rise" style="--i:${3 + i}" data-person="${esc(p.id)}">
+    <div class="grid-4 people-grid${picked ? ' has-selection' : ''}">${list.map((p, i) => `
+      <button class="choice person-card rise${picked?.id === p.id ? ' is-selected' : ''}" style="--i:${3 + i}" data-person="${esc(p.id)}" aria-pressed="${picked?.id === p.id}">
         <span class="check">${icon('check')}</span>
+        <span class="career-card-kicker">Profil 0${i + 1}</span>
         ${avatarHTML(p)}
         <h3>${esc(p.name)}</h3>
         <p class="headline">${esc(p.headline)}</p>
         <div class="p-meta"><span>${icon('building')} ${esc(p.company)}</span><span>${icon('pin')} ${esc(p.location)}</span></div>
-        <span class="li-chip">${icon('linkedin')} Temsili profil</span>
+        <span class="career-source-note">${icon(careerSearchIsLive() ? 'globe' : 'user')} ${careerSearchIsLive() ? 'Profil eşleşmesi' : 'Örnek profil'}</span>
       </button>`).join('')}
     </div>
-    <div class="scr-foot between">
-      <button class="btn btn-glass" data-act="notme">${icon('x')} Listede yokum</button>
-      <button class="btn btn-lg btn-primary" data-act="confirm" disabled>Evet, bu benim ${icon('arrowRight')}</button>
+    <div class="scr-foot between career-choice-foot">
+      <div class="career-selection" role="status">${icon('user')}<span><small>Seçilen profil</small><b data-selected-copy>${picked ? esc(picked.headline) : 'Devam etmek için bir kart seç'}</b></span></div>
+      <div class="career-choice-actions"><button class="btn btn-glass" data-act="notme">${icon('edit')} ${careerSearchIsLive() ? 'Listede yokum' : 'Adımı değiştir'}</button>
+      <button class="btn btn-lg btn-primary" data-act="confirm"${picked ? '' : ' disabled'}>Bu profille devam et ${icon('arrowRight')}</button></div>
     </div>`;
   },
   mount(el) {
@@ -3747,15 +3778,16 @@ SCREENS['career.pick'] = {
     el.addEventListener('click', (e) => {
       const b = e.target.closest('[data-person]');
       if (b) {
-        $$('[data-person]', el).forEach((x) => x.classList.toggle('is-selected', x === b));
+        $$('[data-person]', el).forEach((x) => { x.classList.toggle('is-selected', x === b); x.setAttribute('aria-pressed', String(x === b)); });
         grid.classList.add('has-selection');
         STATE.career.picked = STATE.career.results.find((p) => String(p.id) === b.dataset.person);
+        $('[data-selected-copy]', el).textContent = STATE.career.picked.headline;
         ok.disabled = false; Sound.select();
         return;
       }
       const a = e.target.closest('[data-act]'); if (!a) return;
       if (a.dataset.act === 'confirm' && STATE.career.picked) { Sound.tap(); STATE.career.profile = null; App.go('career.analyze'); }
-      if (a.dataset.act === 'notme') { Sound.tap(); notFoundModal(false); }
+      if (a.dataset.act === 'notme') { Sound.tap(); if (careerSearchIsLive()) notFoundModal(false); else App.go('career.name'); }
     });
   },
 };
@@ -3771,22 +3803,27 @@ SCREENS['career.analyze'] = {
         ${avatarHTML(p)}
         <div><h3>${esc(p.name)}</h3><p>${esc(p.headline)}</p>
         <div class="p-meta"><span>${icon('building')} ${esc(p.company)}</span><span>${icon('pin')} ${esc(p.location)}</span></div></div>
-        <ul class="trust-list"><li>${icon('linkedin')} Herkese açık LinkedIn profili</li><li>${icon('shield')} Yalnızca bu görsel için kullanılır</li><li>${icon('lock')} Profil bilgilerin kaydedilmez</li></ul>
+        <ul class="trust-list"><li>${icon('user')} ${API.live && CONFIG.ai.profileUrl ? 'Seçilen profil bilgileri' : 'Temsili kariyer bilgileri'}</li><li>${icon('shield')} Yalnızca bu deneyim için kullanılır</li></ul>
       </div>
       <div class="extract">
-        <div class="eyebrow ai rise" style="--i:1">${icon('sparkle')} Profilin yapay zekâ ile okunuyor</div>
+        <div class="eyebrow ai rise" style="--i:1">${icon('sparkle')} <span class="career-analysis-status" role="status">Kariyer durakları hazırlanıyor</span></div>
         <h2 class="an-title rise" style="--i:2">Yolculuğunu keşfediyoruz…</h2>
         <div class="ex-cats rise" style="--i:3">${cats.map(([k, ic, l]) => `<div class="ex-cat" data-cat="${k}">${icon(ic)}<b>${l}</b><span class="cnt">0</span></div>`).join('')}</div>
-        <div class="ex-feed" aria-live="polite"></div>
-        <div class="ai-summary rise" style="--i:4"><div class="as-label">${icon('sparkle')} Yapay zekâ özeti</div><p class="as-text"></p><p class="as-power"></p></div>
+        <div class="ex-feed">${cats.map(([k, ic, l]) => `<section class="career-detail"><h3>${icon(ic)}${l}</h3><ul data-items="${k}"><li class="career-empty">Hazırlanıyor…</li></ul></section>`).join('')}</div>
+        <div class="ai-summary rise" style="--i:4" aria-live="polite" aria-busy="true"><div class="as-label">${icon('sparkle')} Kariyer özeti</div><p class="as-text">Yolculuğunun ortak noktaları bulunuyor…</p><p class="as-power"></p></div>
+        <div class="career-analysis-error" role="alert" hidden><p>Profil özeti hazırlanamadı. Bağlantı ayarlarını kontrol edip yeniden deneyebilirsin.</p><div class="career-choice-actions"><button class="btn btn-glass" data-act="retry-analysis">${icon('refresh')} Yeniden dene</button><button class="btn btn-glass" data-act="pick-profile">${icon('user')} Profili değiştir</button></div></div>
         <div class="analyze-foot"><button class="btn btn-lg btn-primary" data-act="next" disabled>Stilimi seçeyim ${icon('arrowRight')}</button></div>
       </div>
     </div>`;
   },
   mount(el, ctx) {
     $$('.avatar img', el).forEach((img) => img.addEventListener('error', () => img.remove()));
-    const feed = $('.ex-feed', el), next = $('[data-act="next"]', el);
-    el.addEventListener('click', (e) => { if (e.target.closest('[data-act="next"]') && !next.disabled) { Sound.tap(); App.go('career.style'); } });
+    const next = $('[data-act="next"]', el);
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('[data-act="next"]') && !next.disabled) { Sound.tap(); App.go('career.style'); }
+      if (e.target.closest('[data-act="retry-analysis"]')) { Sound.tap(); App.go('career.analyze'); }
+      if (e.target.closest('[data-act="pick-profile"]')) { Sound.tap(); App.go('career.pick'); }
+    });
     const countUp = (cat, n) => {
       const c = $(`[data-cat="${cat}"]`, el); if (!c) return;
       c.classList.add('on');
@@ -3794,7 +3831,7 @@ SCREENS['career.analyze'] = {
       if (!n) { cnt.textContent = '0'; return; }
       const h = ctx.interval(() => { i++; cnt.textContent = String(Math.min(i, n)); if (i >= n) clearInterval(h); }, 70);
     };
-    const add = (ic, text) => { const d = document.createElement('div'); d.className = 'ex-item'; d.innerHTML = `${icon(ic)}<span>${esc(text)}</span>`; feed.appendChild(d); };
+    const add = (list, ic, text) => { const d = document.createElement('li'); d.className = 'ex-item'; d.innerHTML = `${icon(ic)}<span>${esc(text)}</span>`; list.appendChild(d); };
     (async () => {
       const prof = STATE.career.profile && STATE.career.profile.id === STATE.career.picked.id ? STATE.career.profile : await API.career.profile(STATE.career.picked);
       if (!ctx.alive) return;
@@ -3807,7 +3844,9 @@ SCREENS['career.analyze'] = {
       ];
       for (const [cat, ic, n, items] of seqs) {
         countUp(cat, n);
-        for (const it of items) { add(ic, it); Sound.key(); await ctx.sleep(240); }
+        const list = $(`[data-items="${cat}"]`, el); list.replaceChildren();
+        if (!items.length) { const empty = document.createElement('li'); empty.className = 'career-empty'; empty.textContent = 'Bu başlıkta bilgi yok.'; list.appendChild(empty); }
+        for (const it of items) { add(list, ic, it); Sound.key(); await ctx.sleep(240); }
         await ctx.sleep(220);
       }
       const sum = await API.career.summarize(prof);
@@ -3817,14 +3856,17 @@ SCREENS['career.analyze'] = {
       $('.analyze', el).classList.add('is-done');
       await typeText($('.as-text', el), sum.summary, ctx);
       $('.as-power', el).innerHTML = `<b>Süper gücün:</b> ${esc(sum.power)}`;
+      $('.ai-summary', el).setAttribute('aria-busy', 'false');
+      $('.career-analysis-status', el).textContent = 'Kariyer özeti hazır';
       next.disabled = false; Sound.success();
     })().catch((err) => {
       console.error(err);
       if (!ctx.alive) return;
-      Toast.show('Profil okunamadı; örnek bir profille devam ediyoruz.');
-      STATE.career.picked = mockPeople(STATE.career.name || 'Deniz Yıldız', true)[0];
-      STATE.career.profile = null;
-      ctx.timeout(() => App.go('career.analyze'), 1200);
+      $('.analyze', el).classList.add('is-done');
+      $('.ai-summary', el).setAttribute('aria-busy', 'false');
+      $('.as-text', el).textContent = 'Özet tamamlanamadı.';
+      $('.career-analysis-status', el).textContent = 'İşlem tamamlanamadı';
+      $('.career-analysis-error', el).hidden = false;
     });
   },
 };
@@ -3837,26 +3879,28 @@ SCREENS['career.style'] = {
     return `<div class="scr-head">
       <div class="eyebrow acc rise">Adım 3 · Stilini seç</div>
       <h2 class="rise" style="--i:1">Kariyer haritan nasıl görünsün?</h2>
-      <p class="lead rise" style="--i:2">Aynı yolculuk, dört farklı anlatım. Sana en çok yakışanı seç.</p>
+      <p class="lead rise" style="--i:2">Aynı örnek kariyer, dört gerçek çıktı. Tasarım dilini karşılaştırıp sana en çok yakışanı seç.${API.live ? '' : ' Demo sonucunda kayıtlı galeri örneği gösterilir.'}</p>
     </div>
     <div class="grid-4 style-grid${sel ? ' has-selection' : ''}">${CAREER_STYLES.map((s, i) => `
-      <button class="choice theme-card style-card rise${sel === s.id ? ' is-selected' : ''}" style="--i:${3 + i}" data-style="${s.id}">
-        <div class="theme-art">${styleArt(s.id)}</div>
+      <button class="choice style-card career-style-card rise${sel === s.id ? ' is-selected' : ''}" style="--i:${3 + i}" data-style="${s.id}" aria-pressed="${sel === s.id}">
+        <span class="career-card-kicker">Önizleme · 0${i + 1}</span>
+        <div class="career-style-art"><img src="${s.thumbnail}" alt="${esc(s.name)} tasarımında temsili kariyer haritası" width="1080" height="1350"></div>
         <span class="check">${icon('check')}</span>
         <div class="theme-meta"><h3>${esc(s.name)}</h3><p>${esc(s.desc)}</p></div>
       </button>`).join('')}
     </div>
-    <div class="scr-foot between">
+    <div class="scr-foot between career-choice-foot">
       <div class="sel-summary rise" style="--i:8">${avatarHTML(p)}<span><small>Profil</small><b>${esc(p.name)}</b></span></div>
       <button class="btn btn-lg btn-ai" data-act="next"${sel ? '' : ' disabled'}>${icon('sparkle')} Haritamı oluştur</button>
     </div>`;
   },
   mount(el) {
     const grid = $('.style-grid', el), next = $('[data-act="next"]', el);
+    $$('.career-style-art img', el).forEach(img => img.addEventListener('error', () => Toast.show('Stil önizlemesi yüklenemedi. Sayfayı yenileyin.')));
     el.addEventListener('click', (e) => {
       const b = e.target.closest('[data-style]');
       if (b) {
-        $$('[data-style]', el).forEach((x) => x.classList.toggle('is-selected', x === b));
+        $$('[data-style]', el).forEach((x) => { x.classList.toggle('is-selected', x === b); x.setAttribute('aria-pressed', String(x === b)); });
         grid.classList.add('has-selection');
         STATE.career.styleId = b.dataset.style; next.disabled = false; Sound.select();
         return;
