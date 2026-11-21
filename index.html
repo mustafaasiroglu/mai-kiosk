@@ -7,6 +7,15 @@
 <meta name="theme-color" content="#05050d">
 <meta name="description" content="Yıldız Holding × Microsoft · Yapay Zekâ Deneyim Alanı — dokunmatik kiosk uygulaması">
 <title>Yıldız Holding × Microsoft · Yapay Zekâ Deneyim Alanı</title>
+<script>
+  (() => {
+    const param = new URLSearchParams(window.location.search).get("scoutTheme");
+    const theme =
+      param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+<link rel="stylesheet" href="kiosk-theme.css">
 <style>
 /* =====================================================================
    YILDIZ HOLDİNG × MICROSOFT · YAPAY ZEKÂ DENEYİM KİOSKU — Tasarım sistemi
@@ -152,7 +161,8 @@ img { -webkit-user-drag: none; }
 .step.is-done i { background: rgba(255, 255, 255, .14); border-color: transparent; color: #fff; }
 .step.is-active { color: #fff; }
 .step.is-active i { background: var(--acc); border-color: transparent; color: #fff; box-shadow: 0 0 2.6vmin var(--acc-soft); }
-.tb-right { justify-self: end; }
+.tb-right { justify-self: end; display: grid; justify-items: end; gap: .6vmin; }
+.tb-mode { font-size: var(--fs-xs); color: var(--cp-text-soft); }
 
 /* Marka kilidi */
 .brand { display: flex; align-items: center; gap: 1.4vmin; white-space: nowrap; }
@@ -645,6 +655,7 @@ h1, h2, h3, h4 { margin: 0; font-family: var(--font-display); letter-spacing: -.
 .home-top { display: flex; align-items: center; justify-content: space-between; flex: none; }
 .live-chip { display: inline-flex; align-items: center; gap: 1.2vmin; padding: 1.1vmin 2.2vmin; border-radius: 999px; background: var(--glass); border: 1px solid var(--line); font-size: var(--fs-sm); color: var(--ink2); font-weight: 600; }
 .live-chip .dot { width: 1.3vmin; height: 1.3vmin; border-radius: 50%; background: #3ee08f; animation: livePulse 2s infinite; }
+.live-chip[data-mode="mock"] .dot { background: var(--ink3); animation: none; }
 @keyframes livePulse { 0% { box-shadow: 0 0 0 0 rgba(62, 224, 143, .6); } 100% { box-shadow: 0 0 0 1.6vmin rgba(62, 224, 143, 0); } }
 .home-hero { text-align: center; margin: 3vmin auto 4.6vmin; display: flex; flex-direction: column; align-items: center; gap: 1.8vmin; flex: none; }
 .eyebrow-chip { display: inline-flex; align-items: center; gap: 1vmin; padding: 1vmin 2.2vmin; border-radius: 999px; background: rgba(255, 255, 255, .06); border: 1px solid var(--line2); font-size: var(--fs-sm); font-weight: 600; color: var(--ink2); }
@@ -799,25 +810,26 @@ h1, h2, h3, h4 { margin: 0; font-family: var(--font-display); letter-spacing: -.
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 .confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 40; }
 
-/* ---------- Tasarım önizleme paneli (yalnızca designMode) ---------- */
-.dn-fab { position: fixed; right: 0; top: 50%; transform: translateY(-50%); writing-mode: vertical-rl; z-index: 90; display: inline-flex; align-items: center; gap: 8px; padding: 14px 8px; border-radius: 12px 0 0 12px; border-right: 0 !important; border: 1px solid rgba(255, 255, 255, .22); background: rgba(16, 15, 34, .78); color: #fff; font: 600 13px/1 var(--font-text); cursor: pointer; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); opacity: .7; transition: opacity .2s; }
-.dn-fab:hover, .dn-fab:focus-visible { opacity: 1; }
-.dn-fab .ic { font-size: 16px; }
-.dn-panel { position: fixed; top: 0; right: 0; bottom: 0; width: 340px; z-index: 95; background: #0f0e1f; border-left: 1px solid rgba(255, 255, 255, .14); box-shadow: -20px 0 60px rgba(0, 0, 0, .6); transform: translateX(105%); transition: transform .4s var(--ease); display: flex; flex-direction: column; font-size: 13px; user-select: none; }
-.dn-panel.open { transform: none; }
-.dn-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-bottom: 1px solid rgba(255, 255, 255, .1); }
-.dn-head b { font: 700 15px var(--font-display); }
-.dn-head small { display: block; color: var(--ink3); font-size: 11.5px; margin-top: 3px; }
-.dn-close { width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .18); background: transparent; color: #fff; cursor: pointer; display: grid; place-items: center; }
-.dn-body { flex: 1; overflow: auto; padding: 8px 12px 18px; }
-.dn-group h4 { font: 700 11px var(--font-text); letter-spacing: .14em; text-transform: uppercase; color: var(--ink3); margin: 16px 6px 6px; }
-.dn-item { display: flex; width: 100%; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 9px; border: 0; background: transparent; color: rgba(255, 255, 255, .86); font: 500 13px var(--font-text); text-align: left; cursor: pointer; }
-.dn-item:hover { background: rgba(255, 255, 255, .07); }
-.dn-item.cur { background: rgba(139, 92, 246, .22); color: #fff; }
-.dn-item i { font-style: normal; color: var(--ink4); font-size: 11px; width: 22px; flex: none; }
-.dn-foot { padding: 12px 14px; border-top: 1px solid rgba(255, 255, 255, .1); display: flex; flex-wrap: wrap; gap: 8px; }
-.dn-foot button { flex: 1; padding: 9px 10px; border-radius: 9px; border: 1px solid rgba(255, 255, 255, .16); background: rgba(255, 255, 255, .06); color: #fff; font: 600 12px var(--font-text); cursor: pointer; }
-.dn-foot .note { flex-basis: 100%; color: var(--ink3); font-size: 11px; line-height: 1.45; }
+/* ---------- Kalıcı kiosk ayarları ---------- */
+.settings-fab { position: fixed; right: 0; top: 50%; transform: translateY(-50%); writing-mode: vertical-rl; z-index: 90; display: inline-flex; align-items: center; gap: 8px; padding: 16px 10px; border-radius: 12px 0 0 12px; border: 1px solid var(--cp-border-strong); border-right: 0; background: var(--cp-panel); color: var(--cp-text); font: 600 14px/1 var(--font-text); cursor: pointer; }
+.settings-fab .ic { font-size: 18px; }
+.settings-panel { display: none; position: fixed; inset: 0 0 0 auto; margin: 0; width: min(380px, 100vw); max-width: 100vw; height: 100dvh; max-height: 100dvh; padding: 0; border: 0; border-left: 1px solid var(--cp-border); background: var(--cp-panel); color: var(--cp-text); box-shadow: var(--cp-shadow); font: 16px/1.4 var(--font-text); }
+.settings-panel[open] { display: flex; flex-direction: column; }
+.settings-panel::backdrop { background: var(--cp-overlay); }
+.settings-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px; border-bottom: 1px solid var(--cp-border); }
+.settings-head h2 { margin: 0; font-size: 24px; }
+.settings-head p { margin: 4px 0 0; font-size: 14px; color: var(--cp-text-soft); }
+.settings-close { width: 44px; height: 44px; flex: none; border: 1px solid var(--cp-border); border-radius: 10px; background: var(--cp-surface-soft); color: var(--cp-text); display: grid; place-items: center; cursor: pointer; }
+.settings-body { padding: 24px; overflow: auto; display: grid; align-content: start; gap: 16px; }
+.settings-item { display: flex; align-items: center; gap: 16px; width: 100%; min-height: 84px; padding: 16px; border: 1px solid var(--cp-border); border-radius: 16px; background: var(--cp-surface-soft); color: var(--cp-text); text-decoration: none; text-align: left; font: inherit; cursor: pointer; }
+.settings-item:hover { border-color: var(--cp-accent); background: var(--cp-accent-soft); }
+.settings-item > .ic { font-size: 24px; color: var(--cp-link); }
+.settings-copy { flex: 1; }
+.settings-copy b { display: block; font-size: 16px; }
+.settings-copy small { display: block; margin-top: 4px; color: var(--cp-text-soft); font-size: 13px; }
+.settings-state { padding: 4px 8px; border-radius: 10px; background: var(--cp-accent-soft); color: var(--cp-text); font-size: 12px; }
+.settings-item:disabled { opacity: .5; cursor: not-allowed; }
+.settings-note { margin: 0; color: var(--cp-text-soft); font-size: 13px; line-height: 1.5; }
 .phone-stage { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: rgba(3, 3, 10, .7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 .phone-wrap { display: flex; align-items: center; gap: 4vmin; }
 .phone { width: 390px; height: 844px; border-radius: 58px; padding: 13px; background: linear-gradient(145deg, #2a2a35, #0b0b10); box-shadow: 0 0 0 2px #3a3a48, 0 40px 120px rgba(0, 0, 0, .8); transform-origin: center; position: relative; flex: none; }
@@ -829,7 +841,7 @@ h1, h2, h3, h4 { margin: 0; font-family: var(--font-display); letter-spacing: -.
 
 /* ---------- Telefon (paylaşım) sayfası ---------- */
 body.is-mobile { overflow: auto; user-select: text; -webkit-user-select: text; background: #07071a; }
-body.is-mobile #app, body.is-mobile .dn-fab { display: none; }
+body.is-mobile #app, body.is-mobile .settings-fab { display: none; }
 #mobile-root { display: none; }
 body.is-mobile #mobile-root { display: block; }
 .m-page {
@@ -936,11 +948,11 @@ body.lite .pack-float { transform: rotate(-7deg); }
 <div id="modal-root" class="modal-root"></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <dialog id="connection-dialog" class="modal" aria-labelledby="connection-title" aria-describedby="connection-help">
-  <h3 id="connection-title">Kioska hoş geldin</h3>
+  <h3 id="connection-title">Microsoft AI Kiosk'a hoş geldin</h3>
   <p id="connection-help">Devam etmek için bir mod seç.</p>
   <div id="connection-choice" class="btn-row">
-    <button type="button" class="btn btn-glass" id="connection-demo">Demo</button>
-    <button type="button" class="btn btn-ai" id="connection-live">Canlı</button>
+    <button type="button" class="btn btn-glass" id="connection-demo">Demo Modu</button>
+    <button type="button" class="btn btn-ai" id="connection-live">Canlı Mod</button>
   </div>
   <form id="connection-form" method="dialog" autocomplete="off" hidden>
     <label>Foundry endpoint
@@ -969,6 +981,7 @@ body.lite .pack-float { transform: rotate(-7deg); }
   </form>
 </dialog>
 <noscript><div class="noscript">Bu deneyim için JavaScript gereklidir.</div></noscript>
+<script src="samples.js"></script>
 <script>
 /* ==========================================================================
    Ülker ürün ambalajları — beyaz zemini temizlenmiş, şeffaf PNG (dosyaya gömülü).
@@ -989,7 +1002,6 @@ const PRODUCT_IMAGES = {
    API anahtarı tarayıcı depolamasına yazılmaz.
    ========================================================================== */
 const CONFIG = {
-  designMode: true,        // Sağ alttaki "Ekranlar" tasarım paneli. Etkinlikte false yapın.
   sound: true,             // Dokunma / deklanşör / başarı sesleri
   ambientMotion: true,     // Arka plan hareketleri. Zayıf donanımda false yapın (düşük FPS'te otomatik kapanır).
   event: {
@@ -997,6 +1009,7 @@ const CONFIG = {
     partnerName: 'Yıldız Holding',
     partnerLogo: '',       // Resmi logo (data URI PNG önerilir). Boşsa yazı kullanılır.
     productBrand: 'Ülker',
+    productLogo: 'assets/ulker-logo.png',
     hashtag: '#YıldızınıParlat',
   },
   idle: { warnAfterSec: 75, countdownSec: 12 },
@@ -1504,6 +1517,9 @@ const ICONS = {
   fullscreen: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
   edit: '<path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/><path d="M14 7l3 3"/>',
   lock: '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
+  key: '<circle cx="16" cy="8" r="5"/><path d="m12.5 11.5-9 9H7V17h3.5v-3.5l2-2"/>',
+  settings: '<path d="m9 3-.6 2.5-2 1.2L4 6 2 9.5l1.9 1.8v2.4L2 15.5 4 19l2.4-.7 2 1.2L9 22h6l.6-2.5 2-1.2 2.4.7 2-3.5-1.9-1.8v-2.4L22 9.5 20 6l-2.4.7-2-1.2L15 3z"/><circle cx="12" cy="12.5" r="3.5"/>',
+  volume: '<path d="M11 4 6 8H3v8h3l5 4zM15 8a6 6 0 0 1 0 8M18 5a10 10 0 0 1 0 14"/>',
 };
 function icon(name, cls = '') {
   return `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${ICONS[name] || ''}</svg>`;
@@ -2027,8 +2043,16 @@ function baseArt(id) {
 
   if (id === 'bar') {
     let seg = '';
-    for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) seg += `<rect x="${36 + i * 33}" y="${42 + j * 34}" width="28" height="29" rx="5" fill="#5a2e1a"/><path d="M${39 + i * 33} ${46 + j * 34} h22" stroke="#8a5236" stroke-width="3" stroke-linecap="round"/>`;
-    return `${open}<rect x="30" y="36" width="140" height="76" rx="10" fill="#3b1d10"/>${seg}<path d="M150 36 L178 30 L170 60 Z" fill="#e8e0d4"/></svg>`;
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) {
+      const x = 36 + i * 33, y = 40 + j * 32;
+      seg += `<rect x="${x}" y="${y}" width="29" height="28" rx="4" fill="var(--cp-chocolate-face)"/>
+        <path d="M${x + 4} ${y + 4}h20" stroke="var(--cp-chocolate-highlight)" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M${x + 25} ${y + 7}v17H${x + 5}" fill="none" stroke="var(--cp-chocolate-edge)" stroke-width="2" stroke-linecap="round"/>
+        <rect x="${x + 6}" y="${y + 8}" width="17" height="11" rx="2" fill="var(--cp-chocolate-dark)" opacity=".28"/>`;
+    }
+    return `${open}<ellipse cx="100" cy="117" rx="76" ry="10" fill="var(--cp-overlay)" opacity=".4"/>
+      <g transform="rotate(-8 100 74)"><rect x="30" y="43" width="140" height="72" rx="9" fill="var(--cp-chocolate-edge)"/>
+      <rect x="30" y="34" width="140" height="72" rx="9" fill="var(--cp-chocolate-dark)"/>${seg}</g></svg>`;
   }
   return `${open}<path d="M40 70 Q40 40 70 40 H150 Q170 40 170 60 V112 H40 Z" fill="#8a4a22"/>
     <rect x="40" y="70" width="130" height="42" fill="#f2c26b"/><rect x="40" y="84" width="130" height="10" fill="#fff4dc"/>
@@ -2803,21 +2827,13 @@ function burstPath(g, x, y, r1, r2, n) {
 }
 
 /* Marka bandı (tüm paylaşılabilir görsellerin altına) */
-function drawBrandBand(g, W, H, { title = '', sub = '', pack = null, pixelatedPack = false } = {}) {
+function drawBrandBand(g, W, H, { title = '', sub = '' } = {}) {
   g.save();
   const top = H - 200;
   const gr = g.createLinearGradient(0, top, 0, H);
   gr.addColorStop(0, 'rgba(6,6,16,0)'); gr.addColorStop(0.55, 'rgba(6,6,16,.55)'); gr.addColorStop(1, 'rgba(6,6,16,.86)');
   g.fillStyle = gr; g.fillRect(0, top, W, H - top);
-  let x = 44;
-  if (pack) {
-    const f = packFit(pack, 150, 76);
-    g.save(); g.translate(x + f.w / 2, H - 72); g.rotate(-0.08);
-    g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = 18; g.shadowOffsetY = 6;
-    g.imageSmoothingEnabled = !pixelatedPack;
-    g.drawImage(pack, -f.w / 2, -f.h / 2, f.w, f.h); g.restore();
-    x += f.w + 18;
-  }
+  const x = 44;
   // sağdaki imza bloğunu önce ölç; başlık ve alt yazı ona çarpmadan sığsın
   const rx = W - 44, partner = CONFIG.event.partnerName, foot = `Microsoft AI ile üretildi · ${CONFIG.event.hashtag}`;
   g.font = cfont(650, 27); const pw2 = g.measureText(partner).width, mw = g.measureText('Microsoft').width;
@@ -2837,42 +2853,9 @@ function drawBrandBand(g, W, H, { title = '', sub = '', pack = null, pixelatedPa
   g.restore();
 }
 
-/* Kamera yoksa / tasarım önizlemesinde kullanılan demo portre */
-let __demoPortrait = null;
+/* Kayıtlı örnek fotoğraf; Demo Modu kamera açmaz. */
 function demoPortrait() {
-  if (__demoPortrait) return __demoPortrait;
-  const W = 900, H = 1125, c = makeCanvas(W, H), g = c.getContext('2d');
-  let gr = g.createRadialGradient(W * 0.5, H * 0.36, 60, W * 0.5, H * 0.5, H * 0.85);
-  gr.addColorStop(0, '#f4f0ea'); gr.addColorStop(1, '#b4aec8');
-  g.fillStyle = gr; g.fillRect(0, 0, W, H);
-  softDot(g, W * 0.25, H * 0.18, 460, '#ffffff', 0.5);
-  g.fillStyle = '#2f3b6b';
-  g.beginPath(); g.moveTo(80, H); g.bezierCurveTo(96, 860, 230, 772, 450, 762); g.bezierCurveTo(670, 772, 804, 860, 820, H); g.closePath(); g.fill();
-  g.fillStyle = '#26315a'; g.beginPath(); g.moveTo(450, 900); g.lineTo(450, H); g.lineTo(440, H); g.closePath(); g.fill();
-  g.fillStyle = '#e2ad86'; rr(g, 390, 600, 120, 196, 46); g.fill();
-  g.fillStyle = '#f0f0f5'; g.beginPath(); g.moveTo(370, 772); g.lineTo(450, 890); g.lineTo(530, 772); g.lineTo(505, 766); g.lineTo(450, 850); g.lineTo(395, 766); g.closePath(); g.fill();
-  g.fillStyle = '#e6b18a';
-  g.beginPath(); g.ellipse(290, 482, 26, 44, 0, 0, TAU); g.fill();
-  g.beginPath(); g.ellipse(610, 482, 26, 44, 0, 0, TAU); g.fill();
-  gr = g.createLinearGradient(0, 290, 0, 680); gr.addColorStop(0, '#f3c6a0'); gr.addColorStop(1, '#dfa47c');
-  g.fillStyle = gr; g.beginPath(); g.ellipse(450, 474, 162, 198, 0, 0, TAU); g.fill();
-  g.fillStyle = '#3a2a22';
-  g.beginPath(); g.moveTo(286, 480); g.bezierCurveTo(262, 300, 360, 238, 456, 240); g.bezierCurveTo(566, 242, 650, 312, 616, 480);
-  g.bezierCurveTo(604, 404, 566, 356, 504, 344); g.bezierCurveTo(432, 380, 352, 376, 312, 424); g.closePath(); g.fill();
-  g.strokeStyle = '#3a2a22'; g.lineWidth = 12; g.lineCap = 'round';
-  g.beginPath(); g.moveTo(370, 442); g.quadraticCurveTo(396, 428, 424, 438); g.stroke();
-  g.beginPath(); g.moveTo(476, 438); g.quadraticCurveTo(504, 428, 530, 442); g.stroke();
-  g.fillStyle = '#2b2220';
-  g.beginPath(); g.arc(398, 482, 12, 0, TAU); g.fill();
-  g.beginPath(); g.arc(502, 482, 12, 0, TAU); g.fill();
-  g.fillStyle = '#fff'; g.beginPath(); g.arc(402, 478, 3.5, 0, TAU); g.fill(); g.beginPath(); g.arc(506, 478, 3.5, 0, TAU); g.fill();
-  g.strokeStyle = 'rgba(150,90,60,.55)'; g.lineWidth = 6;
-  g.beginPath(); g.moveTo(452, 494); g.quadraticCurveTo(438, 542, 458, 550); g.stroke();
-  g.strokeStyle = '#a2503d'; g.lineWidth = 9;
-  g.beginPath(); g.moveTo(396, 588); g.quadraticCurveTo(450, 630, 504, 588); g.stroke();
-  softDot(g, 356, 560, 48, '#ff8a8a', 0.26); softDot(g, 544, 560, 48, '#ff8a8a', 0.26);
-  __demoPortrait = c.toDataURL('image/jpeg', 0.9);
-  return __demoPortrait;
+  return SAMPLE_PHOTO_SOURCE;
 }
 
 /* ---------- Fotoğraf temaları: temsili çıktı ---------- */
@@ -3138,13 +3121,13 @@ async function renderPhotoMock({ photo, product, theme, variation = 0 }) {
   const rnd = mulberry32(hashStr(theme.id + product.id) + variation * 7919);
   const fn = PHOTO_RENDERERS[theme.id] || PHOTO_RENDERERS.snowglobe;
   g.save(); g.imageSmoothingEnabled = theme.id !== 'blocky'; fn(g, W, H, img, product, pack, rnd, variation); g.restore();
-  drawBrandBand(g, W, H, { pack, pixelatedPack: theme.id === 'blocky' });
+  drawBrandBand(g, W, H);
   return c.toDataURL('image/jpeg', 0.9);
 }
-async function composePhoto(aiDataUrl, product, theme) {
+async function composePhoto(aiDataUrl) {
   const W = 1080, H = 1350, c = makeCanvas(W, H), g = c.getContext('2d');
   coverDraw(g, await loadImage(aiDataUrl), 0, 0, W, H);
-  drawBrandBand(g, W, H, { pack: await photoPackImage(product, theme), pixelatedPack: theme.id === 'blocky' });
+  drawBrandBand(g, W, H);
   return c.toDataURL('image/jpeg', 0.9);
 }
 
@@ -3370,7 +3353,7 @@ async function renderInfographic(profile, styleId, { variation = 0, bg = null } 
 }
 
 /* ---------- Lezzet laboratuvarı ambalajı ---------- */
-function drawFlowPack(g, w, h, concept) {
+function drawFlowPack(g, w, h, concept, logo) {
   const [c1, c2] = concept.colors;
   const x0 = -w / 2, x1 = w / 2, y0 = -h / 2, y1 = h / 2, cw = w * 0.055;
   g.fillStyle = shade(c2, -0.3);
@@ -3416,8 +3399,7 @@ function drawFlowPack(g, w, h, concept) {
     }
   });
   g.restore();
-  g.save(); rr(g, x0 + 74, y0 + 54, 150, 50, 25); g.fillStyle = '#e30613'; g.fill(); g.lineWidth = 3.5; g.strokeStyle = '#fff'; g.stroke();
-  g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = cfont(850, 30); g.fillText(trLow(CONFIG.event.productBrand), x0 + 149, y0 + 89); g.restore();
+  g.drawImage(logo, x0 + 74, y0 + 48, 180, 180 * logo.naturalHeight / logo.naturalWidth);
   g.save(); g.textAlign = 'left';
   let fs = 82; g.font = cfont(900, fs, 'italic');
   let lines = wrapLines(g, concept.name, w * 0.5, 2);
@@ -3431,6 +3413,7 @@ function drawFlowPack(g, w, h, concept) {
   g.fillStyle = gr; g.beginPath(); g.moveTo(x0 + cw + 10, y0 + 18); g.quadraticCurveTo(0, y0 - 8, x1 - cw - 10, y0 + 18); g.lineTo(x1 - cw - 10, y0 + 70); g.quadraticCurveTo(0, y0 + 50, x0 + cw + 10, y0 + 70); g.closePath(); g.fill();
 }
 async function renderPackaging(concept, { variation = 0 } = {}) {
+  const logo = await loadImage(CONFIG.event.productLogo);
   const W = 1080, H = 1350, c = makeCanvas(W, H), g = c.getContext('2d');
   const [c1, c2] = concept.colors, rnd = mulberry32(hashStr(concept.name) + variation * 31);
   let gr = g.createRadialGradient(W / 2, 560, 80, W / 2, 660, 960);
@@ -3454,7 +3437,7 @@ async function renderPackaging(concept, { variation = 0 } = {}) {
     }
   });
   g.save(); g.translate(W / 2, 668); g.rotate(-0.07);
-  drawFlowPack(g, 880, 410, concept);
+  drawFlowPack(g, 880, 410, concept, logo);
   g.restore();
   g.save(); g.translate(W - 196, 470); g.rotate(0.2);
   burstPath(g, 0, 0, 92, 76, 18); g.fillStyle = '#ffd166'; g.fill(); g.lineWidth = 5; g.strokeStyle = '#fff'; g.stroke();
@@ -3586,8 +3569,18 @@ function buildPhotoPrompt(p, t, variation) {
 function buildInfographicPrompt(profile, style) {
   return `Background artwork for a vertical 4:5 career infographic poster about a ${profile.headline} professional. Style: ${style.bgPrompt}. Keep large calm areas on the right two-thirds and at the top for text overlays. Absolutely no text, letters, numbers, logos or people.`;
 }
+async function packagingLogoReference() {
+  if (!CONFIG.event.productLogo) throw new Error('Laboratuvar için resmi ürün logosu ayarlanmamış.');
+  const logo = await loadImage(CONFIG.event.productLogo);
+  const c = makeCanvas(896, 1120), g = c.getContext('2d');
+  const scale = Math.min(768 / logo.naturalWidth, 768 / logo.naturalHeight);
+  const w = logo.naturalWidth * scale, h = logo.naturalHeight * scale;
+  g.fillStyle = '#e8e8e8'; g.fillRect(0, 0, c.width, c.height);
+  g.drawImage(logo, (c.width - w) / 2, (c.height - h) / 2, w, h);
+  return dataUrlToBlob(c.toDataURL('image/png'));
+}
 function buildPackPrompt(c) {
-  return `Premium studio product photography of a new ${CONFIG.event.productBrand} snack concept: a ${c.baseEn} with ${c.flavorEn}. One modern flow-wrap package, vibrant flavor-inspired colors, appetizing cutaway product visuals and only the selected real ingredients. On the package, print the brand "${CONFIG.event.productBrand}", the exact product name ${JSON.stringify(c.name)}, the exact short slogan ${JSON.stringify(c.slogan)} and a small "YENİ" badge; no invented copy, additional slogans or text outside the package. ${c.visualDirection ? `Art direction: ${c.visualDirection}` : ''} Soft gradient studio background with a refined podium. Photorealistic premium commercial lighting, vertical 4:5. Leave the bottom 8% calm for the kiosk signature without a blank strip.`;
+  return `Reference image 1 contains only the official ${CONFIG.event.productBrand} logo, not an existing package. Create premium studio product photography of a NEW ${CONFIG.event.productBrand} snack concept: a ${c.baseEn} with ${c.flavorEn}. One modern flow-wrap package, vibrant flavor-inspired colors, appetizing cutaway product visuals and only the selected real ingredients. Place the exact supplied logo once on the upper-left front of the package, naturally following the wrapper perspective. Preserve its red lettering, white outline, umlaut dots, italic letter shapes and original proportions. Do not recreate the brand as typed text, substitute a font, redesign or misspell the logo, add another logo, or copy the reference background into the scene. On the package, print the exact product name ${JSON.stringify(c.name)}, the exact short slogan ${JSON.stringify(c.slogan)} and a small "YENİ" badge; no invented copy, additional slogans or text outside the package. ${c.visualDirection ? `Art direction: ${c.visualDirection}` : ''} Soft gradient studio background with a refined podium. Photorealistic premium commercial lighting, vertical 4:5. Leave the bottom 8% calm for the kiosk signature without a blank strip.`;
 }
 
 const LAB_COPY_LIMITS = { name: 24, slogan: 60, story: 240, visualDirection: 360 };
@@ -3648,6 +3641,41 @@ function mockConcept(base, flavors, moment, variation = 0) {
   };
 }
 
+const SavedSamples = {
+  async response(path) {
+    const response = await fetch(path);
+    if (!response.ok) throw new Error('Kayıtlı örnek yüklenemedi (HTTP ' + response.status + '): ' + path);
+    return response;
+  },
+  async image(id) {
+    const blob = await (await this.response(sampleFor(id).path + '.jpg')).blob();
+    if (!blob.type.startsWith('image/')) throw new Error('Kayıtlı örnek dosyası bir görsel değil.');
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') resolve(reader.result);
+        else reject(new Error('Kayıtlı örnek görsel okunamadı.'));
+      };
+      reader.onerror = () => reject(new Error('Kayıtlı örnek görsel okunamadı.', { cause: reader.error }));
+      reader.readAsDataURL(blob);
+    });
+  },
+  async labConcept() {
+    const sample = sampleFor('lab');
+    if (!sample.prompt) throw new Error('Laboratuvar örneğinin konsept kaydı yok.');
+    const record = await (await this.response(sample.prompt)).json();
+    const copy = validateLabCopy(record.concept);
+    if (!Array.isArray(record.concept.notes) || !Array.isArray(record.concept.flavorColors)) {
+      throw new Error('Laboratuvar örneğinin konsept kaydı eksik.');
+    }
+    return { ...record.concept, ...copy };
+  },
+};
+
+function photoDisplayProduct() {
+  return byId(PRODUCTS, API.live ? STATE.photo.productId : sampleFor('photo-' + STATE.photo.themeId).productId);
+}
+
 /* ---------- Dışa açık API ---------- */
 const API = {
   get live() { return CONFIG.ai.mode === 'live'; },
@@ -3666,10 +3694,10 @@ const API = {
           refs.push(dataUrlToBlob(c.toDataURL('image/png')));
         }
         const ai = await MAI.edit(buildPhotoPrompt(product, theme, variation), refs);
-        return composePhoto(ai, product, theme);
+        return composePhoto(ai);
       }
       if (!opts.fast) await API.wait(8200);
-      return renderPhotoMock({ photo, product, theme, variation });
+      return SavedSamples.image('photo-' + theme.id);
     },
   },
   career: {
@@ -3694,18 +3722,19 @@ const API = {
       return mockSummary(profile);
     },
     async infographic({ profile, style, variation = 0 }, opts = {}) {
-      if (API.live && CONFIG.ai.endpoint) {
+      if (API.live) {
+        if (!CONFIG.ai.endpoint) throw new Error('Canlı üretim için Foundry endpoint’i ayarlanmamış.');
         const bgUrl = await MAI.generate(buildInfographicPrompt(profile, style), 896, 1120);
         return renderInfographic(profile, style.id, { variation, bg: await loadImage(bgUrl) });
       }
       if (!opts.fast) await API.wait(8600);
-      return renderInfographic(profile, style.id, { variation });
+      return SavedSamples.image('career');
     },
   },
   lab: {
     async concept({ base, flavors, moment, variation = 0 }) {
-      const mock = mockConcept(base, flavors, moment, variation);
       if (API.live) {
+        const mock = mockConcept(base, flavors, moment, variation);
         if (!CONFIG.ai.labDeployment.trim()) throw new Error('Canlı Laboratuvar için ayarlardan bir metin modeli dağıtımı seçin.');
         const r = await Chat.json(
           'Sen premium bir atıştırmalık markasının yaratıcı ürün geliştiricisi ve Türkçe metin yazarısın. Seçilen temel, lezzetler ve tüketim anını birlikte yorumla. Özgün, kolay telaffuz edilen ve raf üzerinde ayırt edilebilen bir ürün adı üret; mevcut ürün adlarını kopyalama. Slogan kısa, doğal Türkçe ve seçilen ana özgü olsun; klişe dolgu ifadeleri kullanma. Hikâye en fazla iki kısa cümleyle lezzet deneyimini anlatsın. Sağlık, besin değeri veya performans iddiası, yeni bir içerik ya da gerçek dışı ürün özelliği ekleme. visualDirection alanını İngilizce tek kısa cümleyle, yaklaşık 30 kelime olarak yaz: renk paleti, seçilen içeriklerin ambalajdaki yerleşimi ve ışık; yeni metin veya slogan ekleme. Her alanı karakter sınırının rahatça altında tut; uzun taslak değil, doğrudan baskıya hazır kısa metin üret. Yalnızca JSON döndür: name, slogan, story, visualDirection. Karakter sınırları: ' + JSON.stringify(LAB_COPY_LIMITS),
@@ -3714,12 +3743,16 @@ const API = {
         return { ...mock, ...validateLabCopy(r) };
       }
       await API.wait(300);
-      return mock;
+      return SavedSamples.labConcept();
     },
     async packaging(concept, opts = {}) {
-      if (API.live && CONFIG.ai.endpoint) return composePack(await MAI.generate(buildPackPrompt(concept), 896, 1120), concept);
+      if (API.live) {
+        if (!CONFIG.ai.endpoint) throw new Error('Canlı üretim için Foundry endpoint’i ayarlanmamış.');
+        const logo = await packagingLogoReference();
+        return composePack(await MAI.edit(buildPackPrompt(concept), [logo]), concept);
+      }
       if (!opts.fast) await API.wait(7600);
-      return renderPackaging(concept, { variation: opts.variation || 0 });
+      return SavedSamples.image('lab');
     },
   },
   share: {
@@ -3995,7 +4028,7 @@ const App = {
     ctx.timeout(() => el.classList.add('is-settled'), 1750);
     try { if (def.mount) def.mount(el, ctx, params); } catch (e) { console.error(e); }
     Idle.reset();
-    if (window.DesignNav) DesignNav.mark(id);
+    if (Settings.el) Settings.refresh();
   },
   home() {
     if (Modal.cur) Modal.cur.close(true);
@@ -4008,7 +4041,7 @@ const Topbar = {
   el: null,
   init() {
     this.el = $('#topbar');
-    this.el.innerHTML = `<div class="tb-left"><button class="home-btn" data-act="home" aria-label="Ana ekrana dön">${icon('home')}</button><div class="tb-exp"><small>Deneyim</small><b></b></div></div><nav class="steps" aria-label="Adımlar"></nav><div class="tb-right">${brandLockup()}</div>`;
+    this.el.innerHTML = `<div class="tb-left"><button class="home-btn" data-act="home" aria-label="Ana ekrana dön">${icon('home')}</button><div class="tb-exp"><small>Deneyim</small><b></b></div></div><nav class="steps" aria-label="Adımlar"></nav><div class="tb-right">${brandLockup()}<span class="tb-mode" data-mode-label>${modeLabel()}</span></div>`;
     this.el.addEventListener('click', (e) => { if (e.target.closest('[data-act="home"]')) { Sound.tap(); App.home(); } });
   },
   update(def) {
@@ -4033,7 +4066,7 @@ const Idle = {
   reset() { this.last = Date.now(); },
   check() {
     const cur = App.cur;
-    if (!cur || cur.id === 'home' || cur.def.noIdle || this.modal || document.body.classList.contains('is-mobile') || (window.DesignNav && DesignNav.open)) return;
+    if (!cur || cur.id === 'home' || cur.def.noIdle || this.modal || document.body.classList.contains('is-mobile') || Settings.open || $('#connection-dialog').open) return;
     if (Date.now() - this.last > CONFIG.idle.warnAfterSec * 1000) this.warn();
   },
   warn() {
@@ -4195,7 +4228,6 @@ function runGenView(el, ctx, { stages, estimateMs, task, tipsCount, onRetry }) {
     if (b.dataset.act === 'gen-home') { Sound.tap(); App.home(); }
   });
   return Promise.resolve().then(() => {
-    if (window.DesignNav && DesignNav.failNext) { DesignNav.failNext = false; throw new Error('Tasarım önizlemesi: örnek hata durumu'); }
     return task();
   }).then(
     (res) => { done = true; return ctx.sleep(1150).then(() => res); },
@@ -4210,12 +4242,13 @@ function resultViewHTML({ img, alt, title = '', text = '', extra = '', regenLabe
     <div class="res-side">
       <div class="eyebrow acc rise" style="--i:1">Adım 4 · Sonuç</div>
       ${extra || `<h2 class="rise" style="--i:2">${title}</h2><p class="lead rise" style="--i:3">${text}</p>`}
+      ${API.live ? '' : '<p class="fine demo-sample-note">Demo Modu: kayıtlı gerçek örnek gösterilir; seçimler ve yeniden üretme bu görseli değiştirmez.</p>'}
       <div class="qr-card rise" style="--i:4">
         <div class="qr-box"><div class="spinner"></div></div>
         <div class="qr-copy"><b>${icon('phone')} Telefonuna al</b><span>Telefonunun kamerasını QR koda tut; görselin açılsın, indir ya da LinkedIn ve Instagram’da paylaş.</span><small class="qr-url">Bağlantı hazırlanıyor…</small></div>
       </div>
       <div class="btn-row rise" style="--i:5">
-        <button class="btn btn-lg btn-primary" data-act="regen">${icon('refresh')} ${regenLabel}</button>
+        <button class="btn btn-lg btn-primary" data-act="regen">${icon('refresh')} ${API.live ? regenLabel : 'Örneği tekrar göster'}</button>
         <button class="btn btn-lg btn-glass" data-act="restart">${icon('restart')} Baştan başla</button>
       </div>
       <p class="fine rise" style="--i:6">${icon('shield')} ${esc(CONFIG.share.retentionText)}</p>
@@ -4260,7 +4293,7 @@ function initGlobalEvents() {
   document.addEventListener('dragstart', (e) => e.preventDefault());
   document.addEventListener('gesturestart', (e) => e.preventDefault());
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { if (Modal.cur) Modal.cur.close(); else if (window.DesignNav && DesignNav.open) DesignNav.toggle(false); }
+    if (e.key === 'Escape' && !Settings.open && !$('#connection-dialog').open && Modal.cur) Modal.cur.close();
   });
 }
 
@@ -4283,7 +4316,7 @@ SCREENS.home = {
   title: 'Ana ekran',
   render() {
     return `<div class="home">
-      <header class="home-top rise" style="--i:0">${brandLockup('lg')}<div class="live-chip"><span class="dot"></span>${esc(CONFIG.event.title)}</div></header>
+      <header class="home-top rise" style="--i:0">${brandLockup('lg')}<div class="live-chip" data-mode="${CONFIG.ai.mode}"><span class="dot"></span><span data-mode-label>${modeLabel()}</span></div></header>
       <div class="home-hero">
         <div class="eyebrow-chip rise" style="--i:1">${icon('sparkle')} Microsoft yapay zekâ teknolojileriyle</div>
         <h1 class="hero-title rise" style="--i:2">Yapay zekâ ile <span class="grad-text">yıldızını parlat.</span></h1>
@@ -4396,7 +4429,7 @@ SCREENS['photo.theme'] = {
     return `<div class="scr-head">
       <div class="eyebrow acc rise">Adım 2 · Sahneni seç</div>
       <h2 class="rise" style="--i:1">Hikâyen hangi dünyada geçsin?</h2>
-      <p class="lead rise" style="--i:2">Yapay zekâ seni seçtiğin sahneye, ${esc(CONFIG.event.productBrand + ' ' + p.name)} ile birlikte yerleştirecek.</p>
+      <p class="lead rise" style="--i:2">${API.live ? `Yapay zekâ seni seçtiğin sahneye, ${esc(CONFIG.event.productBrand + ' ' + p.name)} ile birlikte yerleştirecek.` : 'Demo Modu, seçtiğin temanın daha önce üretilmiş gerçek örneğini gösterir.'}</p>
     </div>
     <div class="grid-3 theme-grid${sel ? ' has-selection' : ''}">${THEMES.map((t, i) => `
       <button class="choice theme-card rise${sel === t.id ? ' is-selected' : ''}" style="--i:${3 + i}" data-theme="${t.id}">
@@ -4431,11 +4464,11 @@ SCREENS['photo.camera'] = {
   exp: 'photo', step: 3, title: 'Fotoğraf çekimi',
   guard: () => (!STATE.photo.productId ? 'photo.quiz' : !STATE.photo.themeId ? 'photo.theme' : null),
   render() {
-    const p = byId(PRODUCTS, STATE.photo.productId), t = byId(THEMES, STATE.photo.themeId);
+    const p = photoDisplayProduct(), t = byId(THEMES, STATE.photo.themeId);
     return `<div class="cam-layout">
       <div class="cam-frame rise">
         <video playsinline muted autoplay></video>
-        <img class="cam-shot" alt="Çektiğin fotoğraf">
+        <img class="cam-shot" alt="${API.live ? 'Çektiğin fotoğraf' : 'Kayıtlı örnek fotoğraf'}">
         <div class="cam-guide">${cameraGuideSVG()}</div>
         <div class="cam-corners"><i></i><i></i><i></i><i></i></div>
         <span class="chip cam-hint">${icon('user')} Belden yukarın kadrajda olsun</span>
@@ -4465,7 +4498,7 @@ SCREENS['photo.camera'] = {
           <button class="btn btn-lg btn-glass" data-act="retry">${icon('refresh')} Tekrar dene</button>
           <button class="btn btn-lg btn-primary" data-act="demo">${icon('user')} Örnek fotoğrafla devam et</button>
         </div>
-        <p class="consent rise" style="--i:6">Devam ederek fotoğrafının yalnızca bu tasarımı üretmek için işlenmesini kabul edersin. <button class="link-btn inline" data-act="kvkk">Aydınlatma metni</button></p>
+        <p class="consent rise" style="--i:6">${API.live ? 'Devam ederek fotoğrafının yalnızca bu tasarımı üretmek için işlenmesini kabul edersin.' : 'Demo Modu kayıtlı örnek fotoğrafı kullanır; kameraya erişilmez.'} <button class="link-btn inline" data-act="kvkk">Aydınlatma metni</button></p>
       </div>
     </div>`;
   },
@@ -4474,6 +4507,10 @@ SCREENS['photo.camera'] = {
     const video = $('video', el), shot = $('.cam-shot', el), cnt = $('.cam-count', el), flash = $('.cam-flash', el);
     const set = (s) => { el.dataset.state = s; };
     const start = () => {
+      if (!API.live) {
+        STATE.photo.photo = demoPortrait(); shot.src = STATE.photo.photo; set('review');
+        return;
+      }
       set('loading');
       Camera.start(video).then(() => { if (!ctx.alive) { Camera.stop(); return; } set('live'); })
         .catch(() => { if (ctx.alive) set('error'); });
@@ -4510,12 +4547,12 @@ SCREENS['photo.gen'] = {
   exp: 'photo', step: 4, noIdle: true, title: 'Yapay zekâ tasarlıyor',
   guard: () => (!STATE.photo.productId ? 'photo.quiz' : !STATE.photo.themeId ? 'photo.theme' : !STATE.photo.photo ? 'photo.camera' : null),
   render(ctx) {
-    const p = byId(PRODUCTS, STATE.photo.productId), t = byId(THEMES, STATE.photo.themeId);
+    const p = photoDisplayProduct(), t = byId(THEMES, STATE.photo.themeId);
     ctx.tips = tipsFor('photo');
     return genViewHTML({ stages: photoStages(p, t), etaSec: API.live ? 20 : 10, sticker: packSVG(p), tips: ctx.tips });
   },
   mount(el, ctx) {
-    const s = STATE.photo, p = byId(PRODUCTS, s.productId), t = byId(THEMES, s.themeId);
+    const s = STATE.photo, p = photoDisplayProduct(), t = byId(THEMES, s.themeId);
     ParticlePortrait($('.gen-canvas', el), ctx, { src: s.photo, palette: t.palette });
     runGenView(el, ctx, {
       stages: photoStages(p, t), estimateMs: API.live ? 20000 : 9500, tipsCount: ctx.tips.length, onRetry: () => App.go('photo.gen'),
@@ -4528,15 +4565,15 @@ SCREENS['photo.result'] = {
   exp: 'photo', step: 4, title: 'Sonuç',
   guard: () => (STATE.photo.result ? null : 'photo.quiz'),
   render() {
-    const s = STATE.photo, p = byId(PRODUCTS, s.productId), t = byId(THEMES, s.themeId);
+    const s = STATE.photo, p = photoDisplayProduct(), t = byId(THEMES, s.themeId);
     return resultViewHTML({
       img: s.result, alt: `${t.name} temasında, ${p.name} ile yapay zekâ anı fotoğrafı`,
       title: 'Tatlı anın hazır!',
-      text: `${esc(t.name)} sahnesinde, ${esc(CONFIG.event.productBrand + ' ' + p.name)} ile sen. Beğenmezsen yeniden üret; beğendiysen hemen telefonuna al.`,
+      text: API.live ? `${esc(t.name)} sahnesinde, ${esc(CONFIG.event.productBrand + ' ' + p.name)} ile sen. Beğenmezsen yeniden üret; beğendiysen hemen telefonuna al.` : `${esc(t.name)} temasının ${esc(CONFIG.event.productBrand + ' ' + p.name)} ile daha önce oluşturulmuş örneği.`,
     });
   },
   mount(el, ctx) {
-    const s = STATE.photo, p = byId(PRODUCTS, s.productId), t = byId(THEMES, s.themeId);
+    const s = STATE.photo, p = photoDisplayProduct(), t = byId(THEMES, s.themeId);
     mountResult(el, ctx, {
       exp: 'photo', img: s.result, meta: { product: p.id, theme: t.id },
       colors: [p.colors[0], p.colors[2], '#ffd166', '#ffffff', '#ff4d6d'],
@@ -4837,9 +4874,9 @@ SCREENS['career.result'] = {
   render() {
     const s = STATE.career, st = byId(CAREER_STYLES, s.styleId);
     return resultViewHTML({
-      img: s.result, alt: `${s.profile.name} için ${st.name} tarzında kariyer infografiği`,
+      img: s.result, alt: API.live ? `${s.profile.name} için ${st.name} tarzında kariyer infografiği` : 'Kayıtlı kariyer infografiği örneği',
       title: 'Kariyer yıldız haritan hazır!',
-      text: `Yolculuğun, ${esc(st.name.toLocaleLowerCase('tr-TR'))} tarzında tek bir görselde. Farklı bir yorum için yeniden üretebilir ya da hemen telefonuna alabilirsin.`,
+      text: API.live ? `Yolculuğun, ${esc(st.name.toLocaleLowerCase('tr-TR'))} tarzında tek bir görselde. Farklı bir yorum için yeniden üretebilir ya da hemen telefonuna alabilirsin.` : 'Daha önce oluşturulmuş kariyer infografiği örneğini incele veya telefonuna al.',
     });
   },
   mount(el, ctx) {
@@ -4997,6 +5034,7 @@ SCREENS['lab.gen'] = {
       stages: labStages(), estimateMs: API.live ? 20000 : 9000, tipsCount: ctx.tips.length, onRetry: () => App.go('lab.gen'),
       task: async () => {
         const concept = await API.lab.concept({ base, flavors, moment, variation: s.variation || 0 });
+        if (!ctx.alive) throw new DOMException('Deneyim kapatıldı.', 'AbortError');
         const img = await API.lab.packaging(concept, { variation: s.variation || 0 });
         return { concept, img };
       },
@@ -5054,12 +5092,7 @@ async function shareFile(d, fileOnly, url) {
   return false;
 }
 async function sampleImage(exp) {
-  if (exp === 'career') {
-    const p = mockProfile(mockPeople('Deniz Yıldız', true)[0]); Object.assign(p, mockSummary(p));
-    return renderInfographic(p, 'constellation');
-  }
-  if (exp === 'lab') return renderPackaging(mockConcept(LAB_BASES[1], [LAB_FLAVORS[1], LAB_FLAVORS[2]], LAB_MOMENTS[1], 0));
-  return renderPhotoMock({ photo: demoPortrait(), product: PRODUCTS[0], theme: THEMES[0], variation: 0 });
+  return SavedSamples.image(exp === 'photo' ? 'photo-snowglobe' : exp);
 }
 
 const MobilePage = {
@@ -5124,7 +5157,13 @@ const MobilePage = {
     const d = this.data(exp, '');
     root.innerHTML = this.html(d);
     this.mount(root, d);
-    sampleImage(exp).then((img) => { d.img = img; root.innerHTML = this.html(d); }).catch(() => {});
+    sampleImage(exp).then((img) => { d.img = img; root.innerHTML = this.html(d); }).catch((error) => {
+      console.error('Kayıtlı paylaşım örneği yüklenemedi:', error);
+      const message = document.createElement('p');
+      message.className = 'm-foot'; message.setAttribute('role', 'alert');
+      message.textContent = 'Örnek görsel yüklenemedi. Sayfayı yenileyin.';
+      root.append(message);
+    });
   },
 };
 
@@ -5146,7 +5185,10 @@ const PhonePreview = {
     fit(); window.addEventListener('resize', fit);
     const screen = $('.phone-screen', stage);
     MobilePage.mount(screen, d, { pageUrl: ls ? ls.url : shareUrlFor(exp, 'onizleme') });
-    if (!d.img) sampleImage(exp).then((img) => { d.img = img; screen.innerHTML = MobilePage.html(d); });
+    if (!d.img) sampleImage(exp).then((img) => { d.img = img; screen.innerHTML = MobilePage.html(d); }).catch((error) => {
+      console.error('Kayıtlı paylaşım örneği yüklenemedi:', error);
+      Toast.show('Örnek görsel yüklenemedi. Yeniden deneyin.');
+    });
     const close = () => { window.removeEventListener('resize', fit); stage.remove(); };
     stage.addEventListener('click', (e) => { if (e.target === stage || e.target.closest('[data-close]')) close(); });
     this.close = close;
@@ -5154,87 +5196,79 @@ const PhonePreview = {
   close: null,
 };
 
-/* Tasarım önizleme paneli (CONFIG.designMode) */
-const DesignNav = {
-  open: false, el: null, fab: null, failNext: false,
-  groups: [
-    ['Genel', [['home', 'Ana ekran'], ['@phone', 'Telefon (QR) sayfası'], ['@idle', 'Boşta kalma uyarısı'], ['@kvkk', 'KVKK bilgilendirmesi']]],
-    ['Tatlı Anı Stüdyosu', [['photo.quiz', 'Karakter sorusu'], ['photo.reveal', 'Lezzet ruhu'], ['photo.theme', 'Tema seçimi'], ['photo.camera', 'Kamera ve çekim'], ['photo.gen', 'Üretim animasyonu'], ['photo.result', 'Sonuç ve QR']]],
-    ['Kariyer Yıldız Haritan', [['career.name', 'Ad soyad ve klavye'], ['career.search', 'LinkedIn araması'], ['career.pick', 'Profil seçimi'], ['career.analyze', 'Profil analizi'], ['career.style', 'Stil seçimi'], ['career.gen', 'Üretim animasyonu'], ['career.result', 'Sonuç ve QR']]],
-    ['Lezzet Laboratuvarı', [['lab.base', 'Temel seçimi'], ['lab.flavor', 'Lezzet seçimi'], ['lab.moment', 'An seçimi'], ['lab.gen', 'Üretim animasyonu'], ['lab.result', 'Sonuç ve QR']]],
-    ['Durumlar', [['@camerr', 'Kamera erişim hatası'], ['@generr', 'Üretim hatası'], ['@notfound', 'Profil bulunamadı']]],
-  ],
+function modeLabel() { return API.live ? 'Live Mode' : 'Demo Modu'; }
+
+const Settings = {
+  el: null, fab: null, openConnection: null,
+  get open() { return !!this.el?.open; },
   init() {
+    if (this.el) return;
     this.fab = document.createElement('button');
-    this.fab.className = 'dn-fab'; this.fab.innerHTML = `${icon('grid')} Ekranlar`; this.fab.setAttribute('aria-label', 'Tasarım önizleme: tüm ekranlar');
-    this.el = document.createElement('aside');
-    this.el.className = 'dn-panel'; this.el.setAttribute('aria-label', 'Tasarım önizleme');
-    let n = 0;
-    this.el.innerHTML = `<div class="dn-head"><div><b>Tasarım önizleme</b><small>Tüm ekranlar ve durumlar</small></div><button class="dn-close" data-dn="close" aria-label="Kapat">${icon('x')}</button></div>
-      <div class="dn-body">${this.groups.map(([g, items]) => `<div class="dn-group"><h4>${esc(g)}</h4>${items.map(([id, label]) => `<button class="dn-item" data-dn-go="${id}"><i>${String(++n).padStart(2, '0')}</i>${esc(label)}</button>`).join('')}</div>`).join('')}</div>
-      <div class="dn-foot"><button data-dn="fs">${'Tam ekran'}</button><button data-dn="speed">Demo hızı: normal</button><button data-dn="sound">Ses: ${CONFIG.sound ? 'açık' : 'kapalı'}</button>
-      <p class="note">Bu panel yalnızca tasarım incelemesi içindir. Etkinlikte <b>CONFIG.designMode = false</b> yapın. Şu an yapay zekâ çağrıları temsili (mock) çalışıyor.</p></div>`;
-    document.body.appendChild(this.fab); document.body.appendChild(this.el);
+    this.fab.className = 'settings-fab';
+    this.fab.innerHTML = `${icon('settings')} Ayarlar`;
+    this.fab.setAttribute('aria-haspopup', 'dialog');
+    this.fab.setAttribute('aria-controls', 'kiosk-settings');
+    this.fab.setAttribute('aria-expanded', 'false');
+    this.el = document.createElement('dialog');
+    this.el.id = 'kiosk-settings';
+    this.el.className = 'settings-panel';
+    this.el.setAttribute('aria-labelledby', 'settings-title');
+    this.el.innerHTML = `<div class="settings-head"><div><h2 id="settings-title">Ayarlar</h2><p data-mode-label>${modeLabel()}</p></div><button class="settings-close" data-settings="close" aria-label="Ayarları kapat">${icon('x')}</button></div>
+      <div class="settings-body">
+        <button class="settings-item" data-settings="sound" role="switch" aria-checked="${CONFIG.sound}">${icon('volume')}<span class="settings-copy"><b>Ses</b><small>Dokunma ve deneyim sesleri</small></span><span class="settings-state" id="settings-sound-state"></span></button>
+        <button class="settings-item" data-settings="fullscreen">${icon('fullscreen')}<span class="settings-copy"><b id="settings-fullscreen-label">Tam ekran yap</b><small>Kiosk görünümünü genişlet</small></span></button>
+        <button class="settings-item" data-settings="mode">${icon('key')}<span class="settings-copy"><b>Mod değiştir</b><small>Demo Modu veya Live Mode</small></span></button>
+        <p class="settings-note" id="settings-busy" hidden>Mod değişikliği, devam eden işlem tamamlandıktan sonra kullanılabilir.</p>
+        <a class="settings-item" href="samples.html">${icon('grid')}<span class="settings-copy"><b>Örnek tasarımlar</b><small>Fotoğraf ve ambalaj galerisini keşfet</small></span>${icon('arrowRight')}</a>
+      </div>`;
+    document.body.append(this.fab, this.el);
     this.fab.addEventListener('click', () => this.toggle());
-    this.el.addEventListener('click', (e) => {
-      const go = e.target.closest('[data-dn-go]');
-      if (go) { this.jump(go.dataset.dnGo); return; }
-      const b = e.target.closest('[data-dn]'); if (!b) return;
-      const a = b.dataset.dn;
-      if (a === 'close') this.toggle(false);
-      if (a === 'fs') { if (!document.fullscreenElement) document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(() => {}); else document.exitFullscreen(); }
-      if (a === 'speed') { CONFIG.mock.speed = CONFIG.mock.speed === 1 ? 0.35 : 1; b.textContent = `Demo hızı: ${CONFIG.mock.speed === 1 ? 'normal' : 'hızlı'}`; }
-      if (a === 'sound') { CONFIG.sound = !CONFIG.sound; b.textContent = `Ses: ${CONFIG.sound ? 'açık' : 'kapalı'}`; }
+    this.el.addEventListener('close', () => {
+      this.fab.setAttribute('aria-expanded', 'false');
+      Idle.reset();
     });
+    this.el.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-settings]');
+      if (!button || button.disabled) return;
+      const action = button.dataset.settings;
+      if (action === 'close') this.toggle(false);
+      if (action === 'sound') { CONFIG.sound = !CONFIG.sound; this.refresh(); }
+      if (action === 'fullscreen') this.toggleFullscreen();
+      if (action === 'mode') { this.toggle(false); this.openConnection(); }
+    });
+    document.addEventListener('fullscreenchange', () => this.refresh());
+    this.refresh();
+  },
+  refresh() {
+    if (!this.el) return;
+    const sound = $('[data-settings="sound"]', this.el);
+    sound.setAttribute('aria-checked', String(CONFIG.sound));
+    $('#settings-sound-state', this.el).textContent = CONFIG.sound ? 'Açık' : 'Kapalı';
+    $('#settings-fullscreen-label', this.el).textContent = document.fullscreenElement ? 'Tam ekrandan çık' : 'Tam ekran yap';
+    const busy = !!App.cur?.def.noIdle;
+    $('[data-settings="mode"]', this.el).disabled = busy;
+    $('#settings-busy', this.el).hidden = !busy;
+    $$('[data-mode-label]').forEach(el => { el.textContent = modeLabel(); });
   },
   toggle(force) {
-    this.open = force == null ? !this.open : !!force;
-    this.el.classList.toggle('open', this.open);
+    const open = force == null ? !this.open : force;
+    if (open) { this.refresh(); this.el.showModal(); }
+    else this.el.close();
+    this.fab.setAttribute('aria-expanded', String(open));
   },
-  mark(id) { if (!this.el) return; $$('.dn-item', this.el).forEach((b) => b.classList.toggle('cur', b.dataset.dnGo === id)); },
-  async seed(id) {
-    const exp = id.split('.')[0], at = (...ids) => ids.includes(id);
-    if (exp === 'photo') {
-      const s = STATE.photo;
-      s.productId = s.productId || 'cocostar';
-      if (!at('photo.quiz', 'photo.reveal')) s.themeId = s.themeId || 'snowglobe';
-      if (at('photo.gen', 'photo.result')) s.photo = s.photo || demoPortrait();
-      if (at('photo.result') && !s.result) s.result = await renderPhotoMock({ photo: s.photo, product: byId(PRODUCTS, s.productId), theme: byId(THEMES, s.themeId), variation: s.variation || 0 });
-    }
-    if (exp === 'career') {
-      const s = STATE.career;
-      s.name = s.name || (id === 'career.name' ? '' : 'Deniz Yıldız');
-      if (!at('career.name', 'career.search')) s.results = s.results || mockPeople(s.name, true);
-      if (at('career.analyze', 'career.style', 'career.gen', 'career.result')) s.picked = s.picked || s.results[0];
-      if (at('career.style', 'career.gen', 'career.result') && !s.profile) { s.profile = mockProfile(s.picked); Object.assign(s.profile, mockSummary(s.profile)); }
-      if (at('career.gen', 'career.result')) s.styleId = s.styleId || 'constellation';
-      if (at('career.result') && !s.result) s.result = await renderInfographic(s.profile, s.styleId, { variation: s.variation || 0 });
-    }
-    if (exp === 'lab') {
-      const s = STATE.lab;
-      if (!at('lab.base')) s.baseId = s.baseId || 'gofret';
-      if (at('lab.moment', 'lab.gen', 'lab.result') && !(s.flavorIds || []).length) s.flavorIds = ['antep', 'karamel'];
-      if (at('lab.gen', 'lab.result')) s.momentId = s.momentId || 'mola';
-      if (at('lab.result') && !s.result) { const { base, flavors, moment } = labPicks(); s.concept = mockConcept(base, flavors, moment, s.variation || 0); s.result = await renderPackaging(s.concept); }
-    }
-  },
-  async jump(id) {
-    if (Modal.cur) Modal.cur.close(true);
-    if (PhonePreview.close) { PhonePreview.close(); PhonePreview.close = null; }
-    if (id === '@phone') { this.toggle(false); PhonePreview.open(); return; }
-    if (id === '@kvkk') { kvkkModal(); return; }
-    if (id === '@idle') { this.toggle(false); Idle.warn(); return; }
-    if (id === '@camerr') { await this.seed('photo.camera'); STATE.photo.photo = null; STATE.photo._camErr = true; App.go('photo.camera'); return; }
-    if (id === '@generr') { await this.seed('photo.gen'); this.failNext = true; App.go('photo.gen'); return; }
-    if (id === '@notfound') { await this.seed('career.search'); App.go('career.name'); setTimeout(() => notFoundModal(false), 500); return; }
-    const isResult = /\.result$/.test(id);
-    if (isResult) Toast.show('Örnek görsel hazırlanıyor…', 1200);
-    try { await this.seed(id); } catch (e) { console.error(e); }
-    if (id === 'home') { App.home(); return; }
-    App.go(id);
+  async toggleFullscreen() {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else {
+        if (!document.documentElement.requestFullscreen) throw new Error('Tam ekran API desteklenmiyor.');
+        await document.documentElement.requestFullscreen();
+      }
+    } catch (error) {
+      console.error('Tam ekran değiştirilemedi:', error);
+      Toast.show('Tam ekran değiştirilemedi. Tarayıcı izinlerini kontrol edin.');
+    } finally { this.refresh(); }
   },
 };
-window.DesignNav = DesignNav;
 
 /* ---------- Açılış ---------- */
 function softwareRendering() {
@@ -5263,13 +5297,16 @@ function chooseConnection(start) {
   const dialog = $('#connection-dialog'), form = $('#connection-form'), error = $('#connection-error');
   const choice = $('#connection-choice'), help = $('#connection-help'), title = $('#connection-title');
   const storageKey = 'mai-kiosk-foundry';
+  let chosen = false;
+  $('#connection-live').innerHTML = 'Canlı Mod ' + icon('key');
   const finish = () => {
+    chosen = true;
     form.reset();
     dialog.close();
     start();
   };
-  dialog.addEventListener('cancel', (event) => event.preventDefault());
-  $('#connection-demo').addEventListener('click', finish, { once: true });
+  dialog.addEventListener('cancel', (event) => { if (!chosen) event.preventDefault(); });
+  $('#connection-demo').addEventListener('click', () => { CONFIG.ai.mode = 'mock'; finish(); });
   $('#connection-live').addEventListener('click', async () => {
     choice.hidden = true;
     form.hidden = false;
@@ -5314,7 +5351,7 @@ function chooseConnection(start) {
   $('#connection-back').addEventListener('click', () => {
     form.hidden = true;
     choice.hidden = false;
-    title.textContent = 'Kioska hoş geldin';
+    title.textContent = 'Microsoft AI Kiosk\'a hoş geldin';
     help.textContent = 'Devam etmek için bir mod seç.';
     $('#connection-live').focus();
   });
@@ -5346,7 +5383,16 @@ function chooseConnection(start) {
     });
     finish();
   });
-  dialog.showModal();
+  const open = () => {
+    form.hidden = true;
+    choice.hidden = false;
+    error.hidden = true;
+    title.textContent = 'Microsoft AI Kiosk\'a hoş geldin';
+    help.textContent = 'Devam etmek için bir mod seç.';
+    dialog.showModal();
+  };
+  open();
+  return open;
 }
 function boot() {
   makeGrain();
@@ -5355,13 +5401,10 @@ function boot() {
   const m = (location.hash || '').match(/^#m\/(photo|career|lab)\/([\w-]+)/);
   if (m) { MobilePage.boot(m[1]); return; }
   Topbar.init();
+  Settings.init();
+  Idle.init();
   App.go('home');
-  chooseConnection(() => {
-    Idle.init();
-    if (CONFIG.designMode) DesignNav.init();
-    const dl = (location.hash || '').match(/^#ekran=([\w.@-]+)/);
-    if (dl && CONFIG.designMode) setTimeout(() => DesignNav.jump(dl[1]), 60);
-  });
+  Settings.openConnection = chooseConnection(() => App.home());
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 
