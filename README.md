@@ -21,7 +21,7 @@ GitHub Pages bu yerel ayarları istemez. Canlı moda devam etmeden model çağr�
 yapılmaz. HTML'yi doğrudan açarsanız ayarları elle girebilirsiniz.
 
 Canlı mod için Microsoft Foundry kaynak adresini (`https://<kaynak>.services.ai.azure.com`),
-anahtarı ve dağıtım adını girin. Görsel modeli alanı `MAI-Image-2-Flash` ile
+anahtarı ve dağıtım adını girin. Görsel modeli alanı `MAI-Image-2.7-Flash` ile
 başlar; Foundry’deki gerçek dağıtım adını kullanın. Lezzet Laboratuvarı için
 aynı kaynaktaki `MAI-Thinking-1` dağıtım adını isteğe bağlı olarak girin.
 Bu alan boşsa Lab metni cihazda hazırlanır, ambalaj görseli yine MAI ile üretilir.
