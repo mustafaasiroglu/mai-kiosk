@@ -10,7 +10,7 @@ adresini açın. Demo modu Foundry anahtarı istemez ve model çağrısı yapmaz
 
 Repo kökündeki `.env` dosyası varsa Canlı seçildiğinde bağlantı formu otomatik
 doldurulur. `FOUNDRY_ENDPOINT`, `FOUNDRY_API_KEY`,
-`FOUNDRY_IMAGE_DEPLOYMENT` ve isteğe bağlı `FOUNDRY_LAB_DEPLOYMENT` alanlarını
+`FOUNDRY_IMAGE_DEPLOYMENT` ve `FOUNDRY_LAB_DEPLOYMENT` alanlarını
 `AD=değer` biçiminde yazın; değerler tek veya çift tırnak içine alınabilir.
 Değişken genişletme ve satır sonu yorumları desteklenmez.
 Dosyadaki alanlar tarayıcıda kayıtlı değerlerin önüne geçer; boş değerler de
@@ -23,8 +23,16 @@ yapılmaz. HTML'yi doğrudan açarsanız ayarları elle girebilirsiniz.
 Canlı mod için Microsoft Foundry kaynak adresini (`https://<kaynak>.services.ai.azure.com`),
 anahtarı ve dağıtım adını girin. Görsel modeli alanı `MAI-Image-2.7-Flash` ile
 başlar; Foundry’deki gerçek dağıtım adını kullanın. Lezzet Laboratuvarı için
-aynı kaynaktaki `MAI-Thinking-1` dağıtım adını isteğe bağlı olarak girin.
-Bu alan boşsa Lab metni cihazda hazırlanır, ambalaj görseli yine MAI ile üretilir.
+aynı kaynaktaki `gpt-5.4-mini` dağıtımı varsayılan metin modelidir; bağlantı
+ayarlarından başka bir dağıtım seçilebilir veya adı elle girilebilir.
+Metin modeli Laboratuvar için gereklidir; yalnızca Fotoğraf veya Kariyer
+kullanılacaksa bu alan boş bırakılabilir.
+GPT modelleri `/openai/v1/chat/completions`, adı `MAI-` ile başlayan metin
+dağıtımları eski `/mai/v1/chat/completions` API'sini kullanır.
+Canlı Laboratuvar önce LLM ile ad, slogan, hikâye ve İngilizce görsel yönlendirmesi
+üretir; alanları ve uzunluklarını doğruladıktan sonra ambalaj görselini oluşturur.
+Metin modeli hatasında cihazda hazırlanmış metne sessizce dönülmez; hata ekranı
+gösterilir ve görsel çağrısı yapılmaz. Demo modu tamamen cihazda çalışmaya devam eder.
 
 Açılışta Demo veya Canlı seçin. Canlı bağlantı ayarları ve anahtar tarayıcının
 yerel depolamasında saklanır ve yenilemeden sonra Canlı seçildiğinde tekrar
@@ -42,18 +50,24 @@ bağlantısı yalnızca örnek sonuç gösterir.
 ## Canlı test örnekleri
 
 `samples.html` önceki ve güncel prompt çıktılarının karşılaştırma galerisidir.
-Görseller `samples/baseline/` ve `samples/promotional/` altında saklanır;
+Güncel görseller `samples/reference-photo/`, eski çizim tabanlı denemeler
+`samples/baseline/` ve `samples/promotional/` altında saklanır;
 her örneğin ham PNG ve kioskta oluşturulan JPEG çıktısı bulunur.
-Portre referansı uygulamanın temsili çizimidir; gerçek katılımcı fotoğrafı
-veya anahtar bu örneklere eklenmez. Yeni örnekler herkese açık Pages yayınına
-gireceğinden yalnızca paylaşılması onaylı, kişisel veri içermeyen test
-görsellerini bu klasöre koyun.
+Güncel portrelerin kamera girdisi `sample_photo.jpeg`, eski denemelerin
+referansı `samples/reference_old.jpg` dosyasıdır. Yeni Laboratuvar
+örneklerinde GPT'nin ürettiği metin ve görsel yönlendirmesi de JSON kaydında
+saklanır. Anahtar bu örneklere eklenmez. Bu dosyalar herkese açık Pages
+yayınına girdiğinden fotoğrafları ve üretilen sonuçları yalnızca ilgili
+kişinin yayımlama izniyle bu klasöre koyun.
 
 Fotoğraf çıktıları ürün minyatürünü ve Microsoft/etkinlik imzasını korur;
 sol alttaki ürün ve tema başlıkları kaldırılmıştır. Canlı fotoğraf promptu
 tek elde ürün, diğer elle ürünü gösterme pozunu kullanır. Reklam Yüzü ve
 diğer 3D temalarda vinyl/clay karakter yaklaşımı, Blok ve Pop Art
 temalarında kendi görsel stilleri korunur.
+Minecraft temasında hem modele gönderilen ambalaj referansı hem de alt banttaki
+ürün minyatürü düşük çözünürlükte piksel olarak hazırlanır; prompt ürünün de
+voxel/pixel-art dünyasına ait olmasını ister.
 
 Yerel kontroller: `node --test test_kiosk.js` ve
 `python -m unittest -q test_local_server`. Bu kontroller model çağrısı yapmaz.

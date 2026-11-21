@@ -98,16 +98,18 @@
   <a href="./">← Kioska dön</a>
   <h1>Canlı test örnekleri</h1>
   <p class="intro">Microsoft Foundry <strong>MAI-Image-2.7-Flash</strong> ile üretilen gerçek test çıktıları.
-    Önceki sürüm, eski prompt ve alt yazıları karşılaştırmak için korunmuştur.
-    Yeni fotoğraf sürümü tek elde ürün ve diğer elle gösterme pozunu kullanır; sol altta ürün ve tema yazısı yoktur.</p>
-  <p class="intro">Tüm portreler <a href="samples/reference.jpg">uygulamanın temsili çiziminden</a> üretildi; gerçek katılımcı fotoğrafı içermez.
-    Her kartta kiosk çıktısı ve modelin ham PNG dosyası ayrı açılabilir.</p>
+    Güncel fotoğraflarda aynı kamera referansı, tek elde ürün ve diğer elle gösterme pozu kullanılır.
+    Minecraft ambalajı da pixel-art olarak hazırlanır. Laboratuvar metinlerini görselden önce <strong>gpt-5.4-mini</strong> üretir.</p>
+  <p class="intro">Güncel portrelerin kaynağı <a href="sample_photo.jpeg">sample_photo.jpeg</a> dosyasıdır.
+    Eski sürümler <a href="samples/reference_old.jpg">temsili çizim referansıyla</a> karşılaştırma için korunur.
+    Her kartta kiosk çıktısı, modelin ham PNG dosyası ve varsa prompt kaydı ayrı açılabilir.</p>
   <div class="controls">
     <label>Sürüm
       <select id="version">
         <option value="all">Tüm sürümler</option>
-        <option value="promotional">Yeni · Ürünü gösterme pozu</option>
-        <option value="baseline">Önceki · İlk testler</option>
+        <option value="reference-photo" selected>Güncel · Kamera referansı + GPT</option>
+        <option value="promotional">Önceki · Çizimle poz denemesi</option>
+        <option value="baseline">İlk sürüm · Çizimle test</option>
       </select>
     </label>
     <label>Deneyim
@@ -138,9 +140,12 @@
   ];
   const samples = [
     ...photoCases.flatMap(sample => [
+      { ...sample, kind: 'photo', version: 'reference-photo' },
       { ...sample, kind: 'photo', version: 'baseline' },
       { ...sample, kind: 'photo', version: 'promotional' },
     ]),
+    { id: 'pack-wafer', title: 'GPT Lezzet Laboratuvarı', product: 'Antep Fıstığı & Tuzlu Karamel · Gofret', kind: 'pack', version: 'reference-photo' },
+    { id: 'pack-cake', title: 'GPT Lezzet Laboratuvarı', product: 'Vişne & Bitter Kakao · Kek', kind: 'pack', version: 'reference-photo' },
     { id: 'pack', title: 'Lezzet Laboratuvarı', product: 'Fıstık & Tuzlu Karamel Gofret', kind: 'pack', version: 'baseline' },
     { id: 'career', title: 'Kariyer Yıldız Haritası', product: 'Temsili veri analisti profili', kind: 'career', version: 'baseline' },
   ];
@@ -148,6 +153,9 @@
   const kind = document.querySelector('#kind');
   const search = document.querySelector('#search');
   const gallery = document.querySelector('#gallery');
+  const versionLabel = sample => sample.version === 'reference-photo'
+    ? 'Güncel · Kamera referansı + GPT'
+    : sample.version === 'promotional' ? 'Önceki · Çizimle poz denemesi' : 'İlk sürüm · Çizimle test';
   const text = (tag, content, className) => {
     const node = document.createElement(tag);
     node.textContent = content;
@@ -170,7 +178,7 @@
       imageLink.href = `${base}.jpg`;
       const image = document.createElement('img');
       image.src = imageLink.href;
-      image.alt = `${sample.title} · ${sample.product} · ${sample.version === 'promotional' ? 'Yeni poz' : 'Önceki sürüm'}`;
+      image.alt = `${sample.title} · ${sample.product} · ${versionLabel(sample)}`;
       image.loading = 'lazy';
       image.width = 1080;
       image.height = 1350;
@@ -179,7 +187,7 @@
       const content = document.createElement('div');
       content.className = 'card-content';
       content.append(
-        text('span', sample.version === 'promotional' ? 'Yeni · Ürünü gösterme pozu' : 'Önceki · İlk testler', 'badge'),
+        text('span', versionLabel(sample), 'badge'),
         text('h2', sample.title),
         text('p', sample.product),
       );
@@ -190,7 +198,7 @@
       const raw = text('a', 'Ham PNG');
       raw.href = `${base}-raw.png`;
       links.append(output, raw);
-      if (sample.version === 'promotional') {
+      if (sample.version !== 'baseline') {
         const prompt = text('a', 'Prompt');
         prompt.href = `${base}.json`;
         links.append(prompt);

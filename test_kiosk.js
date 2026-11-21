@@ -4,7 +4,7 @@ const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
 
-const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8').replace(/\r\n/g, '\n');
 const sourceBetween = (start, end) => {
   const offset = html.indexOf(start);
   assert.notEqual(offset, -1);
@@ -22,7 +22,11 @@ test('photo prompts preserve the holding-and-pointing pose across styles and var
     assert.match(prompt, /exactly one hand holds a single product package/);
     assert.match(prompt, /other hand points its index finger/);
     assert.match(prompt, /fingers stay away from the logo and label/);
-    assert.match(prompt, /preserve its exact silhouette/);
+    if (id === 'blocky') {
+      assert.match(prompt, /genuine low-resolution pixel art/);
+      assert.match(prompt, /No photographic wrapper/);
+      assert.doesNotMatch(prompt, /preserve its exact silhouette/);
+    } else assert.match(prompt, /preserve its exact silhouette/);
     assert.match(prompt, /Brand Snack with coconut and chocolate/);
     assert.match(prompt, /keeping the same one-hand-holds, other-hand-points pose/);
     assert.doesNotMatch(prompt, /\{product\}|\{ingredient\}/);
@@ -39,7 +43,7 @@ test('live and demo photos omit left-hand captions but retain the product thumbn
   const context = vm.createContext({
     makeCanvas: () => canvas,
     loadImage: async () => ({}),
-    packImage: async () => pack,
+    photoPackImage: async () => pack,
     mulberry32: () => () => 0,
     hashStr: () => 0,
     PHOTO_RENDERERS: { snowglobe() {} },
@@ -48,13 +52,127 @@ test('live and demo photos omit left-hand captions but retain the product thumbn
   });
   vm.runInContext(sourceBetween('async function renderPhotoMock(', '/* ---------- Kariyer infografi'), context);
   await context.renderPhotoMock({ photo: 'reference', product: { id: 'snack' }, theme: { id: 'snowglobe' } });
-  await context.composePhoto('generated', { id: 'snack' });
+  await context.composePhoto('generated', { id: 'snack' }, { id: 'snowglobe' });
   assert.equal(bands.length, 2);
   for (const options of bands) {
     assert.equal(options.pack, pack);
     assert.equal(options.title, undefined);
     assert.equal(options.sub, undefined);
   }
+});
+
+test('Minecraft package references become low-resolution pixel images while other themes retain the source', async () => {
+  const pack = { naturalWidth: 1000, naturalHeight: 300 };
+  let output;
+  const context = vm.createContext({
+    packImage: async () => pack,
+    makeCanvas: (width, height) => {
+      const g = { imageSmoothingEnabled: true, drawImage() {} };
+      output = { width, height, getContext: () => g };
+      return output;
+    },
+  });
+  vm.runInContext(sourceBetween('async function photoPackImage(', '/* Karakter sorusu ikonları'), context);
+  assert.equal(await context.photoPackImage({}, { id: 'snowglobe' }), pack);
+  const pixel = await context.photoPackImage({}, { id: 'blocky' });
+  assert.ok(pixel.width <= 64 && pixel.height <= 64);
+  assert.equal(pixel.getContext('2d').imageSmoothingEnabled, false);
+  assert.ok(Math.abs(pixel.width / pixel.height - pack.naturalWidth / pack.naturalHeight) < 0.1);
+});
+
+test('GPT Lab requests use the OpenAI v1 endpoint and strict structured output; MAI retains its endpoint', async () => {
+  for (const model of ['gpt-5.4-mini', 'MAI-Thinking-1']) {
+    let request;
+    const context = vm.createContext({
+      CONFIG: { ai: { labDeployment: model } },
+      MAI: { request: async (route, body, api) => {
+        request = { route, body, api };
+        return { ok: true, json: async () => ({ choices: [{ finish_reason: 'stop', message: { content: '{"name":"Test"}' } }] }) };
+      } },
+    });
+    vm.runInContext(sourceBetween('const LAB_COPY_LIMITS =', '/* ---------- Mock üreticiler'), context);
+    vm.runInContext(sourceBetween('const Chat = {', 'const Backend = {') + '\nglobalThis.chat = Chat;', context);
+    assert.equal((await context.chat.json('Instructions', 'Choices')).name, 'Test');
+    if (model.startsWith('gpt-')) {
+      assert.equal(request.api, 'openai/v1');
+      assert.equal(request.body.messages[0].role, 'developer');
+      assert.equal(request.body.response_format.json_schema.strict, true);
+      assert.deepEqual(Array.from(request.body.response_format.json_schema.schema.required), ['name', 'slogan', 'story', 'visualDirection']);
+      assert.match(request.body.response_format.json_schema.schema.properties.visualDirection.description, /360 characters/);
+    } else {
+      assert.equal(request.api, 'mai/v1');
+      assert.equal(request.body.response_format, undefined);
+    }
+  }
+});
+
+test('Lab copy validates empty and overlong fields instead of truncating or using mock text', async () => {
+  const good = { name: 'Fıstık Işığı', slogan: 'Molana çıtır bir ışıltı.', story: 'Fıstık ve karamel, çıtır gofrette buluşur.', visualDirection: 'Green and gold packaging on a warm neutral podium.' };
+  let response = good, calls = 0;
+  const context = vm.createContext({
+    CONFIG: { ai: { labDeployment: 'gpt-5.4-mini' }, event: { productBrand: 'Brand' } },
+    Chat: { json: async () => { calls++; return response; } },
+    mockConcept: () => ({ name: 'mock-name', slogan: 'mock-slogan', baseEn: 'wafer', flavorEn: 'pistachio' }),
+  });
+  vm.runInContext(sourceBetween('const LAB_COPY_LIMITS =', '/* ---------- Mock üreticiler'), context);
+  const lab = sourceBetween('  lab: {\n    async concept', '  share: {');
+  vm.runInContext(`globalThis.API = { get live() { return true; }, ${lab} };`, context);
+  const picks = { base: { name: 'Gofret' }, flavors: [{ name: 'Antep Fıstığı' }], moment: { name: 'Mola' } };
+  assert.equal((await context.API.lab.concept(picks)).name, good.name);
+  assert.equal(context.validateLabCopy({ ...good, name: 'x'.repeat(24) }).name.length, 24);
+  response = { ...good, name: 'x'.repeat(25) };
+  await assert.rejects(context.API.lab.concept(picks), /karakter sınırını aştı/);
+  response = { ...good, story: ' ' };
+  await assert.rejects(context.API.lab.concept(picks), /eksik bir konsept/);
+  const before = calls;
+  context.CONFIG.ai.labDeployment = '';
+  await assert.rejects(context.API.lab.concept(picks), /metin modeli dağıtımı seçin/);
+  assert.equal(calls, before);
+});
+
+test('Laboratory flavor choices render all twelve ingredient illustrations', () => {
+  const context = vm.createContext({
+    STATE: { lab: { baseId: 'gofret', flavorIds: [] } },
+    SCREENS: {},
+    esc: value => value,
+    icon: () => '',
+  });
+  vm.runInContext(sourceBetween('const LAB_BASES =', '/* ---------- "Biliyor muydun?"'), context);
+  vm.runInContext(sourceBetween('function baseArt(', '/* Kamera kılavuz silueti'), context);
+  vm.runInContext(sourceBetween("SCREENS['lab.flavor'] =", "SCREENS['lab.moment'] ="), context);
+  const rendered = context.SCREENS['lab.flavor'].render();
+  assert.equal([...rendered.matchAll(/data-flavor=/g)].length, 12);
+  assert.equal([...rendered.matchAll(/<svg /g)].length, 12);
+  assert.doesNotMatch(rendered, /undefined/);
+});
+
+test('Laboratory generation waits for copy and never requests an image when copy fails', async () => {
+  const order = [];
+  let task, releaseCopy;
+  const copyReady = new Promise(resolve => { releaseCopy = resolve; });
+  const context = vm.createContext({
+    STATE: { lab: {} },
+    SCREENS: {},
+    $: () => null,
+    FlaskViz() {},
+    labStages: () => [],
+    labPicks: () => ({ base: { name: 'Gofret' }, flavors: [{ name: 'Fıstık', color: 'green' }], moment: { name: 'Mola' } }),
+    runGenView: (_el, _ctx, options) => { task = options.task; return Promise.resolve(); },
+    API: { live: true, lab: {
+      concept: async () => { order.push('copy'); await copyReady; return { name: 'Generated name' }; },
+      packaging: async concept => { assert.equal(concept.name, 'Generated name'); order.push('image'); return 'generated image'; },
+    } },
+  });
+  vm.runInContext(sourceBetween("SCREENS['lab.gen'] =", "SCREENS['lab.result'] ="), context);
+  context.SCREENS['lab.gen'].mount({}, { alive: false, tips: [] });
+  const generation = task();
+  assert.deepEqual(order, ['copy']);
+  releaseCopy();
+  await generation;
+  assert.deepEqual(order, ['copy', 'image']);
+  context.API.lab.concept = async () => { throw new Error('Copy validation failed'); };
+  await assert.rejects(task(), /Copy validation failed/);
+  assert.deepEqual(order, ['copy', 'image']);
 });
 
 test('inline application and gallery scripts parse', () => {
@@ -71,18 +189,28 @@ test('gallery combines version, experience and search filters and displays empty
     replaceChildren(...nodes) { this.children = nodes; }
     addEventListener() {}
   }
-  const nodes = Object.fromEntries(['version', 'kind', 'search', 'gallery', 'count', 'empty']
-    .map(id => [`#${id}`, new Element(id === 'version' || id === 'kind' ? 'all' : '')]));
   const content = fs.readFileSync(path.join(__dirname, 'samples.html'), 'utf8');
+  const defaultVersion = content.match(/<option value="([^"]+)" selected>/)[1];
+  const nodes = Object.fromEntries(['version', 'kind', 'search', 'gallery', 'count', 'empty']
+    .map(id => [`#${id}`, new Element(id === 'version' ? defaultVersion : id === 'kind' ? 'all' : '')]));
   const scripts = [...content.matchAll(/<script>([\s\S]*?)<\/script>/g)];
   const context = vm.createContext({ document: {
     querySelector: selector => nodes[selector],
     createElement: () => new Element(),
   } });
   vm.runInContext(scripts.at(-1)[1], context);
-  nodes['#search'].value = 'Reklam';
+  assert.equal(nodes['#gallery'].children.length, 8);
+  nodes['#kind'].value = 'photo';
+  context.render();
+  assert.equal(nodes['#gallery'].children.length, 6);
+  nodes['#kind'].value = 'pack';
   context.render();
   assert.equal(nodes['#gallery'].children.length, 2);
+  nodes['#version'].value = 'all';
+  nodes['#kind'].value = 'all';
+  nodes['#search'].value = 'Reklam';
+  context.render();
+  assert.equal(nodes['#gallery'].children.length, 3);
   nodes['#version'].value = 'promotional';
   context.render();
   assert.equal(nodes['#gallery'].children.length, 1);
