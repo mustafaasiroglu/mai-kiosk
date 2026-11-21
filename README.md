@@ -65,9 +65,14 @@ bağlantısı yalnızca örnek sonuç gösterir.
 
 ## Canlı test örnekleri
 
-`samples.html` önceki ve güncel prompt çıktılarının karşılaştırma galerisidir.
+`samples.html` her senaryonun en son eklenen örneğini gösteren ortak galeridir:
+altı fotoğraf teması, Kariyer ve Lezzet Laboratuvarı için birer kart.
 Galeri ana sayfayla aynı renkleri kullanır; ortak renkler `kiosk-theme.css`
-dosyasında tanımlıdır. Sürüm, deneyim ve arama filtreleriyle örnekler seçilebilir.
+dosyasında tanımlıdır. Deneyim ve arama filtreleri vardır; sürüm ayrımı yoktur.
+Yeni denemeleri farklı dosya adlarıyla `samples/` altında saklayıp
+`samples.html` içindeki `attempts` listesine ekleyin. Aynı senaryonun `id`
+değerini koruyun; en sona eklenen kayıt öncekinin yerini galeride alır.
+Eski kayıtlar ve dosyalar silinmez; yeni testlerde her senaryo için tek örnek yeterlidir.
 Güncel görseller `samples/reference-photo/`, eski çizim tabanlı denemeler
 `samples/baseline/` ve `samples/promotional/` altında saklanır;
 her örneğin ham PNG ve kioskta oluşturulan JPEG çıktısı bulunur.

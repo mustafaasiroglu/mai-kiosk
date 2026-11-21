@@ -42,7 +42,6 @@
     .card h2 { margin: 12px 0 8px; font-size: 20px; }
     .card-content { padding: 16px; }
     .card p { margin: 8px 0 12px; color: var(--cp-text-muted); font-size: 14px; }
-    .badge { display: inline-block; padding: 4px 8px; border-radius: 0.625rem; background: var(--cp-accent-soft); color: var(--cp-accent); font-size: 13px; font-weight: 600; }
     .links { display: flex; flex-wrap: wrap; gap: 12px; font-size: 14px; }
     #empty { padding: 32px; border: 1px solid var(--cp-border); border-radius: 16px; background: var(--cp-surface); }
     @media (max-width: 1050px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
@@ -64,18 +63,10 @@
     Güncel fotoğraflarda aynı kamera referansı, tek elde ürün ve diğer elle gösterme pozu kullanılır.
     Minecraft ambalajı da pixel-art olarak hazırlanır. Laboratuvar metinlerini görselden önce <strong>gpt-5.4-mini</strong> üretir.</p>
   <p class="intro">Güncel portrelerin kaynağı <a href="sample_photo.jpeg">sample_photo.jpeg</a> dosyasıdır.
-    Eski sürümler <a href="samples/reference_old.jpg">temsili çizim referansıyla</a> karşılaştırma için korunur.
+    Her senaryonun en son eklenen örneği gösterilir; önceki denemeler repoda saklanır.
     Her kartta kiosk çıktısı, modelin ham PNG dosyası ve varsa prompt kaydı ayrı açılabilir.</p>
   </details>
   <div class="controls">
-    <label>Sürüm
-      <select id="version">
-        <option value="all">Tüm sürümler</option>
-        <option value="reference-photo" selected>Güncel · Kamera referansı + GPT</option>
-        <option value="promotional">Önceki · Çizimle poz denemesi</option>
-        <option value="baseline">İlk sürüm · Çizimle test</option>
-      </select>
-    </label>
     <label>Deneyim
       <select id="kind">
         <option value="all">Tüm deneyimler</option>
@@ -102,24 +93,19 @@
     { id: 'photo-space', title: 'Uzay Yolculuğu', product: 'Cocostar' },
     { id: 'photo-popart', title: 'Pop Art Afiş', product: 'Çikolatalı Gofret' },
   ];
-  const samples = [
-    ...photoCases.flatMap(sample => [
-      { ...sample, kind: 'photo', version: 'reference-photo' },
-      { ...sample, kind: 'photo', version: 'baseline' },
-      { ...sample, kind: 'photo', version: 'promotional' },
-    ]),
-    { id: 'pack-wafer', title: 'GPT Lezzet Laboratuvarı', product: 'Antep Fıstığı & Tuzlu Karamel · Gofret', kind: 'pack', version: 'reference-photo' },
-    { id: 'pack-cake', title: 'GPT Lezzet Laboratuvarı', product: 'Vişne & Bitter Kakao · Kek', kind: 'pack', version: 'reference-photo' },
-    { id: 'pack', title: 'Lezzet Laboratuvarı', product: 'Fıstık & Tuzlu Karamel Gofret', kind: 'pack', version: 'baseline' },
-    { id: 'career', title: 'Kariyer Yıldız Haritası', product: 'Temsili veri analisti profili', kind: 'career', version: 'baseline' },
+  // Yeni denemeler sona eklenir; id aynı senaryoda değişmez.
+  const attempts = [
+    ...photoCases.map(sample => ({ ...sample, kind: 'photo', path: `samples/baseline/${sample.id}` })),
+    { id: 'lab', title: 'Lezzet Laboratuvarı', product: 'Fıstık & Tuzlu Karamel Gofret', kind: 'pack', path: 'samples/baseline/pack' },
+    { id: 'career', title: 'Kariyer Yıldız Haritası', product: 'Temsili veri analisti profili', kind: 'career', path: 'samples/baseline/career' },
+    ...photoCases.map(sample => ({ ...sample, kind: 'photo', path: `samples/promotional/${sample.id}`, prompt: true })),
+    ...photoCases.map(sample => ({ ...sample, kind: 'photo', path: `samples/reference-photo/${sample.id}`, prompt: true })),
+    { id: 'lab', title: 'Lezzet Laboratuvarı', product: 'Antep Fıstığı & Tuzlu Karamel · Gofret', kind: 'pack', path: 'samples/reference-photo/pack-wafer', prompt: true },
+    { id: 'lab', title: 'Lezzet Laboratuvarı', product: 'Vişne & Bitter Kakao · Kek', kind: 'pack', path: 'samples/reference-photo/pack-cake', prompt: true },
   ];
-  const version = document.querySelector('#version');
   const kind = document.querySelector('#kind');
   const search = document.querySelector('#search');
   const gallery = document.querySelector('#gallery');
-  const versionLabel = sample => sample.version === 'reference-photo'
-    ? 'Güncel · Kamera referansı + GPT'
-    : sample.version === 'promotional' ? 'Önceki · Çizimle poz denemesi' : 'İlk sürüm · Çizimle test';
   const text = (tag, content, className) => {
     const node = document.createElement(tag);
     node.textContent = content;
@@ -128,21 +114,21 @@
   };
   function render() {
     const query = search.value.trim().toLocaleLowerCase('tr-TR');
+    const samples = [...new Map(attempts.map(sample => [sample.id, sample])).values()];
     const visible = samples.filter(sample =>
-      (version.value === 'all' || sample.version === version.value) &&
       (kind.value === 'all' || sample.kind === kind.value) &&
       `${sample.title} ${sample.product}`.toLocaleLowerCase('tr-TR').includes(query)
     );
     gallery.replaceChildren();
     for (const sample of visible) {
-      const base = `samples/${sample.version}/${sample.id}`;
+      const base = sample.path;
       const card = document.createElement('article');
       card.className = 'card';
       const imageLink = document.createElement('a');
       imageLink.href = `${base}.jpg`;
       const image = document.createElement('img');
       image.src = imageLink.href;
-      image.alt = `${sample.title} · ${sample.product} · ${versionLabel(sample)}`;
+      image.alt = `${sample.title} · ${sample.product}`;
       image.loading = 'lazy';
       image.width = 1080;
       image.height = 1350;
@@ -151,7 +137,6 @@
       const content = document.createElement('div');
       content.className = 'card-content';
       content.append(
-        text('span', versionLabel(sample), 'badge'),
         text('h2', sample.title),
         text('p', sample.product),
       );
@@ -162,7 +147,7 @@
       const raw = text('a', 'Ham PNG');
       raw.href = `${base}-raw.png`;
       links.append(output, raw);
-      if (sample.version !== 'baseline') {
+      if (sample.prompt) {
         const prompt = text('a', 'Prompt');
         prompt.href = `${base}.json`;
         links.append(prompt);
@@ -171,10 +156,9 @@
       card.append(content);
       gallery.append(card);
     }
-    document.querySelector('#count').textContent = `${visible.length} / ${samples.length} örnek · 21 Kasım 2026`;
+    document.querySelector('#count').textContent = `${visible.length} / ${samples.length} örnek`;
     document.querySelector('#empty').hidden = visible.length !== 0;
   }
-  version.addEventListener('change', render);
   kind.addEventListener('change', render);
   search.addEventListener('input', render);
   render();

@@ -346,7 +346,7 @@ test('inline application and gallery scripts parse', () => {
   }
 });
 
-test('gallery combines version, experience and search filters and displays empty results', () => {
+test('gallery shows only the latest attempt per scenario, then applies experience and search filters', () => {
   class Element {
     constructor(value = '') { this.value = value; this.children = []; }
     append(...nodes) { this.children.push(...nodes); }
@@ -354,9 +354,8 @@ test('gallery combines version, experience and search filters and displays empty
     addEventListener() {}
   }
   const content = fs.readFileSync(path.join(__dirname, 'samples.html'), 'utf8');
-  const defaultVersion = content.match(/<option value="([^"]+)" selected>/)[1];
-  const nodes = Object.fromEntries(['version', 'kind', 'search', 'gallery', 'count', 'empty']
-    .map(id => [`#${id}`, new Element(id === 'version' ? defaultVersion : id === 'kind' ? 'all' : '')]));
+  const nodes = Object.fromEntries(['kind', 'search', 'gallery', 'count', 'empty']
+    .map(id => [`#${id}`, new Element(id === 'kind' ? 'all' : '')]));
   const scripts = [...content.matchAll(/<script>([\s\S]*?)<\/script>/g)];
   const context = vm.createContext({ document: {
     querySelector: selector => nodes[selector],
@@ -364,27 +363,38 @@ test('gallery combines version, experience and search filters and displays empty
   } });
   vm.runInContext(scripts.at(-1)[1], context);
   assert.equal(nodes['#gallery'].children.length, 8);
+  assert.equal(nodes['#count'].textContent, '8 / 8 örnek');
+  const paths = () => nodes['#gallery'].children.map(card => card.children[0].href);
+  assert.equal(paths().filter(url => url.includes('reference-photo/photo-')).length, 6);
+  assert.ok(paths().includes('samples/reference-photo/pack-cake.jpg'));
+  assert.ok(!paths().includes('samples/reference-photo/pack-wafer.jpg'));
   nodes['#kind'].value = 'photo';
   context.render();
   assert.equal(nodes['#gallery'].children.length, 6);
   nodes['#kind'].value = 'pack';
   context.render();
-  assert.equal(nodes['#gallery'].children.length, 2);
-  nodes['#version'].value = 'all';
+  assert.equal(nodes['#gallery'].children.length, 1);
+  nodes['#search'].value = 'Antep';
+  context.render();
+  assert.equal(nodes['#gallery'].children.length, 0);
+  assert.equal(nodes['#empty'].hidden, false);
   nodes['#kind'].value = 'all';
   nodes['#search'].value = 'Reklam';
-  context.render();
-  assert.equal(nodes['#gallery'].children.length, 3);
-  nodes['#version'].value = 'promotional';
   context.render();
   assert.equal(nodes['#gallery'].children.length, 1);
   nodes['#kind'].value = 'career';
   context.render();
   assert.equal(nodes['#gallery'].children.length, 0);
   assert.equal(nodes['#empty'].hidden, false);
-  nodes['#version'].value = 'baseline';
   nodes['#search'].value = '';
   context.render();
   assert.equal(nodes['#gallery'].children.length, 1);
   assert.equal(nodes['#empty'].hidden, true);
+  nodes['#kind'].value = 'all';
+  vm.runInContext("attempts.push({ id: 'lab', title: 'Lezzet Laboratuvarı', product: 'Newest test', kind: 'pack', path: 'samples/new-lab', prompt: true });", context);
+  context.render();
+  assert.equal(nodes['#gallery'].children.length, 8);
+  assert.ok(paths().includes('samples/new-lab.jpg'));
+  assert.ok(!paths().includes('samples/reference-photo/pack-cake.jpg'));
+  assert.equal(vm.runInContext('attempts.length', context), 23);
 });
