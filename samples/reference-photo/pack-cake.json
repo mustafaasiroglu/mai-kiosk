@@ -1,0 +1,34 @@
+{
+  "model": "MAI-Image-2.7-Flash",
+  "person_reference": null,
+  "product_reference": null,
+  "prompt": "Premium studio product photography of a new Ülker snack concept: a soft filled cake with sour cherry and dark cocoa. One modern flow-wrap package, vibrant flavor-inspired colors, appetizing cutaway product visuals and only the selected real ingredients. On the package, print the brand \"Ülker\", the exact product name \"Vişne Kakao Keki\", the exact short slogan \"Film gecesine ekşi tatlı bir eşlik.\" and a small \"YENİ\" badge; no invented copy, additional slogans or text outside the package. Art direction: Deep burgundy and dark cocoa palette, with cherry pieces and cocoa accents layered diagonally across the pack, soft cinematic lighting, subtle shadows, premium and cozy mood. Soft gradient studio background with a refined podium. Photorealistic premium commercial lighting, vertical 4:5. Leave the bottom 8% calm for the kiosk signature without a blank strip.",
+  "generation_seconds": 15.256,
+  "copy_model": "gpt-5.4-mini",
+  "concept": {
+    "name": "Vişne Kakao Keki",
+    "slogan": "Film gecesine ekşi tatlı bir eşlik.",
+    "notes": [
+      "Kek",
+      "Vişne",
+      "Bitter Kakao",
+      "Film gecesi"
+    ],
+    "story": "Yumuşak kek, vişnenin canlı ekşiliğiyle bitter kakaonun koyu tadında buluşur. Film başlarken her lokma, koltuğa yerleşen keyfi biraz daha derinleştirir.",
+    "colors": [
+      "#9b1b3a",
+      "#4a2c20"
+    ],
+    "baseId": "kek",
+    "baseName": "Kek",
+    "baseEn": "soft filled cake",
+    "flavorText": "Vişne & Bitter Kakao",
+    "flavorEn": "sour cherry and dark cocoa",
+    "flavorColors": [
+      "#9b1b3a",
+      "#4a2c20"
+    ],
+    "momentName": "Film gecesi",
+    "visualDirection": "Deep burgundy and dark cocoa palette, with cherry pieces and cocoa accents layered diagonally across the pack, soft cinematic lighting, subtle shadows, premium and cozy mood."
+  }
+}
