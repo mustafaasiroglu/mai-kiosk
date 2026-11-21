@@ -34,7 +34,15 @@ Canlı Laboratuvar önce LLM ile ad, slogan, hikâye ve İngilizce görsel yönl
 Metin modeli hatasında cihazda hazırlanmış metne sessizce dönülmez; hata ekranı
 gösterilir ve görsel çağrısı yapılmaz. Demo modu tamamen cihazda çalışmaya devam eder.
 
-Açılışta Demo veya Canlı seçin. Canlı bağlantı ayarları ve anahtar tarayıcının
+Açılışta Demo Modu veya Canlı Mod seçin. Üstteki durum etiketi seçime göre
+**Demo Modu** veya **Live Mode** gösterir. Sağdaki kalıcı **Ayarlar** menüsünden
+sesi açıp kapatabilir, tam ekrana geçebilir, modu değiştirebilir ve
+**Örnek tasarımlar** galerisine gidebilirsiniz. Mod seçimini onaylamak ana ekrana
+döner, kamerayı durdurur ve mevcut deneyimi sıfırlar; sonradan açılan mod
+penceresini Escape ile kapatmak mevcut modu ve deneyimi korur. İşlem sürerken
+mod değiştirme devre dışıdır.
+
+Canlı bağlantı ayarları ve anahtar tarayıcının
 yerel depolamasında saklanır ve yenilemeden sonra Canlı seçildiğinde tekrar
 gösterilir. Anahtar bu cihazdaki tarayıcı verilerine erişebilenlerce okunabilir;
 canlı modu yalnızca güvendiğiniz cihazda ve test anahtarıyla kullanın. Ayarları
@@ -50,6 +58,8 @@ bağlantısı yalnızca örnek sonuç gösterir.
 ## Canlı test örnekleri
 
 `samples.html` önceki ve güncel prompt çıktılarının karşılaştırma galerisidir.
+Galeri ana sayfayla aynı renkleri kullanır; ortak renkler `kiosk-theme.css`
+dosyasında tanımlıdır. Sürüm, deneyim ve arama filtreleriyle örnekler seçilebilir.
 Güncel görseller `samples/reference-photo/`, eski çizim tabanlı denemeler
 `samples/baseline/` ve `samples/promotional/` altında saklanır;
 her örneğin ham PNG ve kioskta oluşturulan JPEG çıktısı bulunur.

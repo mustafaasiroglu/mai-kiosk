@@ -7,6 +7,15 @@
 <meta name="theme-color" content="#05050d">
 <meta name="description" content="Yıldız Holding × Microsoft · Yapay Zekâ Deneyim Alanı — dokunmatik kiosk uygulaması">
 <title>Yıldız Holding × Microsoft · Yapay Zekâ Deneyim Alanı</title>
+<script>
+  (() => {
+    const param = new URLSearchParams(window.location.search).get("scoutTheme");
+    const theme =
+      param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+<link rel="stylesheet" href="kiosk-theme.css">
 <style>
 /* =====================================================================
    YILDIZ HOLDİNG × MICROSOFT · YAPAY ZEKÂ DENEYİM KİOSKU — Tasarım sistemi
@@ -152,7 +161,8 @@ img { -webkit-user-drag: none; }
 .step.is-done i { background: rgba(255, 255, 255, .14); border-color: transparent; color: #fff; }
 .step.is-active { color: #fff; }
 .step.is-active i { background: var(--acc); border-color: transparent; color: #fff; box-shadow: 0 0 2.6vmin var(--acc-soft); }
-.tb-right { justify-self: end; }
+.tb-right { justify-self: end; display: grid; justify-items: end; gap: .6vmin; }
+.tb-mode { font-size: var(--fs-xs); color: var(--cp-text-soft); }
 
 /* Marka kilidi */
 .brand { display: flex; align-items: center; gap: 1.4vmin; white-space: nowrap; }
@@ -645,6 +655,7 @@ h1, h2, h3, h4 { margin: 0; font-family: var(--font-display); letter-spacing: -.
 .home-top { display: flex; align-items: center; justify-content: space-between; flex: none; }
 .live-chip { display: inline-flex; align-items: center; gap: 1.2vmin; padding: 1.1vmin 2.2vmin; border-radius: 999px; background: var(--glass); border: 1px solid var(--line); font-size: var(--fs-sm); color: var(--ink2); font-weight: 600; }
 .live-chip .dot { width: 1.3vmin; height: 1.3vmin; border-radius: 50%; background: #3ee08f; animation: livePulse 2s infinite; }
+.live-chip[data-mode="mock"] .dot { background: var(--ink3); animation: none; }
 @keyframes livePulse { 0% { box-shadow: 0 0 0 0 rgba(62, 224, 143, .6); } 100% { box-shadow: 0 0 0 1.6vmin rgba(62, 224, 143, 0); } }
 .home-hero { text-align: center; margin: 3vmin auto 4.6vmin; display: flex; flex-direction: column; align-items: center; gap: 1.8vmin; flex: none; }
 .eyebrow-chip { display: inline-flex; align-items: center; gap: 1vmin; padding: 1vmin 2.2vmin; border-radius: 999px; background: rgba(255, 255, 255, .06); border: 1px solid var(--line2); font-size: var(--fs-sm); font-weight: 600; color: var(--ink2); }
@@ -799,25 +810,26 @@ h1, h2, h3, h4 { margin: 0; font-family: var(--font-display); letter-spacing: -.
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 .confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 40; }
 
-/* ---------- Tasarım önizleme paneli (yalnızca designMode) ---------- */
-.dn-fab { position: fixed; right: 0; top: 50%; transform: translateY(-50%); writing-mode: vertical-rl; z-index: 90; display: inline-flex; align-items: center; gap: 8px; padding: 14px 8px; border-radius: 12px 0 0 12px; border-right: 0 !important; border: 1px solid rgba(255, 255, 255, .22); background: rgba(16, 15, 34, .78); color: #fff; font: 600 13px/1 var(--font-text); cursor: pointer; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); opacity: .7; transition: opacity .2s; }
-.dn-fab:hover, .dn-fab:focus-visible { opacity: 1; }
-.dn-fab .ic { font-size: 16px; }
-.dn-panel { position: fixed; top: 0; right: 0; bottom: 0; width: 340px; z-index: 95; background: #0f0e1f; border-left: 1px solid rgba(255, 255, 255, .14); box-shadow: -20px 0 60px rgba(0, 0, 0, .6); transform: translateX(105%); transition: transform .4s var(--ease); display: flex; flex-direction: column; font-size: 13px; user-select: none; }
-.dn-panel.open { transform: none; }
-.dn-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-bottom: 1px solid rgba(255, 255, 255, .1); }
-.dn-head b { font: 700 15px var(--font-display); }
-.dn-head small { display: block; color: var(--ink3); font-size: 11.5px; margin-top: 3px; }
-.dn-close { width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .18); background: transparent; color: #fff; cursor: pointer; display: grid; place-items: center; }
-.dn-body { flex: 1; overflow: auto; padding: 8px 12px 18px; }
-.dn-group h4 { font: 700 11px var(--font-text); letter-spacing: .14em; text-transform: uppercase; color: var(--ink3); margin: 16px 6px 6px; }
-.dn-item { display: flex; width: 100%; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 9px; border: 0; background: transparent; color: rgba(255, 255, 255, .86); font: 500 13px var(--font-text); text-align: left; cursor: pointer; }
-.dn-item:hover { background: rgba(255, 255, 255, .07); }
-.dn-item.cur { background: rgba(139, 92, 246, .22); color: #fff; }
-.dn-item i { font-style: normal; color: var(--ink4); font-size: 11px; width: 22px; flex: none; }
-.dn-foot { padding: 12px 14px; border-top: 1px solid rgba(255, 255, 255, .1); display: flex; flex-wrap: wrap; gap: 8px; }
-.dn-foot button { flex: 1; padding: 9px 10px; border-radius: 9px; border: 1px solid rgba(255, 255, 255, .16); background: rgba(255, 255, 255, .06); color: #fff; font: 600 12px var(--font-text); cursor: pointer; }
-.dn-foot .note { flex-basis: 100%; color: var(--ink3); font-size: 11px; line-height: 1.45; }
+/* ---------- Kalıcı kiosk ayarları ---------- */
+.settings-fab { position: fixed; right: 0; top: 50%; transform: translateY(-50%); writing-mode: vertical-rl; z-index: 90; display: inline-flex; align-items: center; gap: 8px; padding: 16px 10px; border-radius: 12px 0 0 12px; border: 1px solid var(--cp-border-strong); border-right: 0; background: var(--cp-panel); color: var(--cp-text); font: 600 14px/1 var(--font-text); cursor: pointer; }
+.settings-fab .ic { font-size: 18px; }
+.settings-panel { display: none; position: fixed; inset: 0 0 0 auto; margin: 0; width: min(380px, 100vw); max-width: 100vw; height: 100dvh; max-height: 100dvh; padding: 0; border: 0; border-left: 1px solid var(--cp-border); background: var(--cp-panel); color: var(--cp-text); box-shadow: var(--cp-shadow); font: 16px/1.4 var(--font-text); }
+.settings-panel[open] { display: flex; flex-direction: column; }
+.settings-panel::backdrop { background: var(--cp-overlay); }
+.settings-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px; border-bottom: 1px solid var(--cp-border); }
+.settings-head h2 { margin: 0; font-size: 24px; }
+.settings-head p { margin: 4px 0 0; font-size: 14px; color: var(--cp-text-soft); }
+.settings-close { width: 44px; height: 44px; flex: none; border: 1px solid var(--cp-border); border-radius: 10px; background: var(--cp-surface-soft); color: var(--cp-text); display: grid; place-items: center; cursor: pointer; }
+.settings-body { padding: 24px; overflow: auto; display: grid; align-content: start; gap: 16px; }
+.settings-item { display: flex; align-items: center; gap: 16px; width: 100%; min-height: 84px; padding: 16px; border: 1px solid var(--cp-border); border-radius: 16px; background: var(--cp-surface-soft); color: var(--cp-text); text-decoration: none; text-align: left; font: inherit; cursor: pointer; }
+.settings-item:hover { border-color: var(--cp-accent); background: var(--cp-accent-soft); }
+.settings-item > .ic { font-size: 24px; color: var(--cp-link); }
+.settings-copy { flex: 1; }
+.settings-copy b { display: block; font-size: 16px; }
+.settings-copy small { display: block; margin-top: 4px; color: var(--cp-text-soft); font-size: 13px; }
+.settings-state { padding: 4px 8px; border-radius: 10px; background: var(--cp-accent-soft); color: var(--cp-text); font-size: 12px; }
+.settings-item:disabled { opacity: .5; cursor: not-allowed; }
+.settings-note { margin: 0; color: var(--cp-text-soft); font-size: 13px; line-height: 1.5; }
 .phone-stage { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: rgba(3, 3, 10, .7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 .phone-wrap { display: flex; align-items: center; gap: 4vmin; }
 .phone { width: 390px; height: 844px; border-radius: 58px; padding: 13px; background: linear-gradient(145deg, #2a2a35, #0b0b10); box-shadow: 0 0 0 2px #3a3a48, 0 40px 120px rgba(0, 0, 0, .8); transform-origin: center; position: relative; flex: none; }
@@ -829,7 +841,7 @@ h1, h2, h3, h4 { margin: 0; font-family: var(--font-display); letter-spacing: -.
 
 /* ---------- Telefon (paylaşım) sayfası ---------- */
 body.is-mobile { overflow: auto; user-select: text; -webkit-user-select: text; background: #07071a; }
-body.is-mobile #app, body.is-mobile .dn-fab { display: none; }
+body.is-mobile #app, body.is-mobile .settings-fab { display: none; }
 #mobile-root { display: none; }
 body.is-mobile #mobile-root { display: block; }
 .m-page {
@@ -989,7 +1001,6 @@ const PRODUCT_IMAGES = {
    API anahtarı tarayıcı depolamasına yazılmaz.
    ========================================================================== */
 const CONFIG = {
-  designMode: true,        // Sağ alttaki "Ekranlar" tasarım paneli. Etkinlikte false yapın.
   sound: true,             // Dokunma / deklanşör / başarı sesleri
   ambientMotion: true,     // Arka plan hareketleri. Zayıf donanımda false yapın (düşük FPS'te otomatik kapanır).
   event: {
@@ -1505,6 +1516,8 @@ const ICONS = {
   edit: '<path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/><path d="M14 7l3 3"/>',
   lock: '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
   key: '<circle cx="16" cy="8" r="5"/><path d="m12.5 11.5-9 9H7V17h3.5v-3.5l2-2"/>',
+  settings: '<path d="m9 3-.6 2.5-2 1.2L4 6 2 9.5l1.9 1.8v2.4L2 15.5 4 19l2.4-.7 2 1.2L9 22h6l.6-2.5 2-1.2 2.4.7 2-3.5-1.9-1.8v-2.4L22 9.5 20 6l-2.4.7-2-1.2L15 3z"/><circle cx="12" cy="12.5" r="3.5"/>',
+  volume: '<path d="M11 4 6 8H3v8h3l5 4zM15 8a6 6 0 0 1 0 8M18 5a10 10 0 0 1 0 14"/>',
 };
 function icon(name, cls = '') {
   return `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${ICONS[name] || ''}</svg>`;
@@ -3996,7 +4009,7 @@ const App = {
     ctx.timeout(() => el.classList.add('is-settled'), 1750);
     try { if (def.mount) def.mount(el, ctx, params); } catch (e) { console.error(e); }
     Idle.reset();
-    if (window.DesignNav) DesignNav.mark(id);
+    if (Settings.el) Settings.refresh();
   },
   home() {
     if (Modal.cur) Modal.cur.close(true);
@@ -4009,7 +4022,7 @@ const Topbar = {
   el: null,
   init() {
     this.el = $('#topbar');
-    this.el.innerHTML = `<div class="tb-left"><button class="home-btn" data-act="home" aria-label="Ana ekrana dön">${icon('home')}</button><div class="tb-exp"><small>Deneyim</small><b></b></div></div><nav class="steps" aria-label="Adımlar"></nav><div class="tb-right">${brandLockup()}</div>`;
+    this.el.innerHTML = `<div class="tb-left"><button class="home-btn" data-act="home" aria-label="Ana ekrana dön">${icon('home')}</button><div class="tb-exp"><small>Deneyim</small><b></b></div></div><nav class="steps" aria-label="Adımlar"></nav><div class="tb-right">${brandLockup()}<span class="tb-mode" data-mode-label>${modeLabel()}</span></div>`;
     this.el.addEventListener('click', (e) => { if (e.target.closest('[data-act="home"]')) { Sound.tap(); App.home(); } });
   },
   update(def) {
@@ -4034,7 +4047,7 @@ const Idle = {
   reset() { this.last = Date.now(); },
   check() {
     const cur = App.cur;
-    if (!cur || cur.id === 'home' || cur.def.noIdle || this.modal || document.body.classList.contains('is-mobile') || (window.DesignNav && DesignNav.open)) return;
+    if (!cur || cur.id === 'home' || cur.def.noIdle || this.modal || document.body.classList.contains('is-mobile') || Settings.open || $('#connection-dialog').open) return;
     if (Date.now() - this.last > CONFIG.idle.warnAfterSec * 1000) this.warn();
   },
   warn() {
@@ -4196,7 +4209,6 @@ function runGenView(el, ctx, { stages, estimateMs, task, tipsCount, onRetry }) {
     if (b.dataset.act === 'gen-home') { Sound.tap(); App.home(); }
   });
   return Promise.resolve().then(() => {
-    if (window.DesignNav && DesignNav.failNext) { DesignNav.failNext = false; throw new Error('Tasarım önizlemesi: örnek hata durumu'); }
     return task();
   }).then(
     (res) => { done = true; return ctx.sleep(1150).then(() => res); },
@@ -4261,7 +4273,7 @@ function initGlobalEvents() {
   document.addEventListener('dragstart', (e) => e.preventDefault());
   document.addEventListener('gesturestart', (e) => e.preventDefault());
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { if (Modal.cur) Modal.cur.close(); else if (window.DesignNav && DesignNav.open) DesignNav.toggle(false); }
+    if (e.key === 'Escape' && !Settings.open && !$('#connection-dialog').open && Modal.cur) Modal.cur.close();
   });
 }
 
@@ -4284,7 +4296,7 @@ SCREENS.home = {
   title: 'Ana ekran',
   render() {
     return `<div class="home">
-      <header class="home-top rise" style="--i:0">${brandLockup('lg')}<div class="live-chip"><span class="dot"></span>${esc(CONFIG.event.title)}</div></header>
+      <header class="home-top rise" style="--i:0">${brandLockup('lg')}<div class="live-chip" data-mode="${CONFIG.ai.mode}"><span class="dot"></span><span data-mode-label>${modeLabel()}</span></div></header>
       <div class="home-hero">
         <div class="eyebrow-chip rise" style="--i:1">${icon('sparkle')} Microsoft yapay zekâ teknolojileriyle</div>
         <h1 class="hero-title rise" style="--i:2">Yapay zekâ ile <span class="grad-text">yıldızını parlat.</span></h1>
@@ -5155,87 +5167,79 @@ const PhonePreview = {
   close: null,
 };
 
-/* Tasarım önizleme paneli (CONFIG.designMode) */
-const DesignNav = {
-  open: false, el: null, fab: null, failNext: false,
-  groups: [
-    ['Genel', [['home', 'Ana ekran'], ['@phone', 'Telefon (QR) sayfası'], ['@idle', 'Boşta kalma uyarısı'], ['@kvkk', 'KVKK bilgilendirmesi']]],
-    ['Tatlı Anı Stüdyosu', [['photo.quiz', 'Karakter sorusu'], ['photo.reveal', 'Lezzet ruhu'], ['photo.theme', 'Tema seçimi'], ['photo.camera', 'Kamera ve çekim'], ['photo.gen', 'Üretim animasyonu'], ['photo.result', 'Sonuç ve QR']]],
-    ['Kariyer Yıldız Haritan', [['career.name', 'Ad soyad ve klavye'], ['career.search', 'LinkedIn araması'], ['career.pick', 'Profil seçimi'], ['career.analyze', 'Profil analizi'], ['career.style', 'Stil seçimi'], ['career.gen', 'Üretim animasyonu'], ['career.result', 'Sonuç ve QR']]],
-    ['Lezzet Laboratuvarı', [['lab.base', 'Temel seçimi'], ['lab.flavor', 'Lezzet seçimi'], ['lab.moment', 'An seçimi'], ['lab.gen', 'Üretim animasyonu'], ['lab.result', 'Sonuç ve QR']]],
-    ['Durumlar', [['@camerr', 'Kamera erişim hatası'], ['@generr', 'Üretim hatası'], ['@notfound', 'Profil bulunamadı']]],
-  ],
+function modeLabel() { return API.live ? 'Live Mode' : 'Demo Modu'; }
+
+const Settings = {
+  el: null, fab: null, openConnection: null,
+  get open() { return !!this.el?.open; },
   init() {
+    if (this.el) return;
     this.fab = document.createElement('button');
-    this.fab.className = 'dn-fab'; this.fab.innerHTML = `${icon('grid')} Ekranlar`; this.fab.setAttribute('aria-label', 'Tasarım önizleme: tüm ekranlar');
-    this.el = document.createElement('aside');
-    this.el.className = 'dn-panel'; this.el.setAttribute('aria-label', 'Tasarım önizleme');
-    let n = 0;
-    this.el.innerHTML = `<div class="dn-head"><div><b>Tasarım önizleme</b><small>Tüm ekranlar ve durumlar</small></div><button class="dn-close" data-dn="close" aria-label="Kapat">${icon('x')}</button></div>
-      <div class="dn-body">${this.groups.map(([g, items]) => `<div class="dn-group"><h4>${esc(g)}</h4>${items.map(([id, label]) => `<button class="dn-item" data-dn-go="${id}"><i>${String(++n).padStart(2, '0')}</i>${esc(label)}</button>`).join('')}</div>`).join('')}</div>
-      <div class="dn-foot"><button data-dn="fs">${'Tam ekran'}</button><button data-dn="speed">Demo hızı: normal</button><button data-dn="sound">Ses: ${CONFIG.sound ? 'açık' : 'kapalı'}</button>
-      <p class="note">Bu panel yalnızca tasarım incelemesi içindir. Etkinlikte <b>CONFIG.designMode = false</b> yapın. Şu an yapay zekâ çağrıları temsili (mock) çalışıyor.</p></div>`;
-    document.body.appendChild(this.fab); document.body.appendChild(this.el);
+    this.fab.className = 'settings-fab';
+    this.fab.innerHTML = `${icon('settings')} Ayarlar`;
+    this.fab.setAttribute('aria-haspopup', 'dialog');
+    this.fab.setAttribute('aria-controls', 'kiosk-settings');
+    this.fab.setAttribute('aria-expanded', 'false');
+    this.el = document.createElement('dialog');
+    this.el.id = 'kiosk-settings';
+    this.el.className = 'settings-panel';
+    this.el.setAttribute('aria-labelledby', 'settings-title');
+    this.el.innerHTML = `<div class="settings-head"><div><h2 id="settings-title">Ayarlar</h2><p data-mode-label>${modeLabel()}</p></div><button class="settings-close" data-settings="close" aria-label="Ayarları kapat">${icon('x')}</button></div>
+      <div class="settings-body">
+        <button class="settings-item" data-settings="sound" role="switch" aria-checked="${CONFIG.sound}">${icon('volume')}<span class="settings-copy"><b>Ses</b><small>Dokunma ve deneyim sesleri</small></span><span class="settings-state" id="settings-sound-state"></span></button>
+        <button class="settings-item" data-settings="fullscreen">${icon('fullscreen')}<span class="settings-copy"><b id="settings-fullscreen-label">Tam ekran yap</b><small>Kiosk görünümünü genişlet</small></span></button>
+        <button class="settings-item" data-settings="mode">${icon('key')}<span class="settings-copy"><b>Mod değiştir</b><small>Demo Modu veya Live Mode</small></span></button>
+        <p class="settings-note" id="settings-busy" hidden>Mod değişikliği, devam eden işlem tamamlandıktan sonra kullanılabilir.</p>
+        <a class="settings-item" href="samples.html">${icon('grid')}<span class="settings-copy"><b>Örnek tasarımlar</b><small>Fotoğraf ve ambalaj galerisini keşfet</small></span>${icon('arrowRight')}</a>
+      </div>`;
+    document.body.append(this.fab, this.el);
     this.fab.addEventListener('click', () => this.toggle());
-    this.el.addEventListener('click', (e) => {
-      const go = e.target.closest('[data-dn-go]');
-      if (go) { this.jump(go.dataset.dnGo); return; }
-      const b = e.target.closest('[data-dn]'); if (!b) return;
-      const a = b.dataset.dn;
-      if (a === 'close') this.toggle(false);
-      if (a === 'fs') { if (!document.fullscreenElement) document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(() => {}); else document.exitFullscreen(); }
-      if (a === 'speed') { CONFIG.mock.speed = CONFIG.mock.speed === 1 ? 0.35 : 1; b.textContent = `Demo hızı: ${CONFIG.mock.speed === 1 ? 'normal' : 'hızlı'}`; }
-      if (a === 'sound') { CONFIG.sound = !CONFIG.sound; b.textContent = `Ses: ${CONFIG.sound ? 'açık' : 'kapalı'}`; }
+    this.el.addEventListener('close', () => {
+      this.fab.setAttribute('aria-expanded', 'false');
+      Idle.reset();
     });
+    this.el.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-settings]');
+      if (!button || button.disabled) return;
+      const action = button.dataset.settings;
+      if (action === 'close') this.toggle(false);
+      if (action === 'sound') { CONFIG.sound = !CONFIG.sound; this.refresh(); }
+      if (action === 'fullscreen') this.toggleFullscreen();
+      if (action === 'mode') { this.toggle(false); this.openConnection(); }
+    });
+    document.addEventListener('fullscreenchange', () => this.refresh());
+    this.refresh();
+  },
+  refresh() {
+    if (!this.el) return;
+    const sound = $('[data-settings="sound"]', this.el);
+    sound.setAttribute('aria-checked', String(CONFIG.sound));
+    $('#settings-sound-state', this.el).textContent = CONFIG.sound ? 'Açık' : 'Kapalı';
+    $('#settings-fullscreen-label', this.el).textContent = document.fullscreenElement ? 'Tam ekrandan çık' : 'Tam ekran yap';
+    const busy = !!App.cur?.def.noIdle;
+    $('[data-settings="mode"]', this.el).disabled = busy;
+    $('#settings-busy', this.el).hidden = !busy;
+    $$('[data-mode-label]').forEach(el => { el.textContent = modeLabel(); });
   },
   toggle(force) {
-    this.open = force == null ? !this.open : !!force;
-    this.el.classList.toggle('open', this.open);
+    const open = force == null ? !this.open : force;
+    if (open) { this.refresh(); this.el.showModal(); }
+    else this.el.close();
+    this.fab.setAttribute('aria-expanded', String(open));
   },
-  mark(id) { if (!this.el) return; $$('.dn-item', this.el).forEach((b) => b.classList.toggle('cur', b.dataset.dnGo === id)); },
-  async seed(id) {
-    const exp = id.split('.')[0], at = (...ids) => ids.includes(id);
-    if (exp === 'photo') {
-      const s = STATE.photo;
-      s.productId = s.productId || 'cocostar';
-      if (!at('photo.quiz', 'photo.reveal')) s.themeId = s.themeId || 'snowglobe';
-      if (at('photo.gen', 'photo.result')) s.photo = s.photo || demoPortrait();
-      if (at('photo.result') && !s.result) s.result = await renderPhotoMock({ photo: s.photo, product: byId(PRODUCTS, s.productId), theme: byId(THEMES, s.themeId), variation: s.variation || 0 });
-    }
-    if (exp === 'career') {
-      const s = STATE.career;
-      s.name = s.name || (id === 'career.name' ? '' : 'Deniz Yıldız');
-      if (!at('career.name', 'career.search')) s.results = s.results || mockPeople(s.name, true);
-      if (at('career.analyze', 'career.style', 'career.gen', 'career.result')) s.picked = s.picked || s.results[0];
-      if (at('career.style', 'career.gen', 'career.result') && !s.profile) { s.profile = mockProfile(s.picked); Object.assign(s.profile, mockSummary(s.profile)); }
-      if (at('career.gen', 'career.result')) s.styleId = s.styleId || 'constellation';
-      if (at('career.result') && !s.result) s.result = await renderInfographic(s.profile, s.styleId, { variation: s.variation || 0 });
-    }
-    if (exp === 'lab') {
-      const s = STATE.lab;
-      if (!at('lab.base')) s.baseId = s.baseId || 'gofret';
-      if (at('lab.moment', 'lab.gen', 'lab.result') && !(s.flavorIds || []).length) s.flavorIds = ['antep', 'karamel'];
-      if (at('lab.gen', 'lab.result')) s.momentId = s.momentId || 'mola';
-      if (at('lab.result') && !s.result) { const { base, flavors, moment } = labPicks(); s.concept = mockConcept(base, flavors, moment, s.variation || 0); s.result = await renderPackaging(s.concept); }
-    }
-  },
-  async jump(id) {
-    if (Modal.cur) Modal.cur.close(true);
-    if (PhonePreview.close) { PhonePreview.close(); PhonePreview.close = null; }
-    if (id === '@phone') { this.toggle(false); PhonePreview.open(); return; }
-    if (id === '@kvkk') { kvkkModal(); return; }
-    if (id === '@idle') { this.toggle(false); Idle.warn(); return; }
-    if (id === '@camerr') { await this.seed('photo.camera'); STATE.photo.photo = null; STATE.photo._camErr = true; App.go('photo.camera'); return; }
-    if (id === '@generr') { await this.seed('photo.gen'); this.failNext = true; App.go('photo.gen'); return; }
-    if (id === '@notfound') { await this.seed('career.search'); App.go('career.name'); setTimeout(() => notFoundModal(false), 500); return; }
-    const isResult = /\.result$/.test(id);
-    if (isResult) Toast.show('Örnek görsel hazırlanıyor…', 1200);
-    try { await this.seed(id); } catch (e) { console.error(e); }
-    if (id === 'home') { App.home(); return; }
-    App.go(id);
+  async toggleFullscreen() {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else {
+        if (!document.documentElement.requestFullscreen) throw new Error('Tam ekran API desteklenmiyor.');
+        await document.documentElement.requestFullscreen();
+      }
+    } catch (error) {
+      console.error('Tam ekran değiştirilemedi:', error);
+      Toast.show('Tam ekran değiştirilemedi. Tarayıcı izinlerini kontrol edin.');
+    } finally { this.refresh(); }
   },
 };
-window.DesignNav = DesignNav;
 
 /* ---------- Açılış ---------- */
 function softwareRendering() {
@@ -5264,14 +5268,16 @@ function chooseConnection(start) {
   const dialog = $('#connection-dialog'), form = $('#connection-form'), error = $('#connection-error');
   const choice = $('#connection-choice'), help = $('#connection-help'), title = $('#connection-title');
   const storageKey = 'mai-kiosk-foundry';
+  let chosen = false;
   $('#connection-live').innerHTML = 'Canlı Mod ' + icon('key');
   const finish = () => {
+    chosen = true;
     form.reset();
     dialog.close();
     start();
   };
-  dialog.addEventListener('cancel', (event) => event.preventDefault());
-  $('#connection-demo').addEventListener('click', finish, { once: true });
+  dialog.addEventListener('cancel', (event) => { if (!chosen) event.preventDefault(); });
+  $('#connection-demo').addEventListener('click', () => { CONFIG.ai.mode = 'mock'; finish(); });
   $('#connection-live').addEventListener('click', async () => {
     choice.hidden = true;
     form.hidden = false;
@@ -5348,7 +5354,16 @@ function chooseConnection(start) {
     });
     finish();
   });
-  dialog.showModal();
+  const open = () => {
+    form.hidden = true;
+    choice.hidden = false;
+    error.hidden = true;
+    title.textContent = 'Microsoft AI Kiosk\'a hoş geldin';
+    help.textContent = 'Devam etmek için bir mod seç.';
+    dialog.showModal();
+  };
+  open();
+  return open;
 }
 function boot() {
   makeGrain();
@@ -5357,13 +5372,10 @@ function boot() {
   const m = (location.hash || '').match(/^#m\/(photo|career|lab)\/([\w-]+)/);
   if (m) { MobilePage.boot(m[1]); return; }
   Topbar.init();
+  Settings.init();
+  Idle.init();
   App.go('home');
-  chooseConnection(() => {
-    Idle.init();
-    if (CONFIG.designMode) DesignNav.init();
-    const dl = (location.hash || '').match(/^#ekran=([\w.@-]+)/);
-    if (dl && CONFIG.designMode) setTimeout(() => DesignNav.jump(dl[1]), 60);
-  });
+  Settings.openConnection = chooseConnection(() => App.home());
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 

@@ -13,6 +13,108 @@ const sourceBetween = (start, end) => {
   return html.slice(offset, finish);
 };
 
+test('connection selection can repeatedly switch Demo and Live and cancel without changing mode', async () => {
+  const nodes = new Map();
+  const element = (selector) => {
+    if (!nodes.has(selector)) nodes.set(selector, {
+      listeners: new Map(), open: false, value: '',
+      addEventListener(type, handler) {
+        const handlers = this.listeners.get(type) || [];
+        handlers.push(handler); this.listeners.set(type, handlers);
+      },
+      async dispatch(type) {
+        const event = { prevented: false, preventDefault() { this.prevented = true; } };
+        for (const handler of this.listeners.get(type) || []) await handler(event);
+        return event;
+      },
+      focus() {}, showModal() { this.open = true; }, close() { this.open = false; },
+    });
+    return nodes.get(selector);
+  };
+  const form = element('#connection-form');
+  form.elements = Object.fromEntries(['endpoint', 'key', 'imageModel', 'labModel'].map(name => [name, element(name)]));
+  form.reset = () => Object.values(form.elements).forEach(field => { field.value = ''; });
+  const config = { ai: { mode: 'mock' } }, stored = new Map(), transitions = [];
+  const context = vm.createContext({
+    CONFIG: config, $: element, icon: () => '',
+    location: { protocol: 'https:', hostname: 'example.test' },
+    localStorage: { getItem: key => stored.get(key), setItem: (key, value) => stored.set(key, value) },
+    FormData: class { constructor(form) { this.form = form; } get(name) { return this.form.elements[name].value; } },
+  });
+  vm.runInContext(sourceBetween('function chooseConnection(', 'function boot()'), context);
+  const reopen = context.chooseConnection(() => transitions.push(config.ai.mode));
+  assert.equal((await element('#connection-dialog').dispatch('cancel')).prevented, true);
+  await element('#connection-demo').dispatch('click');
+  for (let i = 0; i < 2; i++) {
+    reopen();
+    await element('#connection-live').dispatch('click');
+    Object.entries({
+      endpoint: 'https://test-resource.services.ai.azure.com',
+      key: 'test-placeholder', imageModel: 'test-image', labModel: 'test-text',
+    }).forEach(([name, value]) => { form.elements[name].value = value; });
+    await form.dispatch('submit');
+    assert.equal(config.ai.mode, 'live');
+    reopen();
+    assert.equal((await element('#connection-dialog').dispatch('cancel')).prevented, false);
+    element('#connection-dialog').close();
+    assert.equal(config.ai.mode, 'live');
+    reopen();
+    await element('#connection-demo').dispatch('click');
+    assert.equal(config.ai.mode, 'mock');
+    assert.equal(element('#connection-dialog').open, false);
+  }
+  assert.deepEqual(transitions, ['mock', 'live', 'mock', 'live', 'mock']);
+  assert.equal(form.listeners.get('submit').length, 1);
+  assert.equal(element('#connection-demo').listeners.get('click').length, 1);
+});
+
+test('settings reflect sound and busy state and report fullscreen failures explicitly', async () => {
+  const nodes = new Map();
+  const element = selector => {
+    if (!nodes.has(selector)) nodes.set(selector, { attributes: {}, setAttribute(name, value) { this.attributes[name] = value; } });
+    return nodes.get(selector);
+  };
+  const config = { sound: true, ai: { mode: 'mock' } }, app = { cur: { def: {} } };
+  const labels = [{}, {}], notifications = [], errors = [];
+  const document = {
+    fullscreenElement: null,
+    documentElement: { requestFullscreen: async () => { document.fullscreenElement = {}; } },
+    exitFullscreen: async () => { document.fullscreenElement = null; },
+  };
+  const context = vm.createContext({
+    CONFIG: config, App: app, document, $: element, $$: () => labels,
+    API: { get live() { return config.ai.mode === 'live'; } },
+    Toast: { show: message => notifications.push(message) },
+    console: { error: (...args) => errors.push(args) },
+  });
+  vm.runInContext(sourceBetween('function modeLabel()', '/* ---------- Açılış') + '\nglobalThis.settings = Settings;', context);
+  const settings = context.settings;
+  settings.el = {};
+  settings.refresh();
+  assert.equal(element('[data-settings="sound"]').attributes['aria-checked'], 'true');
+  assert.equal(element('#settings-sound-state').textContent, 'Açık');
+  assert.equal(labels[0].textContent, 'Demo Modu');
+  config.sound = false;
+  config.ai.mode = 'live';
+  app.cur.def.noIdle = true;
+  settings.refresh();
+  assert.equal(element('[data-settings="sound"]').attributes['aria-checked'], 'false');
+  assert.equal(element('#settings-sound-state').textContent, 'Kapalı');
+  assert.equal(element('[data-settings="mode"]').disabled, true);
+  assert.equal(element('#settings-busy').hidden, false);
+  assert.ok(labels.every(label => label.textContent === 'Live Mode'));
+  app.cur.def.noIdle = false;
+  await settings.toggleFullscreen();
+  assert.equal(element('#settings-fullscreen-label').textContent, 'Tam ekrandan çık');
+  await settings.toggleFullscreen();
+  assert.equal(element('#settings-fullscreen-label').textContent, 'Tam ekran yap');
+  document.documentElement.requestFullscreen = async () => { throw new Error('Permission denied'); };
+  await settings.toggleFullscreen();
+  assert.equal(errors.length, 1);
+  assert.match(notifications[0], /Tam ekran değiştirilemedi/);
+  assert.equal(element('[data-settings="mode"]').disabled, false);
+});
+
 test('photo prompts preserve the holding-and-pointing pose across styles and variations', () => {
   const context = vm.createContext({ CONFIG: { event: { productBrand: 'Brand' } } });
   vm.runInContext(sourceBetween('function buildPhotoPrompt(', 'function buildInfographicPrompt('), context);
