@@ -1,0 +1,63 @@
+{
+  "model": "MAI-Image-2.7-Flash",
+  "prompt": "Create high-quality background artwork for a vertical 4:5 career infographic poster about a Kıdemli Veri Analisti professional. Art direction: a polished friendly 2.5D adventure-map environment, airy pale-blue sky, layered grassy green islands, soft clouds and a few tiny golden collectibles on the far left; clean rounded game-art shapes and gentle dimensional shading; the central and right regions remain light and quiet, without characters or a large game interface. The kiosk will add the name, timeline, milestones and skills itself: keep the top quarter and right two-thirds calm, uncluttered and easy to read. Decorative details belong along the outer left and bottom edges, never crossing the future text area. One coherent full-bleed composition, sharp detail, no panels or hard horizontal divisions. Absolutely no text, letters, numbers, logos, watermarks or people.",
+  "profile": {
+    "id": "p0",
+    "arch": 0,
+    "name": "Deniz Yıldız",
+    "headline": "Kıdemli Veri Analisti",
+    "company": "Ülker",
+    "location": "İstanbul, Türkiye",
+    "hue": 221,
+    "photoUrl": "",
+    "experience": [
+      {
+        "title": "Kıdemli Veri Analisti",
+        "org": "Ülker",
+        "start": 2021,
+        "end": null
+      },
+      {
+        "title": "İş Zekâsı Uzmanı",
+        "org": "pladis",
+        "start": 2018,
+        "end": 2021
+      },
+      {
+        "title": "Veri Analisti",
+        "org": "Şok Marketler",
+        "start": 2015,
+        "end": 2018
+      }
+    ],
+    "education": [
+      {
+        "school": "İstanbul Teknik Üniversitesi",
+        "degree": "Endüstri Mühendisliği",
+        "start": 2011,
+        "end": 2015
+      }
+    ],
+    "skills": [
+      "Power BI",
+      "SQL",
+      "Microsoft Fabric",
+      "Python",
+      "DAX",
+      "Talep tahmini",
+      "Veri görselleştirme",
+      "İstatistik",
+      "Excel",
+      "Hikâyeleştirme",
+      "Paydaş yönetimi",
+      "Agile"
+    ],
+    "certifications": [
+      "Power BI Data Analyst Associate",
+      "Fabric Analytics Engineer Associate"
+    ],
+    "passion": "veriyi karara dönüştürmek",
+    "power": "Karmaşık veriyi herkesin anlayacağı hikâyelere dönüştürmek.",
+    "summary": "11 yıllık yolculuk, 3 kurum ve tek bir tutku: veriyi karara dönüştürmek."
+  }
+}

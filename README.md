@@ -13,6 +13,20 @@ Seçimler ve yeniden gösterme, bu hazır görselleri değiştirmez; arayüz bun
 Laboratuvar adı, sloganı ve hikâyesi de gösterilen çıktının JSON kaydından okunur.
 Örnek dosyalarının okunabilmesi için kiosk HTTP üzerinden açılmalıdır.
 
+Kariyer akışında ad alanına cihaz klavyesiyle veya kiosk ekran klavyesiyle
+yazılabilir. Profil seçimi unvan, kurum ve konum bilgilerini ayrı gösterir;
+analiz deneyim, eğitim, yetenek ve sertifikaları gruplar. Analiz hatasında
+kendiliğinden temsili bir profile geçilmez; yeniden deneme ve profil değiştirme
+seçenekleri sunulur. Harici profil servisleri bağlı değilse temsili veri kullanımı
+arayüzde açıkça belirtilir.
+
+Dört kariyer stili, `samples/career-styles/` altındaki gerçek çıktı JPEG'leriyle
+önizlenir. Aynı temsili profil için Foundry görsel modeliyle arka plan üretilmiş,
+ad ve kariyer metinleri canlıdaki `renderInfographic` akışıyla eklenmiştir.
+Ham PNG'ler ve kullanılan model, prompt ve temsili profil bilgileri JSON olarak
+aynı klasörde korunur. Galeri ve Demo sonucu en güncel Takımyıldız örneğini
+gösterir; diğer üç çıktı stil seçimi ekranındaki karşılaştırma içindir.
+
 Repo kökündeki `.env` dosyası varsa Canlı seçildiğinde bağlantı formu otomatik
 doldurulur. `FOUNDRY_ENDPOINT`, `FOUNDRY_API_KEY`,
 `FOUNDRY_IMAGE_DEPLOYMENT` ve `FOUNDRY_LAB_DEPLOYMENT` alanlarını

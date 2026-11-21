@@ -551,7 +551,39 @@ h1, h2, h3, h4 { margin: 0; font-family: var(--font-display); letter-spacing: -.
 .search-steps li.is-done .state .ic { opacity: 1; }
 
 /* ---------- Profil kartları ---------- */
-.person-card { align-items: center; text-align: center; padding: 3.2vmin 2.4vmin 2.6vmin; }
+.screen[data-screen^="career."] {
+  overflow-y: auto; overscroll-behavior: contain;
+  --fs-xs: max(12px, 1.45vmin); --fs-sm: max(14px, 1.75vmin); --fs-md: max(16px, 2.1vmin);
+  --fs-lg: max(18px, 2.45vmin); --fs-h3: max(22px, 2.9vmin); --fs-h2: max(28px, 4.5vmin);
+}
+.career-entry-layout { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); gap: 2.4vmin; margin-bottom: 2.4vmin; }
+.career-name-form, .career-welcome { border: 1px solid var(--cp-border); border-radius: 16px; background: var(--cp-surface-soft); padding: 2.4vmin; min-width: 0; }
+.career-name-label { display: block; font-size: var(--fs-sm); font-weight: 650; }
+.career-name-form .name-input { width: 100%; height: max(56px, 8vmin); margin-top: 1vmin; border-radius: 10px; background: var(--cp-surface); box-shadow: none; padding: 0 2vmin; }
+.career-name-form .name-input:focus-within { border-color: var(--cp-career-accent); box-shadow: 0 0 0 2px var(--cp-career-soft); }
+.career-name-entry { width: 100%; min-width: 0; border: 0; background: var(--cp-transparent); color: var(--cp-text); font: 650 var(--fs-h3) var(--font-text); user-select: text; }
+.career-name-entry::placeholder { color: var(--cp-text-soft); }
+.career-name-entry:focus-visible { outline: none; }
+.career-name-options { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.4vmin; margin-top: 1.6vmin; }
+.career-name-options .btn { min-height: 44px; }
+.career-name-hint { margin-top: 1.2vmin; }
+.career-welcome { display: flex; align-items: center; gap: 2vmin; background: var(--cp-career-soft); }
+.career-welcome-art { width: 12vmin; min-width: 64px; aspect-ratio: 3 / 4; flex: none; overflow: hidden; border-radius: 10px; }
+.career-welcome-art svg { display: block; width: 100%; height: 100%; }
+.career-welcome h3 { font-size: var(--fs-lg); margin: 0 0 1.2vmin; }
+.career-path { list-style: none; padding: 0; margin: 0; display: grid; gap: 1vmin; }
+.career-path li { display: flex; align-items: center; gap: 1vmin; font-size: var(--fs-sm); color: var(--cp-text-muted); }
+.career-path b { display: grid; place-items: center; width: max(24px, 2.8vmin); aspect-ratio: 1; border: 1px solid var(--cp-border-strong); border-radius: 50%; color: var(--cp-career-accent); font-size: var(--fs-xs); flex: none; }
+.career-search { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 6vmin; width: min(100%, 144vmin); margin: auto; align-items: center; }
+.career-search-art { display: flex; flex-direction: column; align-items: center; gap: 2vmin; }
+.career-search .radar { width: 34vmin; height: 34vmin; margin: 0; }
+.career-search .search-title { text-align: left; overflow-wrap: anywhere; margin: 1.4vmin 0; }
+.career-search .search-steps { width: 100%; margin-top: 2.4vmin; }
+.career-source-note { display: inline-flex; align-items: center; gap: .8vmin; color: var(--cp-career-accent); font-size: var(--fs-sm); }
+.career-source-note .ic { font-size: 1.2em; }
+.people-grid, .style-grid { grid-auto-rows: minmax(min-content, 1fr); min-height: min-content; }
+.person-card { align-items: flex-start; text-align: left; padding: 2.6vmin; gap: 1.4vmin; border-radius: 16px; background: var(--cp-surface-soft); box-shadow: var(--cp-card-shadow); }
+.career-card-kicker { color: var(--cp-text-soft); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; padding-right: 4vmin; }
 .avatar {
   position: relative; width: 16vmin; height: 16vmin; border-radius: 50%; flex: none; overflow: hidden; display: grid; place-items: center;
   font: 750 5.6vmin var(--font-display); color: #fff; letter-spacing: -.02em;
@@ -559,26 +591,44 @@ h1, h2, h3, h4 { margin: 0; font-family: var(--font-display); letter-spacing: -.
   box-shadow: 0 0 0 .5vmin rgba(255, 255, 255, .14), 0 2vmin 5vmin -2vmin hsl(var(--h, 220) 80% 50%);
 }
 .avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.person-card h3 { font-size: var(--fs-h3); margin-top: 1.8vmin; }
-.person-card .headline { margin: .6vmin 0 0; font-size: var(--fs-sm); color: var(--ink2); min-height: 2.84em; }
+.person-card .avatar { width: max(64px, 9vmin); height: max(64px, 9vmin); font-size: max(24px, 3.2vmin); margin: 1vmin 0; }
+.person-card h3 { font-size: var(--fs-h3); margin: 0; overflow-wrap: anywhere; }
+.person-card .headline { margin: 0; font-size: var(--fs-sm); color: var(--cp-text-muted); line-height: 1.5; }
+.person-card .p-meta { align-items: flex-start; margin: auto 0 0; padding-top: 1.2vmin; }
+.person-card .p-meta span { align-items: flex-start; text-align: left; }
 .p-meta { display: flex; flex-direction: column; gap: .7vmin; margin-top: 1.2vmin; font-size: var(--fs-xs); color: var(--ink3); align-items: center; }
 .p-meta span { display: inline-flex; gap: .8vmin; align-items: center; }
 .p-meta .ic { font-size: 2vmin; }
 .li-chip { margin-top: auto; display: inline-flex; align-items: center; gap: .8vmin; padding: .7vmin 1.5vmin; border-radius: 999px; background: rgba(10, 102, 194, .22); color: #8fc3ff; font-size: var(--fs-xs); font-weight: 700; }
 .li-chip .ic { font-size: 2vmin; }
+.career-selection { min-width: 0; display: flex; align-items: center; gap: 1.4vmin; }
+.career-selection > .ic { color: var(--cp-career-accent); font-size: 3vmin; }
+.career-selection small { display: block; color: var(--cp-text-soft); font-size: var(--fs-xs); }
+.career-selection b { display: block; font-size: var(--fs-sm); font-weight: 600; overflow-wrap: anywhere; }
+.career-choice-foot { border-top: 1px solid var(--cp-border); padding-top: 1.6vmin; flex-wrap: wrap; }
+.career-choice-actions { display: flex; gap: 1.2vmin; flex-wrap: wrap; }
+.career-style-art { display: flex; justify-content: center; height: 27vmin; min-height: 150px; margin: 1vmin 0; flex-shrink: 0; }
+.career-style-art :is(svg, img) { width: auto; max-width: 100%; height: 100%; object-fit: contain; border-radius: 10px; box-shadow: var(--cp-card-shadow); }
+.career-style-card { border-radius: 16px; padding: 2.2vmin; background: var(--cp-surface-soft); box-shadow: var(--cp-card-shadow); }
+.career-style-card .theme-meta { padding: 0; margin-top: auto; }
+.career-style-card .theme-meta h3 { font-size: var(--fs-lg); }
+.career-style-card .theme-meta p { color: var(--cp-text-muted); line-height: 1.5; }
+.career-style-card .check { z-index: 3; }
+.is-settled .style-grid.has-selection .choice:not(.is-selected) { opacity: 1; }
 
 /* ---------- Profil analizi ---------- */
-.analyze { flex: 1; min-height: 0; display: flex; gap: 4.4vmin; }
+.analyze { flex: 1; min-height: min-content; display: grid; grid-template-columns: minmax(0, .65fr) minmax(0, 1.35fr); gap: 3vmin; align-items: start; }
 .profile-card {
-  position: relative; flex: 0 0 50vmin; overflow: hidden; border-radius: var(--r-xl); padding: 5vmin 3.6vmin;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 1vmin;
-  background: linear-gradient(180deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .025)); border: 1px solid var(--line);
+  position: relative; overflow: hidden; border-radius: 16px; padding: 3vmin;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1.8vmin;
+  background: var(--cp-surface-soft); border: 1px solid var(--cp-border);
 }
-.profile-card .avatar { width: 22vmin; height: 22vmin; font-size: 7.6vmin; margin-bottom: 1.6vmin; }
-.profile-card h3 { font-size: var(--fs-h2); }
-.profile-card p { margin: 0; color: var(--ink2); font-size: var(--fs-md); }
+.profile-card .avatar { width: max(64px, 11vmin); height: max(64px, 11vmin); font-size: max(24px, 4vmin); }
+.profile-card h3 { font-size: var(--fs-h3); overflow-wrap: anywhere; }
+.profile-card p { margin: .8vmin 0 0; color: var(--cp-text-muted); font-size: var(--fs-sm); }
+.profile-card .p-meta { align-items: flex-start; gap: 1vmin; }
 .trust-list { list-style: none; margin: 2.4vmin 0 0; padding: 2vmin 0 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 1.1vmin; align-self: stretch; }
-.trust-list li { display: flex; align-items: center; gap: 1.2vmin; font-size: var(--fs-xs); color: var(--ink3); justify-content: center; }
+.trust-list li { display: flex; align-items: center; gap: 1.2vmin; font-size: var(--fs-xs); color: var(--cp-text-soft); }
 .trust-list .ic { font-size: 2.2vmin; color: var(--acc1); }
 .scan-line { position: absolute; left: 0; right: 0; top: -14vmin; height: 14vmin; pointer-events: none; background: linear-gradient(180deg, transparent, var(--acc-soft), transparent); animation: scan 2.4s ease-in-out infinite; }
 .analyze.is-done .scan-line { display: none; }
@@ -586,15 +636,20 @@ h1, h2, h3, h4 { margin: 0; font-family: var(--font-display); letter-spacing: -.
 .extract { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
 .extract h2 { font-size: var(--fs-h2); margin-top: 1.2vmin; }
 .ex-cats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.6vmin; margin-top: 2.4vmin; flex: none; }
-.ex-cat { padding: 1.8vmin 2vmin; border-radius: 2.4vmin; background: var(--glass); border: 1px solid var(--line); display: flex; flex-direction: column; gap: .4vmin; transition: border-color .4s, background .4s; }
-.ex-cat.on { border-color: color-mix(in srgb, var(--acc1) 50%, transparent); background: rgba(255, 255, 255, .08); }
-.ex-cat .ic { font-size: 3.4vmin; color: var(--acc1); }
-.ex-cat b { font-size: var(--fs-sm); color: var(--ink2); font-weight: 600; }
-.ex-cat .cnt { font: 800 var(--fs-h2)/1 var(--font-display); font-variant-numeric: tabular-nums; }
-.ex-feed { flex: 1; min-height: 6vmin; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 1.1vmin; margin-top: 2.2vmin; overflow: hidden; }
-.ex-item { display: inline-flex; align-items: center; gap: .9vmin; padding: .9vmin 1.7vmin; border-radius: 999px; background: rgba(255, 255, 255, .08); border: 1px solid var(--line); font-size: var(--fs-sm); animation: popIn .5s var(--spring) both; max-width: 100%; }
-.ex-item .ic { font-size: 2.2vmin; color: var(--acc1); flex: none; }
-.ex-item span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ex-cat { padding: 1.4vmin; border-radius: 10px; background: var(--cp-surface-soft); border: 1px solid var(--cp-border); display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 1vmin; transition: border-color .4s, background .4s; }
+.ex-cat.on { border-color: var(--cp-career-accent); background: var(--cp-career-soft); }
+.ex-cat .ic { font-size: max(20px, 2.6vmin); color: var(--cp-career-accent); }
+.ex-cat b { font-size: var(--fs-sm); color: var(--cp-text-muted); font-weight: 600; }
+.ex-cat .cnt { font: 800 var(--fs-h3)/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.ex-feed { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.6vmin; margin-top: 2vmin; }
+.career-detail { border: 1px solid var(--cp-border); border-radius: 10px; background: var(--cp-surface-soft); padding: 1.6vmin; min-width: 0; }
+.career-detail h3 { display: flex; align-items: center; gap: .8vmin; color: var(--cp-career-accent); font-size: var(--fs-xs); margin: 0 0 1vmin; }
+.career-detail ul { list-style: none; padding: 0; margin: 0; display: grid; gap: .8vmin; }
+.career-detail ul[data-items="skills"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ex-item { display: flex; align-items: flex-start; gap: .9vmin; font-size: var(--fs-xs); color: var(--cp-text-muted); animation: popIn .5s var(--spring) both; }
+.ex-item .ic { font-size: 1.1em; color: var(--cp-career-accent); flex: none; margin-top: .2em; }
+.ex-item span { overflow-wrap: anywhere; }
+.career-empty { color: var(--cp-text-soft); font-size: var(--fs-xs); }
 @keyframes popIn { from { opacity: 0; transform: scale(.6) translateY(1vmin); } to { opacity: 1; transform: none; } }
 .ai-summary { flex: none; margin-top: 2vmin; padding: 2.2vmin 2.8vmin; border-radius: var(--r-lg); border: 1px solid color-mix(in srgb, var(--acc1) 40%, transparent); background: linear-gradient(120deg, color-mix(in srgb, var(--acc1) 18%, transparent), color-mix(in srgb, var(--acc2) 14%, transparent)); }
 .as-label { display: flex; align-items: center; gap: .9vmin; font-size: var(--fs-xs); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--ink2); }
@@ -603,6 +658,32 @@ h1, h2, h3, h4 { margin: 0; font-family: var(--font-display); letter-spacing: -.
 .as-power { margin: .8vmin 0 0; color: var(--ink2); font-size: var(--fs-sm); min-height: 1.4em; }
 .typing::after { content: "▍"; color: var(--acc1); animation: blink 1s steps(1) infinite; margin-left: .2vmin; }
 .analyze-foot { flex: none; display: flex; justify-content: flex-end; margin-top: 2vmin; }
+.career-analysis-error { margin-top: 2vmin; border: 1px solid var(--cp-danger); border-radius: 10px; padding: 1.8vmin; background: var(--cp-surface); }
+.career-analysis-error p { margin: 0 0 1.4vmin; font-size: var(--fs-sm); }
+@media (orientation: portrait) {
+  .career-entry-layout, .career-search, .analyze { grid-template-columns: 1fr; }
+  .career-search { gap: 4vmin; }
+  .career-search .radar { width: 30vmin; height: 30vmin; }
+}
+@media (max-width: 640px) {
+  .screen[data-screen="career.name"] .kbd { display: none; }
+  .career-entry-layout, .career-search, .analyze { grid-template-columns: 1fr; }
+  .career-name-form, .career-welcome, .person-card, .profile-card, .career-style-card { padding: 16px; }
+  .screen .people-grid, .screen .style-grid, .ex-feed { grid-template-columns: 1fr; }
+  .career-choice-actions, .career-choice-actions .btn { width: 100%; }
+  .career-style-card { display: grid; grid-template-columns: 100px minmax(0, 1fr); align-items: center; gap: 16px; }
+  .career-style-card .career-card-kicker { grid-column: 1 / -1; }
+  .career-style-art { height: 134px; min-height: 0; margin: 0; }
+  .career-style-card .theme-meta { margin: 0; }
+}
+@media (orientation: landscape) and (max-aspect-ratio: 4 / 3) {
+  .career-entry-layout { grid-template-columns: 1fr; }
+  .career-welcome { display: none; }
+  body[data-exp="career"] .step span { display: none; }
+}
+@media (orientation: landscape) {
+  .screen[data-screen="career.name"] .key { height: 6.8vmin; min-height: 44px; }
+}
 
 /* ---------- Lezzet laboratuvarı ---------- */
 .base-card { align-items: stretch; text-align: left; justify-content: space-between; border-color: color-mix(in srgb, var(--c0) 30%, var(--line)); }
@@ -905,7 +986,6 @@ body.is-mobile #mobile-root { display: block; }
   .cam-layout, .res-layout { flex-direction: column; gap: 3vmin; }
   .cam-frame { height: auto; width: min(100%, 76vmin); max-height: none; }
   .res-frame { width: auto; height: 70vmin; max-height: none; }
-  .screen[data-screen="career.name"] { justify-content: center; }
   .key { height: 9.4vmin; }
   .cam-side, .res-side { flex: none; width: 100%; max-width: 96vmin; }
   .gen-layout { flex-direction: column; gap: 3vmin; }
@@ -916,9 +996,6 @@ body.is-mobile #mobile-root { display: block; }
   .gen-pct b { font-size: 5.6vmin; }
   .gen-stages { display: none; }
   .gen-left { align-items: center; text-align: center; }
-  .analyze { flex-direction: column; }
-  .profile-card { flex: none; flex-direction: row; text-align: left; justify-content: flex-start; gap: 3vmin; padding: 3vmin; }
-  .profile-card .avatar { width: 16vmin; height: 16vmin; margin: 0; }
   .ex-cats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .flavor-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .portal-sticker { right: -3vmin; width: 16vmin; }
@@ -1109,14 +1186,14 @@ const THEMES = [
 
 /* ---------- Kariyer haritası stilleri ---------- */
 const CAREER_STYLES = [
-  { id: 'constellation', name: 'Takımyıldız', desc: 'Her durak gökyüzünde parlayan bir yıldız.', palette: ['#7cc7ff', '#ffffff', '#ffd27a', '#8b7bff'],
-    bgPrompt: 'a deep navy night sky with a subtle glowing constellation path of stars rising along the left side, soft nebula clouds' },
-  { id: 'metro', name: 'Metro Hattı', desc: 'Kariyerin, durakları olan bir metro hattı.', palette: ['#e3061b', '#0078d4', '#1b1b2f', '#ffffff'],
-    bgPrompt: 'a clean, minimal light-cream background with a subtle transit-map line motif in red and blue along the left edge' },
-  { id: 'game', name: 'Oyun Haritası', desc: 'Seviye atlayan bir kahramanın yolculuğu.', palette: ['#5cc04a', '#ffcc00', '#2f7de1', '#ffffff'],
-    bgPrompt: 'a bright, friendly 2D game world map with a winding trail, rolling green hills and small checkpoint flags along the left side' },
-  { id: 'magazine', name: 'Dergi Kapağı', desc: 'Yılın profesyoneli kapağında sen varsın.', palette: ['#ff4d6d', '#7a1cff', '#ffd166', '#ffffff'],
-    bgPrompt: 'a bold, glossy magazine-cover background with a vibrant pink-to-violet gradient and abstract editorial shapes' },
+  { id: 'constellation', name: 'Takımyıldız', desc: 'Her durak gökyüzünde parlayan bir yıldız.', thumbnail: 'samples/career-styles/constellation.jpg', palette: ['#7cc7ff', '#ffffff', '#ffd27a', '#8b7bff'],
+    bgPrompt: 'a sophisticated midnight-navy celestial atlas, fine scattered stars, restrained icy-blue nebula haze and a few warm gold highlights; delicate luminous astronomy details confined to the left edge; elegant, spacious and editorial, not a busy fantasy space scene' },
+  { id: 'metro', name: 'Metro Hattı', desc: 'Kariyerin, durakları olan bir metro hattı.', thumbnail: 'samples/career-styles/metro.jpg', palette: ['#e3061b', '#0078d4', '#1b1b2f', '#ffffff'],
+    bgPrompt: 'a premium Swiss-design transit atlas on warm ivory paper, a very faint precise square grid and restrained red and cobalt-blue route fragments at the outer left edge; clean vector-like geometry, crisp intersections and subtle paper texture; no dense network of routes' },
+  { id: 'game', name: 'Oyun Haritası', desc: 'Seviye atlayan bir kahramanın yolculuğu.', thumbnail: 'samples/career-styles/game.jpg', palette: ['#5cc04a', '#ffcc00', '#2f7de1', '#ffffff'],
+    bgPrompt: 'a polished friendly 2.5D adventure-map environment, airy pale-blue sky, layered grassy green islands, soft clouds and a few tiny golden collectibles on the far left; clean rounded game-art shapes and gentle dimensional shading; the central and right regions remain light and quiet, without characters or a large game interface' },
+  { id: 'magazine', name: 'Dergi Kapağı', desc: 'Yılın profesyoneli kapağında sen varsın.', thumbnail: 'samples/career-styles/magazine.jpg', palette: ['#ff4d6d', '#7a1cff', '#ffd166', '#ffffff'],
+    bgPrompt: 'a premium contemporary editorial-cover backdrop, rich coral-pink fading into violet, sculptural translucent folds and one restrained warm-gold accent near the outer edge; dramatic but refined studio lighting, clean uninterrupted negative space, no portrait or cover typography' },
 ];
 
 /* ---------- Lezzet laboratuvarı ---------- */
@@ -3567,7 +3644,7 @@ function buildPhotoPrompt(p, t, variation) {
   ].filter(Boolean).join(' ');
 }
 function buildInfographicPrompt(profile, style) {
-  return `Background artwork for a vertical 4:5 career infographic poster about a ${profile.headline} professional. Style: ${style.bgPrompt}. Keep large calm areas on the right two-thirds and at the top for text overlays. Absolutely no text, letters, numbers, logos or people.`;
+  return `Create high-quality background artwork for a vertical 4:5 career infographic poster about a ${profile.headline} professional. Art direction: ${style.bgPrompt}. The kiosk will add the name, timeline, milestones and skills itself: keep the top quarter and right two-thirds calm, uncluttered and easy to read. Decorative details belong along the outer left and bottom edges, never crossing the future text area. One coherent full-bleed composition, sharp detail, no panels or hard horizontal divisions. Absolutely no text, letters, numbers, logos, watermarks or people.`;
 }
 async function packagingLogoReference() {
   if (!CONFIG.event.productLogo) throw new Error('Laboratuvar için resmi ürün logosu ayarlanmamış.');
@@ -4134,8 +4211,15 @@ function mountKeyboard(root, ctx, { get, set, submit, max = 40 }) {
     b.classList.add('is-press'); setTimeout(() => b.classList.remove('is-press'), 130);
     Sound.key(); press(b.dataset.key);
   });
+  root.addEventListener('click', (e) => {
+    if (e.detail !== 0) return;
+    const b = e.target.closest('[data-key]');
+    if (!b || b.disabled) return;
+    Sound.key(); press(b.dataset.key);
+  });
   const onKey = (e) => {
     if (Modal.cur || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target?.closest?.('input, textarea, button, [contenteditable="true"]')) return;
     if (e.key === 'Backspace') { e.preventDefault(); press('back'); }
     else if (e.key === 'Enter') { e.preventDefault(); if (!$('.key.go', root).disabled) press('go'); }
     else if (e.key === ' ') { e.preventDefault(); press(' '); }
@@ -4587,6 +4671,7 @@ SCREENS['photo.result'] = {
    ========================================================================== */
 const careerStages = (st) => ['Kariyer durakların yerleştiriliyor', 'Deneyimlerin yıldızlara dönüşüyor', 'Yeteneklerin parlatılıyor', `${st.name} tasarımı çiziliyor`, 'Son dokunuşlar yapılıyor'];
 const nameValid = (v) => { const w = String(v || '').trim().split(/\s+/).filter((x) => x.length >= 2); return w.length >= 2; };
+const careerSearchIsLive = () => API.live && Boolean(CONFIG.ai.peopleSearchUrl);
 function avatarHTML(p, cls = '') {
   return `<div class="avatar ${cls}" style="--h:${p.hue || 210}">${esc(initials(p.name))}${p.photoUrl ? `<img src="${esc(p.photoUrl)}" alt="" referrerpolicy="no-referrer">` : ''}</div>`;
 }
@@ -4621,32 +4706,47 @@ SCREENS['career.name'] = {
     return `<div class="scr-head center">
       <div class="eyebrow acc rise">Adım 1 · Tanışalım</div>
       <h2 class="rise" style="--i:1">Adın ve soyadın nedir?</h2>
-      <p class="lead rise" style="--i:2">Adınla oluşturulan temsili kariyer profilini bir yıldız haritasına dönüştürelim.</p>
+      <p class="lead rise" style="--i:2">${careerSearchIsLive() ? 'Profilini bulalım, kariyer yolculuğunu bir tasarıma dönüştürelim.' : 'Adınla örnek kariyerleri keşfet; ardından dört tasarım dilinden birini seç.'}</p>
     </div>
-    <div class="name-field rise" style="--i:3">
-      <div class="name-input" data-empty="${v ? 'false' : 'true'}" role="textbox" aria-label="Ad ve soyad">${icon('user')}<span class="ni-text">${esc(displayName(v))}</span><span class="caret"></span><span class="ni-ph">Örn. Ayşe Yılmaz</span></div>
-      <button class="toggle-chip${fam ? ' is-on' : ''}" data-act="family" aria-pressed="${fam}"><span class="tg"><i></i></span>${esc(CONFIG.event.partnerName)} ailesindenim</button>
+    <div class="career-entry-layout rise" style="--i:3">
+      <form class="career-name-form">
+        <label class="career-name-label" for="career-name">Adın ve soyadın</label>
+        <div class="name-input">${icon('user')}<input id="career-name" class="career-name-entry" type="text" value="${esc(v)}" maxlength="40" autocomplete="name" autocapitalize="words" spellcheck="false" placeholder="Örn. Ayşe Yılmaz" aria-describedby="career-name-hint"></div>
+        <div class="career-name-options">
+          <button type="button" class="toggle-chip${fam ? ' is-on' : ''}" data-act="family" aria-pressed="${fam}"><span class="tg"><i></i></span>${esc(CONFIG.event.partnerName)} ailesindenim</button>
+          <button type="submit" class="btn btn-primary" data-act="search" disabled>Profilleri gör ${icon('arrowRight')}</button>
+        </div>
+        <p id="career-name-hint" class="fine career-name-hint" role="status"></p>
+      </form>
+      <aside class="career-welcome">
+        <div class="career-welcome-art">${styleArt('constellation')}</div>
+        <div><h3>Her durak bir yıldız.</h3><ol class="career-path"><li><b>1</b> Profilini seç</li><li><b>2</b> Yolculuğunu keşfet</li><li><b>3</b> Tasarımını telefonuna al</li></ol></div>
+      </aside>
     </div>
     <div class="kbd rise" style="--i:4">${keyboardHTML('Ara')}</div>
-    <p class="fine rise" style="--i:5;justify-content:center;margin-top:1.8vmin">${icon('shield')} Yalnızca herkese açık profil bilgilerini kullanırız; hiçbir bilgi kaydedilmez.</p>`;
+    <p class="fine rise" style="--i:5;justify-content:center;margin-top:1.8vmin">${icon('shield')} ${careerSearchIsLive() ? 'Yalnızca herkese açık profil bilgileri kullanılır.' : 'Temsili profiller kullanılır; gerçek bir profil araması yapılmaz.'}</p>`;
   },
   mount(el, ctx) {
-    const txt = $('.ni-text', el), box = $('.name-input', el), go = $('.key.go', el);
+    const input = $('.career-name-entry', el), go = $('.key.go', el), search = $('[data-act="search"]', el), hint = $('#career-name-hint', el);
     const paint = () => {
       const v = STATE.career.name || '';
-      txt.textContent = displayName(v);
-      box.dataset.empty = v ? 'false' : 'true';
-      go.disabled = !nameValid(v);
+      if (input.value !== v) input.value = v;
+      go.disabled = search.disabled = !nameValid(v);
+      const message = nameValid(v) ? 'Hazırsın. Profil seçeneklerine geçebilirsin.' : 'Ad ve soyadını en az ikişer harfle yaz.';
+      if (hint.textContent !== message) hint.textContent = message;
     };
+    const submit = () => {
+      if (!nameValid(STATE.career.name)) return;
+      STATE.career.name = titleTR(STATE.career.name);
+      STATE.career.results = null; STATE.career.picked = null; STATE.career.profile = null;
+      App.go('career.search');
+    };
+    input.addEventListener('input', () => { STATE.career.name = input.value; paint(); });
+    $('.career-name-form', el).addEventListener('submit', (e) => { e.preventDefault(); submit(); });
     mountKeyboard($('.kbd', el), ctx, {
       get: () => STATE.career.name || '',
       set: (v) => { STATE.career.name = v; paint(); },
-      submit: () => {
-        if (!nameValid(STATE.career.name)) return;
-        STATE.career.name = titleTR(STATE.career.name);
-        STATE.career.results = null; STATE.career.picked = null; STATE.career.profile = null;
-        App.go('career.search');
-      },
+      submit,
     });
     el.addEventListener('click', (e) => {
       const f = e.target.closest('[data-act="family"]');
@@ -4666,19 +4766,25 @@ SCREENS['career.search'] = {
   render() {
     const name = STATE.career.name;
     const blips = [[10, 16, 210], [74, 8, 320], [80, 64, 40], [14, 70, 150], [46, 86, 270]];
-    return `<div class="search-wrap">
+    return `<div class="career-search">
+      <div class="career-search-art">
       <div class="radar rise">
         <div class="radar-ring"></div><div class="radar-ring r2"></div><div class="radar-ring r3"></div>
         <div class="radar-sweep"></div><div class="radar-pulse"></div>
         ${blips.map(([x, y, h], i) => `<div class="blip" style="left:${x}%;top:${y}%;--h:${h};animation-delay:${(i * 0.55).toFixed(2)}s">${esc(initials(name))}</div>`).join('')}
         <div class="radar-core">${icon('search')}</div>
       </div>
+      <span class="career-source-note">${icon(careerSearchIsLive() ? 'globe' : 'user')} ${careerSearchIsLive() ? 'Herkese açık profiller' : 'Temsili kariyer profilleri'}</span>
+      </div><div>
+      <div class="eyebrow acc">Adım 2 · Profil seçenekleri</div>
       <h2 class="search-title rise" style="--i:1">“${esc(name)}” aranıyor…</h2>
+      <p class="lead">${careerSearchIsLive() ? 'Olası eşleşmeleri bir araya getiriyoruz. Bir sonraki adımda profilini sen seçeceksin.' : 'Bu deneyim için örnek kariyerler hazırlanıyor; gerçek kişilere ait bir arama yapılmıyor.'}</p>
       <ol class="search-steps rise" style="--i:2">
-        <li class="is-active">${icon('globe')}<span>WebIQ ile web’de herkese açık profiller aranıyor</span><span class="state">${icon('check')}</span></li>
-        <li>${icon('linkedin')}<span>Örnek profiller hazırlanıyor</span><span class="state">${icon('check')}</span></li>
+        <li class="is-active">${icon('search')}<span>${careerSearchIsLive() ? 'Herkese açık profil eşleşmeleri aranıyor' : 'Adına uygun temsili profiller hazırlanıyor'}</span><span class="state">${icon('check')}</span></li>
+        <li>${icon('briefcase')}<span>Kariyer başlıkları bir araya getiriliyor</span><span class="state">${icon('check')}</span></li>
         <li>${icon('sparkle')}<span>En olası sonuçlar sıralanıyor</span><span class="state">${icon('check')}</span></li>
       </ol>
+      </div>
     </div>`;
   },
   mount(el, ctx) {
@@ -4703,25 +4809,27 @@ SCREENS['career.pick'] = {
   exp: 'career', step: 2, title: 'Profil seçimi',
   guard: () => (STATE.career.results && STATE.career.results.length ? null : 'career.name'),
   render() {
-    const list = STATE.career.results.slice(0, 4);
+    const list = STATE.career.results.slice(0, 4), picked = list.find(p => p.id === STATE.career.picked?.id);
     return `<div class="scr-head">
       <div class="eyebrow acc rise">Adım 2 · Profilini seç</div>
-      <h2 class="rise" style="--i:1">Hangisi sensin?</h2>
-      <p class="lead rise" style="--i:2">“${esc(STATE.career.name)}” için ${list.length} herkese açık profil bulduk. Kendini seç, gerisini yapay zekâya bırak.</p>
+      <h2 class="rise" style="--i:1">${careerSearchIsLive() ? 'Profilini buldun mu?' : 'Hangi kariyer sana daha yakın?'}</h2>
+      <p class="lead rise" style="--i:2">${careerSearchIsLive() ? `“${esc(STATE.career.name)}” için ${list.length} olası eşleşme. Unvan, kurum ve konum bilgilerini kontrol ederek seç.` : `${list.length} temsili kariyer, dört farklı yolculuk. İncelemek istediğin örnek profili seç.`}</p>
     </div>
-    <div class="grid-4 people-grid">${list.map((p, i) => `
-      <button class="choice person-card rise" style="--i:${3 + i}" data-person="${esc(p.id)}">
+    <div class="grid-4 people-grid${picked ? ' has-selection' : ''}">${list.map((p, i) => `
+      <button class="choice person-card rise${picked?.id === p.id ? ' is-selected' : ''}" style="--i:${3 + i}" data-person="${esc(p.id)}" aria-pressed="${picked?.id === p.id}">
         <span class="check">${icon('check')}</span>
+        <span class="career-card-kicker">Profil 0${i + 1}</span>
         ${avatarHTML(p)}
         <h3>${esc(p.name)}</h3>
         <p class="headline">${esc(p.headline)}</p>
         <div class="p-meta"><span>${icon('building')} ${esc(p.company)}</span><span>${icon('pin')} ${esc(p.location)}</span></div>
-        <span class="li-chip">${icon('linkedin')} Temsili profil</span>
+        <span class="career-source-note">${icon(careerSearchIsLive() ? 'globe' : 'user')} ${careerSearchIsLive() ? 'Profil eşleşmesi' : 'Örnek profil'}</span>
       </button>`).join('')}
     </div>
-    <div class="scr-foot between">
-      <button class="btn btn-glass" data-act="notme">${icon('x')} Listede yokum</button>
-      <button class="btn btn-lg btn-primary" data-act="confirm" disabled>Evet, bu benim ${icon('arrowRight')}</button>
+    <div class="scr-foot between career-choice-foot">
+      <div class="career-selection" role="status">${icon('user')}<span><small>Seçilen profil</small><b data-selected-copy>${picked ? esc(picked.headline) : 'Devam etmek için bir kart seç'}</b></span></div>
+      <div class="career-choice-actions"><button class="btn btn-glass" data-act="notme">${icon('edit')} ${careerSearchIsLive() ? 'Listede yokum' : 'Adımı değiştir'}</button>
+      <button class="btn btn-lg btn-primary" data-act="confirm"${picked ? '' : ' disabled'}>Bu profille devam et ${icon('arrowRight')}</button></div>
     </div>`;
   },
   mount(el) {
@@ -4730,15 +4838,16 @@ SCREENS['career.pick'] = {
     el.addEventListener('click', (e) => {
       const b = e.target.closest('[data-person]');
       if (b) {
-        $$('[data-person]', el).forEach((x) => x.classList.toggle('is-selected', x === b));
+        $$('[data-person]', el).forEach((x) => { x.classList.toggle('is-selected', x === b); x.setAttribute('aria-pressed', String(x === b)); });
         grid.classList.add('has-selection');
         STATE.career.picked = STATE.career.results.find((p) => String(p.id) === b.dataset.person);
+        $('[data-selected-copy]', el).textContent = STATE.career.picked.headline;
         ok.disabled = false; Sound.select();
         return;
       }
       const a = e.target.closest('[data-act]'); if (!a) return;
       if (a.dataset.act === 'confirm' && STATE.career.picked) { Sound.tap(); STATE.career.profile = null; App.go('career.analyze'); }
-      if (a.dataset.act === 'notme') { Sound.tap(); notFoundModal(false); }
+      if (a.dataset.act === 'notme') { Sound.tap(); if (careerSearchIsLive()) notFoundModal(false); else App.go('career.name'); }
     });
   },
 };
@@ -4754,22 +4863,27 @@ SCREENS['career.analyze'] = {
         ${avatarHTML(p)}
         <div><h3>${esc(p.name)}</h3><p>${esc(p.headline)}</p>
         <div class="p-meta"><span>${icon('building')} ${esc(p.company)}</span><span>${icon('pin')} ${esc(p.location)}</span></div></div>
-        <ul class="trust-list"><li>${icon('linkedin')} Herkese açık LinkedIn profili</li><li>${icon('shield')} Yalnızca bu görsel için kullanılır</li><li>${icon('lock')} Profil bilgilerin kaydedilmez</li></ul>
+        <ul class="trust-list"><li>${icon('user')} ${API.live && CONFIG.ai.profileUrl ? 'Seçilen profil bilgileri' : 'Temsili kariyer bilgileri'}</li><li>${icon('shield')} Yalnızca bu deneyim için kullanılır</li></ul>
       </div>
       <div class="extract">
-        <div class="eyebrow ai rise" style="--i:1">${icon('sparkle')} Profilin yapay zekâ ile okunuyor</div>
+        <div class="eyebrow ai rise" style="--i:1">${icon('sparkle')} <span class="career-analysis-status" role="status">Kariyer durakları hazırlanıyor</span></div>
         <h2 class="an-title rise" style="--i:2">Yolculuğunu keşfediyoruz…</h2>
         <div class="ex-cats rise" style="--i:3">${cats.map(([k, ic, l]) => `<div class="ex-cat" data-cat="${k}">${icon(ic)}<b>${l}</b><span class="cnt">0</span></div>`).join('')}</div>
-        <div class="ex-feed" aria-live="polite"></div>
-        <div class="ai-summary rise" style="--i:4"><div class="as-label">${icon('sparkle')} Yapay zekâ özeti</div><p class="as-text"></p><p class="as-power"></p></div>
+        <div class="ex-feed">${cats.map(([k, ic, l]) => `<section class="career-detail"><h3>${icon(ic)}${l}</h3><ul data-items="${k}"><li class="career-empty">Hazırlanıyor…</li></ul></section>`).join('')}</div>
+        <div class="ai-summary rise" style="--i:4" aria-live="polite" aria-busy="true"><div class="as-label">${icon('sparkle')} Kariyer özeti</div><p class="as-text">Yolculuğunun ortak noktaları bulunuyor…</p><p class="as-power"></p></div>
+        <div class="career-analysis-error" role="alert" hidden><p>Profil özeti hazırlanamadı. Bağlantı ayarlarını kontrol edip yeniden deneyebilirsin.</p><div class="career-choice-actions"><button class="btn btn-glass" data-act="retry-analysis">${icon('refresh')} Yeniden dene</button><button class="btn btn-glass" data-act="pick-profile">${icon('user')} Profili değiştir</button></div></div>
         <div class="analyze-foot"><button class="btn btn-lg btn-primary" data-act="next" disabled>Stilimi seçeyim ${icon('arrowRight')}</button></div>
       </div>
     </div>`;
   },
   mount(el, ctx) {
     $$('.avatar img', el).forEach((img) => img.addEventListener('error', () => img.remove()));
-    const feed = $('.ex-feed', el), next = $('[data-act="next"]', el);
-    el.addEventListener('click', (e) => { if (e.target.closest('[data-act="next"]') && !next.disabled) { Sound.tap(); App.go('career.style'); } });
+    const next = $('[data-act="next"]', el);
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('[data-act="next"]') && !next.disabled) { Sound.tap(); App.go('career.style'); }
+      if (e.target.closest('[data-act="retry-analysis"]')) { Sound.tap(); App.go('career.analyze'); }
+      if (e.target.closest('[data-act="pick-profile"]')) { Sound.tap(); App.go('career.pick'); }
+    });
     const countUp = (cat, n) => {
       const c = $(`[data-cat="${cat}"]`, el); if (!c) return;
       c.classList.add('on');
@@ -4777,7 +4891,7 @@ SCREENS['career.analyze'] = {
       if (!n) { cnt.textContent = '0'; return; }
       const h = ctx.interval(() => { i++; cnt.textContent = String(Math.min(i, n)); if (i >= n) clearInterval(h); }, 70);
     };
-    const add = (ic, text) => { const d = document.createElement('div'); d.className = 'ex-item'; d.innerHTML = `${icon(ic)}<span>${esc(text)}</span>`; feed.appendChild(d); };
+    const add = (list, ic, text) => { const d = document.createElement('li'); d.className = 'ex-item'; d.innerHTML = `${icon(ic)}<span>${esc(text)}</span>`; list.appendChild(d); };
     (async () => {
       const prof = STATE.career.profile && STATE.career.profile.id === STATE.career.picked.id ? STATE.career.profile : await API.career.profile(STATE.career.picked);
       if (!ctx.alive) return;
@@ -4790,7 +4904,9 @@ SCREENS['career.analyze'] = {
       ];
       for (const [cat, ic, n, items] of seqs) {
         countUp(cat, n);
-        for (const it of items) { add(ic, it); Sound.key(); await ctx.sleep(240); }
+        const list = $(`[data-items="${cat}"]`, el); list.replaceChildren();
+        if (!items.length) { const empty = document.createElement('li'); empty.className = 'career-empty'; empty.textContent = 'Bu başlıkta bilgi yok.'; list.appendChild(empty); }
+        for (const it of items) { add(list, ic, it); Sound.key(); await ctx.sleep(240); }
         await ctx.sleep(220);
       }
       const sum = await API.career.summarize(prof);
@@ -4800,14 +4916,17 @@ SCREENS['career.analyze'] = {
       $('.analyze', el).classList.add('is-done');
       await typeText($('.as-text', el), sum.summary, ctx);
       $('.as-power', el).innerHTML = `<b>Süper gücün:</b> ${esc(sum.power)}`;
+      $('.ai-summary', el).setAttribute('aria-busy', 'false');
+      $('.career-analysis-status', el).textContent = 'Kariyer özeti hazır';
       next.disabled = false; Sound.success();
     })().catch((err) => {
       console.error(err);
       if (!ctx.alive) return;
-      Toast.show('Profil okunamadı; örnek bir profille devam ediyoruz.');
-      STATE.career.picked = mockPeople(STATE.career.name || 'Deniz Yıldız', true)[0];
-      STATE.career.profile = null;
-      ctx.timeout(() => App.go('career.analyze'), 1200);
+      $('.analyze', el).classList.add('is-done');
+      $('.ai-summary', el).setAttribute('aria-busy', 'false');
+      $('.as-text', el).textContent = 'Özet tamamlanamadı.';
+      $('.career-analysis-status', el).textContent = 'İşlem tamamlanamadı';
+      $('.career-analysis-error', el).hidden = false;
     });
   },
 };
@@ -4820,26 +4939,28 @@ SCREENS['career.style'] = {
     return `<div class="scr-head">
       <div class="eyebrow acc rise">Adım 3 · Stilini seç</div>
       <h2 class="rise" style="--i:1">Kariyer haritan nasıl görünsün?</h2>
-      <p class="lead rise" style="--i:2">Aynı yolculuk, dört farklı anlatım. Sana en çok yakışanı seç.</p>
+      <p class="lead rise" style="--i:2">Aynı örnek kariyer, dört gerçek çıktı. Tasarım dilini karşılaştırıp sana en çok yakışanı seç.${API.live ? '' : ' Demo sonucunda kayıtlı galeri örneği gösterilir.'}</p>
     </div>
     <div class="grid-4 style-grid${sel ? ' has-selection' : ''}">${CAREER_STYLES.map((s, i) => `
-      <button class="choice theme-card style-card rise${sel === s.id ? ' is-selected' : ''}" style="--i:${3 + i}" data-style="${s.id}">
-        <div class="theme-art">${styleArt(s.id)}</div>
+      <button class="choice style-card career-style-card rise${sel === s.id ? ' is-selected' : ''}" style="--i:${3 + i}" data-style="${s.id}" aria-pressed="${sel === s.id}">
+        <span class="career-card-kicker">Önizleme · 0${i + 1}</span>
+        <div class="career-style-art"><img src="${s.thumbnail}" alt="${esc(s.name)} tasarımında temsili kariyer haritası" width="1080" height="1350"></div>
         <span class="check">${icon('check')}</span>
         <div class="theme-meta"><h3>${esc(s.name)}</h3><p>${esc(s.desc)}</p></div>
       </button>`).join('')}
     </div>
-    <div class="scr-foot between">
+    <div class="scr-foot between career-choice-foot">
       <div class="sel-summary rise" style="--i:8">${avatarHTML(p)}<span><small>Profil</small><b>${esc(p.name)}</b></span></div>
       <button class="btn btn-lg btn-ai" data-act="next"${sel ? '' : ' disabled'}>${icon('sparkle')} Haritamı oluştur</button>
     </div>`;
   },
   mount(el) {
     const grid = $('.style-grid', el), next = $('[data-act="next"]', el);
+    $$('.career-style-art img', el).forEach(img => img.addEventListener('error', () => Toast.show('Stil önizlemesi yüklenemedi. Sayfayı yenileyin.')));
     el.addEventListener('click', (e) => {
       const b = e.target.closest('[data-style]');
       if (b) {
-        $$('[data-style]', el).forEach((x) => x.classList.toggle('is-selected', x === b));
+        $$('[data-style]', el).forEach((x) => { x.classList.toggle('is-selected', x === b); x.setAttribute('aria-pressed', String(x === b)); });
         grid.classList.add('has-selection');
         STATE.career.styleId = b.dataset.style; next.disabled = false; Sound.select();
         return;

@@ -22,6 +22,7 @@ const SAMPLE_ATTEMPTS = [
     raw: `samples/reference-photo/${sample.id}-raw.png`,
     prompt: `samples/reference-photo/${sample.id}.json`,
   })),
+  { id: 'career', title: 'Kariyer Yıldız Haritası', product: 'Temsili veri analisti profili', kind: 'career', path: 'samples/career-styles/constellation', prompt: 'samples/career-styles/constellation.json' },
 ];
 
 function latestSamples() {
