@@ -936,11 +936,11 @@ body.lite .pack-float { transform: rotate(-7deg); }
 <div id="modal-root" class="modal-root"></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <dialog id="connection-dialog" class="modal" aria-labelledby="connection-title" aria-describedby="connection-help">
-  <h3 id="connection-title">Kioska hoş geldin</h3>
+  <h3 id="connection-title">Microsoft AI Kiosk'a hoş geldin</h3>
   <p id="connection-help">Devam etmek için bir mod seç.</p>
   <div id="connection-choice" class="btn-row">
-    <button type="button" class="btn btn-glass" id="connection-demo">Demo</button>
-    <button type="button" class="btn btn-ai" id="connection-live">Canlı</button>
+    <button type="button" class="btn btn-glass" id="connection-demo">Demo Modu</button>
+    <button type="button" class="btn btn-ai" id="connection-live">Canlı Mod</button>
   </div>
   <form id="connection-form" method="dialog" autocomplete="off" hidden>
     <label>Foundry endpoint
@@ -1504,6 +1504,7 @@ const ICONS = {
   fullscreen: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
   edit: '<path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/><path d="M14 7l3 3"/>',
   lock: '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
+  key: '<circle cx="16" cy="8" r="5"/><path d="m12.5 11.5-9 9H7V17h3.5v-3.5l2-2"/>',
 };
 function icon(name, cls = '') {
   return `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${ICONS[name] || ''}</svg>`;
@@ -5263,6 +5264,7 @@ function chooseConnection(start) {
   const dialog = $('#connection-dialog'), form = $('#connection-form'), error = $('#connection-error');
   const choice = $('#connection-choice'), help = $('#connection-help'), title = $('#connection-title');
   const storageKey = 'mai-kiosk-foundry';
+  $('#connection-live').innerHTML = 'Canlı Mod ' + icon('key');
   const finish = () => {
     form.reset();
     dialog.close();
@@ -5314,7 +5316,7 @@ function chooseConnection(start) {
   $('#connection-back').addEventListener('click', () => {
     form.hidden = true;
     choice.hidden = false;
-    title.textContent = 'Kioska hoş geldin';
+    title.textContent = 'Microsoft AI Kiosk\'a hoş geldin';
     help.textContent = 'Devam etmek için bir mod seç.';
     $('#connection-live').focus();
   });
