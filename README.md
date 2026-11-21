@@ -5,6 +5,25 @@ tarayıcıda çalışır; derleme veya sunucu uygulaması gerekmez.
 
 ## Kullanım
 
+### Copilot arayüzü
+
+`python local_server.py` ile [localhost:8000/copilot/](http://localhost:8000/copilot/)
+adresini açın (GitHub Pages: `/mai-kiosk/copilot/`). Klasik kiosk `/` adresinde
+çalışmaya devam eder; **Ayarlar → Copilot** ile yeni arayüze geçebilirsiniz.
+
+Fotoğraf Stüdyosu, Kariyer Koçu ve Lezzet Laboratuvarı aynı sohbet arayüzündedir.
+**Cowork** üretim planını onaya sunar; çalışma alanında adımları ve indirilebilir
+çıktıları gösterir. **Chat** akışı daha doğrudan ilerletir; canlı fotoğrafın
+Foundry’ye gönderilmesi için her iki görünümde de onay gerekir.
+
+Demo modunda yeni görsel üretilmez ve kamera açılmaz; kayıtlı örnekler kullanılır.
+Canlı üretimi Copilot **Ayarlar** menüsünden Foundry bağlantısıyla açabilirsiniz.
+Kariyer verileri her iki modda da temsili olup LinkedIn’e bağlanılmaz.
+Copilot sohbetleri, fotoğrafları ve bağlantı bilgileri açık sayfada tutulur;
+yenileme veya Demo/Canlı bağlantı modu değişikliği sohbetleri temizler.
+
+### Klasik kiosk
+
 Yerelde `python local_server.py` çalıştırıp `http://localhost:8000/`
 adresini açın. Demo modu Foundry anahtarı istemez ve model çağrısı yapmaz.
 Demo kamera açmadan `sample_photo.jpeg` dosyasını gösterir; Fotoğraf, Kariyer
