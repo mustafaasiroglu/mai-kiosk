@@ -5,8 +5,20 @@ tarayıcıda çalışır; derleme veya sunucu uygulaması gerekmez.
 
 ## Kullanım
 
-Yerelde `python3 -m http.server 8000` çalıştırıp `http://localhost:8000/`
+Yerelde `python local_server.py` çalıştırıp `http://localhost:8000/`
 adresini açın. Demo modu Foundry anahtarı istemez ve model çağrısı yapmaz.
+
+Repo kökündeki `.env` dosyası varsa Canlı seçildiğinde bağlantı formu otomatik
+doldurulur. `FOUNDRY_ENDPOINT`, `FOUNDRY_API_KEY`,
+`FOUNDRY_IMAGE_DEPLOYMENT` ve isteğe bağlı `FOUNDRY_LAB_DEPLOYMENT` alanlarını
+`AD=değer` biçiminde yazın; değerler tek veya çift tırnak içine alınabilir.
+Değişken genişletme ve satır sonu yorumları desteklenmez.
+Dosyadaki alanlar tarayıcıda kayıtlı değerlerin önüne geçer; boş değerler de
+ilgili alanı temizler. `.env` Git tarafından yok sayılır; commit etmeyin.
+Yerel sunucu yalnızca bu cihazdan erişilir, `.env` ve diğer gizli yolları
+doğrudan sunmaz; form ayarları aynı origin üzerinden önbelleksiz okunur.
+GitHub Pages bu yerel ayarları istemez. Canlı moda devam etmeden model çağrısı
+yapılmaz. HTML'yi doğrudan açarsanız ayarları elle girebilirsiniz.
 
 Canlı mod için Microsoft Foundry kaynak adresini (`https://<kaynak>.services.ai.azure.com`),
 anahtarı ve dağıtım adını girin. Görsel modeli alanı `MAI-Image-2-Flash` ile
@@ -31,5 +43,6 @@ bağlantısı yalnızca örnek sonuç gösterir.
 
 Yayın kaynağı **Settings → Pages → Deploy from a branch → `main` / `(root)`**.
 `index.html` bu dala girince kiosk `https://mustafaasiroglu.github.io/mai-kiosk/`
-adresinden açılır. Eski HTML adresi, ekran ve QR bağlantılarını koruyarak köke
-yönlendirir.
+adresinden açılır. Alternatif `kiosk.html` adresi, ekran ve QR bağlantılarını
+koruyarak köke yönlendirir. Eski `yildiz-ai-kiosk.html` dosyası bu adla
+değiştirilmiştir; eski dosya adresini kullanan bağlantıları güncelleyin.

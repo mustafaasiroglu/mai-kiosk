@@ -5158,7 +5158,7 @@ function chooseConnection(start) {
   };
   dialog.addEventListener('cancel', (event) => event.preventDefault());
   $('#connection-demo').addEventListener('click', finish, { once: true });
-  $('#connection-live').addEventListener('click', () => {
+  $('#connection-live').addEventListener('click', async () => {
     choice.hidden = true;
     form.hidden = false;
     title.textContent = 'Canlı mod ayarları';
@@ -5176,6 +5176,26 @@ function chooseConnection(start) {
       console.error('Kayıtlı bağlantı ayarları okunamadı:', e);
       error.textContent = 'Kayıtlı ayarlar okunamadı. Bilgileri yeniden girin ve tarayıcı depolama izinlerini kontrol edin.';
       error.hidden = false;
+    }
+    if (location.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(location.hostname)) {
+      form.inert = true;
+      help.textContent = 'Yerel .env ayarları okunuyor…';
+      try {
+        const response = await fetch('/local-config', { cache: 'no-store', signal: AbortSignal.timeout(5000) });
+        if (!response.ok) throw new Error(`Yerel ayarlar HTTP ${response.status}`);
+        const settings = await response.json();
+        for (const name of ['endpoint', 'key', 'imageModel', 'labModel']) {
+          if (typeof settings?.[name] === 'string') form.elements[name].value = settings[name];
+        }
+        help.textContent = 'Microsoft Foundry bağlantı bilgilerini kontrol et.';
+      } catch (e) {
+        console.error('Yerel bağlantı ayarları okunamadı:', e);
+        help.textContent = 'Microsoft Foundry bağlantı bilgilerini gir.';
+        error.textContent = 'Yerel .env okunamadı. python local_server.py ile başlatın veya bilgileri elle girin.';
+        error.hidden = false;
+      } finally {
+        form.inert = false;
+      }
     }
     form.elements.endpoint.focus();
   });
