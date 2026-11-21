@@ -39,6 +39,25 @@ Canlı fotoğraf üretiminde referans fotoğraf Foundry’ye gider. Kariyer prof
 temsili kalır. Kişisel sonuçlar sunucuya yüklenmez: indirme çalışır, QR
 bağlantısı yalnızca örnek sonuç gösterir.
 
+## Canlı test örnekleri
+
+`samples.html` önceki ve güncel prompt çıktılarının karşılaştırma galerisidir.
+Görseller `samples/baseline/` ve `samples/promotional/` altında saklanır;
+her örneğin ham PNG ve kioskta oluşturulan JPEG çıktısı bulunur.
+Portre referansı uygulamanın temsili çizimidir; gerçek katılımcı fotoğrafı
+veya anahtar bu örneklere eklenmez. Yeni örnekler herkese açık Pages yayınına
+gireceğinden yalnızca paylaşılması onaylı, kişisel veri içermeyen test
+görsellerini bu klasöre koyun.
+
+Fotoğraf çıktıları ürün minyatürünü ve Microsoft/etkinlik imzasını korur;
+sol alttaki ürün ve tema başlıkları kaldırılmıştır. Canlı fotoğraf promptu
+tek elde ürün, diğer elle ürünü gösterme pozunu kullanır. Reklam Yüzü ve
+diğer 3D temalarda vinyl/clay karakter yaklaşımı, Blok ve Pop Art
+temalarında kendi görsel stilleri korunur.
+
+Yerel kontroller: `node --test test_kiosk.js` ve
+`python -m unittest -q test_local_server`. Bu kontroller model çağrısı yapmaz.
+
 ## GitHub Pages
 
 Yayın kaynağı **Settings → Pages → Deploy from a branch → `main` / `(root)`**.

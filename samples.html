@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Kiosk · Canlı test örnekleri</title>
+  <script>
+    (() => {
+      const param = new URLSearchParams(window.location.search).get("scoutTheme");
+      const theme =
+        param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --cp-bg: #f7f4ef;
+      --cp-bg-elevated: #fcfbf8;
+      --cp-surface: #ffffff;
+      --cp-surface-soft: #f5f5f5;
+      --cp-border: #dedede;
+      --cp-border-strong: #919191;
+      --cp-text: #242424;
+      --cp-text-muted: #5c5c5c;
+      --cp-text-soft: #6f6f6f;
+      --cp-accent: #b11f4b;
+      --cp-accent-hover: #9a1a41;
+      --cp-accent-soft: rgba(177, 31, 75, 0.08);
+      --cp-accent-fg: #ffffff;
+      --cp-success: #16a34a;
+      --cp-danger: #dc2626;
+      --cp-warning: #f59e0b;
+      --cp-link: #0078d4;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+      --cp-overlay: rgba(255, 255, 255, 0.8);
+      --cp-panel: rgba(255, 255, 255, 0.86);
+      --cp-panel-strong: rgba(255, 255, 255, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.55);
+      --cp-highlight: rgba(177, 31, 75, 0.12);
+      --cp-card-shadow: 0 0 2px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.14);
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --cp-bg: #3d3b3a;
+      --cp-bg-elevated: #343231;
+      --cp-surface: #292929;
+      --cp-surface-soft: #2e2e2e;
+      --cp-border: #474747;
+      --cp-border-strong: #5f5f5f;
+      --cp-text: #dedede;
+      --cp-text-muted: #919191;
+      --cp-text-soft: #b0b0b0;
+      --cp-accent: #fd8ea1;
+      --cp-accent-hover: #fb7b91;
+      --cp-accent-soft: rgba(253, 142, 161, 0.14);
+      --cp-accent-fg: #1a1a1a;
+      --cp-success: #4ade80;
+      --cp-danger: #f87171;
+      --cp-warning: #fbbf24;
+      --cp-link: #4da6ff;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+      --cp-overlay: rgba(41, 41, 41, 0.88);
+      --cp-panel: rgba(41, 41, 41, 0.72);
+      --cp-panel-strong: rgba(41, 41, 41, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.04);
+      --cp-highlight: rgba(253, 142, 161, 0.12);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--cp-bg); color: var(--cp-text); font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif; }
+    main { max-width: 1440px; margin: auto; padding: 32px 24px; }
+    h1 { margin: 20px 0 12px; font-size: clamp(28px, 4vw, 44px); }
+    p { line-height: 1.6; }
+    a { color: var(--cp-link); text-underline-offset: 3px; }
+    .intro { max-width: 900px; color: var(--cp-text-muted); }
+    .controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: end; margin: 28px 0 16px; padding: 20px; border: 1px solid var(--cp-border); border-radius: 16px; background: var(--cp-surface); }
+    label { display: grid; gap: 8px; font-weight: 600; }
+    select, input { padding: 12px; font: inherit; background: var(--cp-bg-elevated); color: var(--cp-text); border: 1px solid var(--cp-border-strong); border-radius: 0.625rem; }
+    input { min-width: 260px; }
+    a:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--cp-accent); outline-offset: 4px; }
+    #count { color: var(--cp-text-muted); }
+    .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+    .card { overflow: hidden; background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 16px; box-shadow: var(--cp-card-shadow); }
+    .card img { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: contain; background: var(--cp-surface-soft); }
+    .card h2 { margin: 12px 0 8px; font-size: 20px; }
+    .card-content { padding: 16px; }
+    .card p { margin: 8px 0 12px; color: var(--cp-text-muted); font-size: 14px; }
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 0.625rem; background: var(--cp-accent-soft); color: var(--cp-accent); font-size: 13px; font-weight: 600; }
+    .links { display: flex; gap: 16px; font-size: 14px; }
+    #empty { padding: 32px; border: 1px solid var(--cp-border); border-radius: 16px; background: var(--cp-surface); }
+    @media (max-width: 1050px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @media (max-width: 780px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 480px) { main { padding: 20px 16px; } .grid { grid-template-columns: 1fr; } .controls, label, input, select { width: 100%; } }
+  </style>
+</head>
+<body>
+<main>
+  <a href="./">← Kioska dön</a>
+  <h1>Canlı test örnekleri</h1>
+  <p class="intro">Microsoft Foundry <strong>MAI-Image-2.7-Flash</strong> ile üretilen gerçek test çıktıları.
+    Önceki sürüm, eski prompt ve alt yazıları karşılaştırmak için korunmuştur.
+    Yeni fotoğraf sürümü tek elde ürün ve diğer elle gösterme pozunu kullanır; sol altta ürün ve tema yazısı yoktur.</p>
+  <p class="intro">Tüm portreler <a href="samples/reference.jpg">uygulamanın temsili çiziminden</a> üretildi; gerçek katılımcı fotoğrafı içermez.
+    Her kartta kiosk çıktısı ve modelin ham PNG dosyası ayrı açılabilir.</p>
+  <div class="controls">
+    <label>Sürüm
+      <select id="version">
+        <option value="all">Tüm sürümler</option>
+        <option value="promotional">Yeni · Ürünü gösterme pozu</option>
+        <option value="baseline">Önceki · İlk testler</option>
+      </select>
+    </label>
+    <label>Deneyim
+      <select id="kind">
+        <option value="all">Tüm deneyimler</option>
+        <option value="photo">Fotoğraf</option>
+        <option value="pack">Ambalaj</option>
+        <option value="career">Kariyer</option>
+      </select>
+    </label>
+    <label>Tema veya ürün ara
+      <input id="search" type="search" placeholder="Örn. Kar Küresi veya Cocostar">
+    </label>
+  </div>
+  <p id="count" role="status" aria-live="polite"></p>
+  <div id="gallery" class="grid"></div>
+  <p id="empty" hidden>Bu filtrelere uygun örnek bulunamadı.</p>
+  <noscript><p>Galeriyi görmek için JavaScript'i etkinleştirin. Görseller <a href="samples/reference.jpg">samples klasöründe</a> saklanır.</p></noscript>
+</main>
+<script>
+  const photoCases = [
+    { id: 'photo-snowglobe', title: 'Yılbaşı Kar Küresi', product: 'Cocostar' },
+    { id: 'photo-adface', title: 'Reklam Yüzü', product: 'Çikolatalı Gofret' },
+    { id: 'photo-blocky', title: 'Blok Dünyası', product: 'Biskrem' },
+    { id: 'photo-factory', title: 'Çikolata Fabrikası', product: 'Halley' },
+    { id: 'photo-space', title: 'Uzay Yolculuğu', product: 'Cocostar' },
+    { id: 'photo-popart', title: 'Pop Art Afiş', product: 'Çikolatalı Gofret' },
+  ];
+  const samples = [
+    ...photoCases.flatMap(sample => [
+      { ...sample, kind: 'photo', version: 'baseline' },
+      { ...sample, kind: 'photo', version: 'promotional' },
+    ]),
+    { id: 'pack', title: 'Lezzet Laboratuvarı', product: 'Fıstık & Tuzlu Karamel Gofret', kind: 'pack', version: 'baseline' },
+    { id: 'career', title: 'Kariyer Yıldız Haritası', product: 'Temsili veri analisti profili', kind: 'career', version: 'baseline' },
+  ];
+  const version = document.querySelector('#version');
+  const kind = document.querySelector('#kind');
+  const search = document.querySelector('#search');
+  const gallery = document.querySelector('#gallery');
+  const text = (tag, content, className) => {
+    const node = document.createElement(tag);
+    node.textContent = content;
+    if (className) node.className = className;
+    return node;
+  };
+  function render() {
+    const query = search.value.trim().toLocaleLowerCase('tr-TR');
+    const visible = samples.filter(sample =>
+      (version.value === 'all' || sample.version === version.value) &&
+      (kind.value === 'all' || sample.kind === kind.value) &&
+      `${sample.title} ${sample.product}`.toLocaleLowerCase('tr-TR').includes(query)
+    );
+    gallery.replaceChildren();
+    for (const sample of visible) {
+      const base = `samples/${sample.version}/${sample.id}`;
+      const card = document.createElement('article');
+      card.className = 'card';
+      const imageLink = document.createElement('a');
+      imageLink.href = `${base}.jpg`;
+      const image = document.createElement('img');
+      image.src = imageLink.href;
+      image.alt = `${sample.title} · ${sample.product} · ${sample.version === 'promotional' ? 'Yeni poz' : 'Önceki sürüm'}`;
+      image.loading = 'lazy';
+      image.width = 1080;
+      image.height = 1350;
+      imageLink.append(image);
+      card.append(imageLink);
+      const content = document.createElement('div');
+      content.className = 'card-content';
+      content.append(
+        text('span', sample.version === 'promotional' ? 'Yeni · Ürünü gösterme pozu' : 'Önceki · İlk testler', 'badge'),
+        text('h2', sample.title),
+        text('p', sample.product),
+      );
+      const links = document.createElement('div');
+      links.className = 'links';
+      const output = text('a', 'Kiosk çıktısı');
+      output.href = `${base}.jpg`;
+      const raw = text('a', 'Ham PNG');
+      raw.href = `${base}-raw.png`;
+      links.append(output, raw);
+      if (sample.version === 'promotional') {
+        const prompt = text('a', 'Prompt');
+        prompt.href = `${base}.json`;
+        links.append(prompt);
+      }
+      content.append(links);
+      card.append(content);
+      gallery.append(card);
+    }
+    document.querySelector('#count').textContent = `${visible.length} / ${samples.length} örnek · 21 Kasım 2026`;
+    document.querySelector('#empty').hidden = visible.length !== 0;
+  }
+  version.addEventListener('change', render);
+  kind.addEventListener('change', render);
+  search.addEventListener('input', render);
+  render();
+</script>
+</body>
+</html>

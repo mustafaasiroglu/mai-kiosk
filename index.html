@@ -1065,15 +1065,15 @@ const THEMES = [
   { id: 'snowglobe', name: 'Yılbaşı Kar Küresi', desc: 'Karlar içinde, sihirli bir kürenin içinde sen.', palette: ['#9cc7ff', '#ffffff', '#ffd27a', '#3b82f6'],
     prompt: 'Scene: the person is inside a magical crystal snow globe standing on a cozy New Year table; gentle snowfall inside the globe, warm golden bokeh lights and pine branches outside, wearing a knitted scarf that matches the package colors. Cinematic, festive, photorealistic.' },
   { id: 'adface', name: 'Reklam Yüzü', desc: 'Yeni kampanyanın yüzü sensin; billboardlar seni bekliyor.', palette: ['#ff4d6d', '#ff9f43', '#ffffff', '#ffd166'],
-    prompt: 'Scene: a high-end advertising key visual where the person is the new face of {product}; confident smile, studio lighting with soft rim light, a bold seamless backdrop in the package colors, magazine-quality commercial photography, billboard-ready.' },
+    prompt: 'Scene: a premium collectible-character campaign for {product}; casual modern outfit, standing on a sleek circular display stand in the main package color. A vibrant seamless background in package colors, a few floating {ingredient} pieces, restrained smooth liquid splashes and energetic graphic accents. Bright commercial studio lighting with soft rim light, sharp focus and refined material detail.' },
   { id: 'blocky', name: 'Minecraft Dünyası', desc: 'Bloklardan bir dünyada kahraman ol.', palette: ['#5dbb3f', '#8a5a33', '#6fb8ff', '#ffe14d'],
-    prompt: 'Scene: a cheerful blocky voxel sandbox-game world with cubic grass and dirt blocks, pixelated textures, square clouds and a blocky sun; render the person as a friendly blocky voxel character that still clearly resembles them, holding a blocky version of the {product} package; bright daylight.' },
+    prompt: 'Scene: a cheerful blocky voxel sandbox-game world with cubic grass and dirt blocks, pixelated textures, square clouds and a blocky sun; a friendly voxel character presenting the {product} package; bright daylight.' },
   { id: 'factory', name: 'Çikolata Fabrikası', desc: 'Çikolata nehirlerinin baş şefi sen ol.', palette: ['#c8922e', '#5a2e15', '#fbe08a', '#8a4a22'],
     prompt: 'Scene: a whimsical chocolate-factory wonderland with flowing chocolate rivers, copper pipes, golden light and floating {ingredient}; the person is the head chocolatier wearing a stylish chocolatier jacket; magical realism.' },
   { id: 'space', name: 'Uzay Yolculuğu', desc: 'Kuyruklu yıldızın peşinde bir astronot.', palette: ['#7b2ff7', '#00c2ff', '#f107a3', '#ffffff'],
     prompt: 'Scene: a retro-futuristic space adventure; the person is an astronaut with the helmet visor open, floating beside a glowing comet whose tail sparkles with {ingredient}; deep purple and blue nebula, cinematic sci-fi lighting.' },
   { id: 'popart', name: 'Pop Art Afiş', desc: 'Rengârenk, cesur bir çizgi roman kapağı.', palette: ['#ffd400', '#ff2d55', '#00b4ff', '#1b1b2f'],
-    prompt: 'Scene: a bold pop-art comic-book poster with halftone dots, thick black outlines and vibrant yellow, magenta and cyan; the person stylized in pop-art comic style while staying recognizable; a speech bubble that says "Tatlı mola!".' },
+    prompt: 'Scene: a bold pop-art comic-book poster with halftone dots, thick black outlines and vibrant yellow, magenta and cyan; the person stylized in pop-art comic style while staying recognizable; energetic graphic shapes without speech bubbles.' },
 ];
 
 /* ---------- Kariyer haritası stilleri ---------- */
@@ -3078,13 +3078,13 @@ async function renderPhotoMock({ photo, product, theme, variation = 0 }) {
   const rnd = mulberry32(hashStr(theme.id + product.id) + variation * 7919);
   const fn = PHOTO_RENDERERS[theme.id] || PHOTO_RENDERERS.snowglobe;
   g.save(); fn(g, W, H, img, product, pack, rnd, variation); g.restore();
-  drawBrandBand(g, W, H, { title: `${CONFIG.event.productBrand} ${product.name}`, sub: theme.name, pack });
+  drawBrandBand(g, W, H, { pack });
   return c.toDataURL('image/jpeg', 0.9);
 }
-async function composePhoto(aiDataUrl, product, theme) {
+async function composePhoto(aiDataUrl, product) {
   const W = 1080, H = 1350, c = makeCanvas(W, H), g = c.getContext('2d');
   coverDraw(g, await loadImage(aiDataUrl), 0, 0, W, H);
-  drawBrandBand(g, W, H, { title: `${CONFIG.event.productBrand} ${product.name}`, sub: theme.name, pack: await packImage(product) });
+  drawBrandBand(g, W, H, { pack: await packImage(product) });
   return c.toDataURL('image/jpeg', 0.9);
 }
 
@@ -3482,13 +3482,21 @@ const Backend = {
 /* ---------- Prompt şablonları (MAI) ---------- */
 function buildPhotoPrompt(p, t, variation) {
   const brand = `${CONFIG.event.productBrand} ${p.name}`;
+  const characterStyle = t.id === 'blocky'
+    ? 'A friendly blocky voxel character with cubic forms, keeping the distinctive face and hairstyle recognizable.'
+    : t.id === 'popart'
+      ? 'A recognizable pop-art comic character with bold outlines and halftone shading.'
+      : 'A premium stylized 3D vinyl/clay character figurine of the reference person, with soft rounded facial proportions, subtle subsurface scattering and a cheerful natural smile. The character is a refined collectible toy, not a generic doll or a photorealistic replacement person.';
   return [
-    'Transform the reference photo into a premium, joyful brand-campaign portrait (vertical 4:5, waist-up framing).',
-    'Reference image 1 is the person: keep their face, identity, skin tone, hairstyle, glasses and expression faithful and clearly recognizable.',
-    p.image ? `Reference image 2 is the official ${brand} package: reproduce it accurately (shape, colors, logo, label) and place it naturally in the scene, held in hand or prominently displayed.` : `Include a ${brand} snack package in the scene.`,
+    'Create a premium, joyful brand-campaign portrait, vertical 4:5, with the complete character visible from head to feet and enough space around both hands.',
+    'Reference image 1 defines the person: preserve their distinctive facial features, skin tone, hairstyle, glasses if present and recognizable identity while applying the requested character style.',
+    characterStyle,
+    p.image ? `Reference image 2 is the official ${brand} package: preserve its exact silhouette, proportions, colors, logo and label layout. Adapt its surface shading to the scene without inventing or redesigning the branding.` : `Include one ${brand} snack package in the scene.`,
+    'Promotional pose: exactly one hand holds a single product package at chest level, with its front facing the camera, upright and clearly legible. The other hand points its index finger toward that package in a cheerful presenting gesture. Both hands and arms are clearly visible; fingers stay away from the logo and label. Natural wrists, coherent anatomy, no extra hands or fingers.',
     t.prompt.replace(/\{product\}/g, brand).replace(/\{ingredient\}/g, p.ingredientEn),
-    'Tasteful, brand-safe and family-friendly. No extra text, watermarks or other brand logos. Keep the bottom 12% calm for a brand band.',
-    variation ? `Variation ${variation}: choose a fresh camera angle, pose and color accent.` : '',
+    'One character and one package only: no duplicate packs, additional people or added logos on clothing or scenery. Tasteful, brand-safe and family-friendly. No captions, slogans, speech bubbles or watermarks; text appears only on the reference package.',
+    'Continue the scene naturally to every edge. Keep only the lowest 8% visually calm for the kiosk signature, without a solid blank strip or horizontal divider. Keep the face, hands, package and feet above that area.',
+    variation ? `Variation ${variation}: vary the camera angle, lighting and color accent while keeping the same one-hand-holds, other-hand-points pose.` : '',
   ].filter(Boolean).join(' ');
 }
 function buildInfographicPrompt(profile, style) {
@@ -3560,7 +3568,7 @@ const API = {
           refs.push(dataUrlToBlob(c.toDataURL('image/png')));
         }
         const ai = await MAI.edit(buildPhotoPrompt(product, theme, variation), refs);
-        return composePhoto(ai, product, theme);
+        return composePhoto(ai, product);
       }
       if (!opts.fast) await API.wait(8200);
       return renderPhotoMock({ photo, product, theme, variation });
