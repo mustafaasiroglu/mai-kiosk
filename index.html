@@ -1008,6 +1008,7 @@ const CONFIG = {
     partnerName: 'Yıldız Holding',
     partnerLogo: '',       // Resmi logo (data URI PNG önerilir). Boşsa yazı kullanılır.
     productBrand: 'Ülker',
+    productLogo: 'assets/ulker-logo.png',
     hashtag: '#YıldızınıParlat',
   },
   idle: { warnAfterSec: 75, countdownSec: 12 },
@@ -3384,7 +3385,7 @@ async function renderInfographic(profile, styleId, { variation = 0, bg = null } 
 }
 
 /* ---------- Lezzet laboratuvarı ambalajı ---------- */
-function drawFlowPack(g, w, h, concept) {
+function drawFlowPack(g, w, h, concept, logo) {
   const [c1, c2] = concept.colors;
   const x0 = -w / 2, x1 = w / 2, y0 = -h / 2, y1 = h / 2, cw = w * 0.055;
   g.fillStyle = shade(c2, -0.3);
@@ -3430,8 +3431,7 @@ function drawFlowPack(g, w, h, concept) {
     }
   });
   g.restore();
-  g.save(); rr(g, x0 + 74, y0 + 54, 150, 50, 25); g.fillStyle = '#e30613'; g.fill(); g.lineWidth = 3.5; g.strokeStyle = '#fff'; g.stroke();
-  g.fillStyle = '#fff'; g.textAlign = 'center'; g.font = cfont(850, 30); g.fillText(trLow(CONFIG.event.productBrand), x0 + 149, y0 + 89); g.restore();
+  g.drawImage(logo, x0 + 74, y0 + 48, 180, 180 * logo.naturalHeight / logo.naturalWidth);
   g.save(); g.textAlign = 'left';
   let fs = 82; g.font = cfont(900, fs, 'italic');
   let lines = wrapLines(g, concept.name, w * 0.5, 2);
@@ -3445,6 +3445,7 @@ function drawFlowPack(g, w, h, concept) {
   g.fillStyle = gr; g.beginPath(); g.moveTo(x0 + cw + 10, y0 + 18); g.quadraticCurveTo(0, y0 - 8, x1 - cw - 10, y0 + 18); g.lineTo(x1 - cw - 10, y0 + 70); g.quadraticCurveTo(0, y0 + 50, x0 + cw + 10, y0 + 70); g.closePath(); g.fill();
 }
 async function renderPackaging(concept, { variation = 0 } = {}) {
+  const logo = await loadImage(CONFIG.event.productLogo);
   const W = 1080, H = 1350, c = makeCanvas(W, H), g = c.getContext('2d');
   const [c1, c2] = concept.colors, rnd = mulberry32(hashStr(concept.name) + variation * 31);
   let gr = g.createRadialGradient(W / 2, 560, 80, W / 2, 660, 960);
@@ -3468,7 +3469,7 @@ async function renderPackaging(concept, { variation = 0 } = {}) {
     }
   });
   g.save(); g.translate(W / 2, 668); g.rotate(-0.07);
-  drawFlowPack(g, 880, 410, concept);
+  drawFlowPack(g, 880, 410, concept, logo);
   g.restore();
   g.save(); g.translate(W - 196, 470); g.rotate(0.2);
   burstPath(g, 0, 0, 92, 76, 18); g.fillStyle = '#ffd166'; g.fill(); g.lineWidth = 5; g.strokeStyle = '#fff'; g.stroke();
@@ -3600,8 +3601,18 @@ function buildPhotoPrompt(p, t, variation) {
 function buildInfographicPrompt(profile, style) {
   return `Background artwork for a vertical 4:5 career infographic poster about a ${profile.headline} professional. Style: ${style.bgPrompt}. Keep large calm areas on the right two-thirds and at the top for text overlays. Absolutely no text, letters, numbers, logos or people.`;
 }
+async function packagingLogoReference() {
+  if (!CONFIG.event.productLogo) throw new Error('Laboratuvar için resmi ürün logosu ayarlanmamış.');
+  const logo = await loadImage(CONFIG.event.productLogo);
+  const c = makeCanvas(896, 1120), g = c.getContext('2d');
+  const scale = Math.min(768 / logo.naturalWidth, 768 / logo.naturalHeight);
+  const w = logo.naturalWidth * scale, h = logo.naturalHeight * scale;
+  g.fillStyle = '#e8e8e8'; g.fillRect(0, 0, c.width, c.height);
+  g.drawImage(logo, (c.width - w) / 2, (c.height - h) / 2, w, h);
+  return dataUrlToBlob(c.toDataURL('image/png'));
+}
 function buildPackPrompt(c) {
-  return `Premium studio product photography of a new ${CONFIG.event.productBrand} snack concept: a ${c.baseEn} with ${c.flavorEn}. One modern flow-wrap package, vibrant flavor-inspired colors, appetizing cutaway product visuals and only the selected real ingredients. On the package, print the brand "${CONFIG.event.productBrand}", the exact product name ${JSON.stringify(c.name)}, the exact short slogan ${JSON.stringify(c.slogan)} and a small "YENİ" badge; no invented copy, additional slogans or text outside the package. ${c.visualDirection ? `Art direction: ${c.visualDirection}` : ''} Soft gradient studio background with a refined podium. Photorealistic premium commercial lighting, vertical 4:5. Leave the bottom 8% calm for the kiosk signature without a blank strip.`;
+  return `Reference image 1 contains only the official ${CONFIG.event.productBrand} logo, not an existing package. Create premium studio product photography of a NEW ${CONFIG.event.productBrand} snack concept: a ${c.baseEn} with ${c.flavorEn}. One modern flow-wrap package, vibrant flavor-inspired colors, appetizing cutaway product visuals and only the selected real ingredients. Place the exact supplied logo once on the upper-left front of the package, naturally following the wrapper perspective. Preserve its red lettering, white outline, umlaut dots, italic letter shapes and original proportions. Do not recreate the brand as typed text, substitute a font, redesign or misspell the logo, add another logo, or copy the reference background into the scene. On the package, print the exact product name ${JSON.stringify(c.name)}, the exact short slogan ${JSON.stringify(c.slogan)} and a small "YENİ" badge; no invented copy, additional slogans or text outside the package. ${c.visualDirection ? `Art direction: ${c.visualDirection}` : ''} Soft gradient studio background with a refined podium. Photorealistic premium commercial lighting, vertical 4:5. Leave the bottom 8% calm for the kiosk signature without a blank strip.`;
 }
 
 const LAB_COPY_LIMITS = { name: 24, slogan: 60, story: 240, visualDirection: 360 };
@@ -3731,7 +3742,10 @@ const API = {
       return mock;
     },
     async packaging(concept, opts = {}) {
-      if (API.live && CONFIG.ai.endpoint) return composePack(await MAI.generate(buildPackPrompt(concept), 896, 1120), concept);
+      if (API.live && CONFIG.ai.endpoint) {
+        const logo = await packagingLogoReference();
+        return composePack(await MAI.edit(buildPackPrompt(concept), [logo]), concept);
+      }
       if (!opts.fast) await API.wait(7600);
       return renderPackaging(concept, { variation: opts.variation || 0 });
     },

@@ -34,6 +34,14 @@ Canlı Laboratuvar önce LLM ile ad, slogan, hikâye ve İngilizce görsel yönl
 Metin modeli hatasında cihazda hazırlanmış metne sessizce dönülmez; hata ekranı
 gösterilir ve görsel çağrısı yapılmaz. Demo modu tamamen cihazda çalışmaya devam eder.
 
+Laboratuvar ambalajları, Ülker'in [resmi sitesindeki logoyu](https://www.ulker.com.tr/documents/1200px-ulker_logo_2_svg.png)
+yerel `assets/ulker-logo.png` dosyasından kullanır (`CONFIG.event.productLogo`).
+Canlı üretimde logo, oranı korunarak PNG referansına yerleştirilir ve
+`images/edits` çağrısına gönderilir; prompt logonun harflerini, renklerini ve
+beyaz konturunu korumasını ister. Modelin logoyu birebir aktarması garanti değildir.
+Demo ambalajında aynı dosya doğrudan çizilir; logo yüklenemezse üretim hata verir,
+temsili yazı logosuna dönülmez. Önceden üretilmiş galeri örnekleri değiştirilmez.
+
 Açılışta Demo Modu veya Canlı Mod seçin. Üstteki durum etiketi seçime göre
 **Demo Modu** veya **Live Mode** gösterir. Sağdaki kalıcı **Ayarlar** menüsünden
 sesi açıp kapatabilir, tam ekrana geçebilir, modu değiştirebilir ve

@@ -277,6 +277,68 @@ test('Laboratory generation waits for copy and never requests an image when copy
   assert.deepEqual(order, ['copy', 'image']);
 });
 
+test('live Laboratory packaging passes the official logo to image edits and fails if it cannot load', async () => {
+  const logo = { naturalWidth: 1200, naturalHeight: 384 }, ref = new Blob(['logo'], { type: 'image/png' });
+  const draws = [], edits = [], concept = { name: 'Test snack', slogan: 'Test slogan', baseEn: 'wafer', flavorEn: 'pistachio' };
+  const context = vm.createContext({
+    CONFIG: { event: { productBrand: 'Ülker', productLogo: 'assets/ulker-logo.png' }, ai: { endpoint: 'test' } },
+    loadImage: async src => { assert.equal(src, 'assets/ulker-logo.png'); return logo; },
+    makeCanvas: (width, height) => ({
+      width, height, getContext: () => ({ fillRect() {}, drawImage: (...args) => draws.push(args) }),
+      toDataURL: type => { assert.equal(type, 'image/png'); return 'png-reference'; },
+    }),
+    dataUrlToBlob: data => { assert.equal(data, 'png-reference'); return ref; },
+    MAI: {
+      edit: async (prompt, refs) => { edits.push({ prompt, refs }); return 'generated'; },
+      generate: () => assert.fail('Laboratory must use the logo reference, not text-only generation'),
+    },
+    composePack: async (image, copy) => { assert.equal(copy, concept); return image; },
+  });
+  vm.runInContext(sourceBetween('async function packagingLogoReference(', 'const LAB_COPY_LIMITS'), context);
+  vm.runInContext(`globalThis.API = { live: true, ${sourceBetween('  lab: {\n    async concept', '  share: {')} };`, context);
+  assert.equal(await context.API.lab.packaging(concept), 'generated');
+  assert.equal(edits[0].refs[0], ref);
+  assert.match(edits[0].prompt, /Reference image 1 contains only the official Ülker logo/);
+  assert.match(edits[0].prompt, /Do not recreate the brand as typed text/);
+  assert.match(edits[0].prompt, /"Test snack"/);
+  assert.match(edits[0].prompt, /"Test slogan"/);
+  assert.equal(draws[0][0], logo);
+  assert.ok(Math.abs(draws[0][3] / draws[0][4] - 1200 / 384) < 0.0001);
+  context.loadImage = async () => { throw new Error('Logo unavailable'); };
+  await assert.rejects(context.API.lab.packaging(concept), /Logo unavailable/);
+  assert.equal(edits.length, 1);
+  context.CONFIG.event.productLogo = '';
+  await assert.rejects(context.API.lab.packaging(concept), /resmi ürün logosu ayarlanmamış/);
+});
+
+test('demo Laboratory packaging draws the real logo instead of a typeset imitation', async () => {
+  const logo = { naturalWidth: 1200, naturalHeight: 384 }, images = [], text = [];
+  const gradient = { addColorStop() {} };
+  const g = new Proxy({
+    drawImage: (...args) => images.push(args),
+    fillText: value => text.push(value),
+    measureText: () => ({ width: 20 }),
+    createLinearGradient: () => gradient,
+    createRadialGradient: () => gradient,
+  }, { get: (target, name) => target[name] || (() => {}) });
+  const context = vm.createContext({
+    CONFIG: { event: { productBrand: 'Ülker', productLogo: 'assets/ulker-logo.png' } },
+    loadImage: async src => { assert.equal(src, 'assets/ulker-logo.png'); return logo; },
+    makeCanvas: () => ({ getContext: () => g, toDataURL: () => 'demo-pack' }),
+    mulberry32: () => () => 0.5, hashStr: () => 1, TAU: Math.PI * 2, FONT_T: 'font',
+    shade: color => color, trUp: value => value.toUpperCase(), trLow: value => value.toLowerCase(),
+    cfont: () => '', wrapLines: (_g, value) => [value],
+    rr() {}, softDot() {}, spaced() {}, burstPath() {}, drawBrandBand() {},
+  });
+  vm.runInContext(sourceBetween('function drawFlowPack(', '/* ==========================================================================\n   Yapay zekâ / servis'), context);
+  const concept = { baseId: 'gofret', baseName: 'Gofret', name: 'Test', slogan: 'Slogan', colors: ['red', 'green'], flavorColors: ['green'], flavorText: 'Fıstık' };
+  assert.equal(await context.renderPackaging(concept), 'demo-pack');
+  assert.equal(images.length, 1);
+  assert.equal(images[0][0], logo);
+  assert.ok(Math.abs(images[0][3] / images[0][4] - 1200 / 384) < 0.0001);
+  assert.ok(!text.includes('ülker'));
+});
+
 test('inline application and gallery scripts parse', () => {
   for (const name of ['index.html', 'samples.html']) {
     const content = fs.readFileSync(path.join(__dirname, name), 'utf8');
