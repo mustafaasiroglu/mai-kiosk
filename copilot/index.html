@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Copilot · Yıldız Holding × Microsoft</title>
+  <script>
+    (() => {
+      const param = new URLSearchParams(window.location.search).get("scoutTheme");
+      const theme =
+        param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <base href="../">
+  <link rel="stylesheet" href="copilot/style.css">
+</head>
+<body>
+  <div class="shell">
+    <aside id="sidebar" class="sidebar" aria-label="Gezinme">
+      <header><b class="wordmark">Copilot</b><button type="button" class="icon-btn" data-action="sidebar" aria-label="Gezinmeyi kapat" data-icon="layout"></button></header>
+      <div class="switch" aria-label="Çalışma biçimi">
+        <button type="button" data-mode="chat">Chat</button><button type="button" data-mode="cowork">Cowork</button>
+      </div>
+      <nav aria-label="Copilot">
+        <button type="button" class="nav-row" data-action="new"><span data-icon="plusCircle"></span> Yeni sohbet</button>
+        <button type="button" class="nav-row" data-action="search"><span data-icon="search"></span> Ara</button>
+        <a class="nav-row" href="samples.html"><span data-icon="library"></span> Örnekler</a>
+        <button type="button" class="nav-row" data-action="agents"><span data-icon="agents"></span> Agent’lar</button>
+      </nav>
+      <div class="side-scroll">
+        <p class="side-label">Agent’ların</p>
+        <div id="pinned"></div>
+        <p class="side-label">Son sohbetler</p>
+        <div id="recent"></div>
+      </div>
+      <footer class="identity"><span class="avatar" aria-hidden="true">Y</span><span><b>Yıldız Holding</b><small>Microsoft AI Kiosk</small></span><button type="button" class="icon-btn" data-action="settings" aria-label="Ayarlar" data-icon="settings"></button></footer>
+    </aside>
+    <main id="main">
+      <header class="topbar">
+        <button type="button" id="openSidebar" class="icon-btn" data-action="sidebar" aria-label="Gezinmeyi aç" data-icon="layout" hidden></button>
+        <span id="topTitle" class="top-title"></span>
+        <span id="modeBadge" class="mode-badge"></span>
+        <button type="button" class="icon-btn" data-action="new" aria-label="Yeni sohbet" data-icon="edit"></button>
+        <button type="button" id="workspaceButton" class="icon-btn" data-action="workspace" aria-controls="workspace" aria-label="Çalışma alanı" data-icon="panel" hidden></button>
+      </header>
+      <section id="catalog" class="catalog"></section>
+      <section id="conversation" class="conversation" aria-label="Sohbet" hidden>
+        <div id="scroll" class="transcript"><div id="messages" class="chat-width" role="log" aria-label="Mesajlar"></div></div>
+        <div class="composer-region chat-width">
+          <form id="composer" class="composer">
+            <div id="attachment"></div>
+            <textarea id="message" rows="2" maxlength="500" aria-label="Mesaj" placeholder="Mesaj yaz"></textarea>
+            <div class="composer-actions">
+              <button type="button" id="attachButton" class="icon-btn" data-action="attach" data-icon="plus" aria-label="Fotoğraf ekle" hidden></button>
+              <span id="composerMode"></span>
+              <button type="submit" id="send" class="icon-btn send" aria-label="Gönder" data-icon="arrowUp" disabled></button>
+              <button type="button" id="stop" class="icon-btn send" data-action="stop" aria-label="İşlemi durdur" data-icon="stop" hidden></button>
+            </div>
+          </form>
+          <p class="disclaimer">Yapay zekâ tarafından üretilen içerik hatalı olabilir.</p>
+        </div>
+      </section>
+      <noscript>Copilot deneyimi için JavaScript gereklidir.</noscript>
+    </main>
+    <aside id="workspace" class="workspace" aria-label="Çalışma alanı" hidden>
+      <header><b>Çalışma alanı</b><button type="button" class="icon-btn" data-action="workspace" data-icon="close" aria-label="Çalışma alanını kapat"></button></header>
+      <div id="workspaceBody"></div>
+    </aside>
+  </div>
+  <dialog id="settings" aria-labelledby="settingsTitle">
+    <header><h2 id="settingsTitle">Ayarlar</h2><button type="button" class="icon-btn" data-action="closeSettings" data-icon="close" aria-label="Ayarları kapat"></button></header>
+    <div class="dialog-actions">
+      <button type="button" class="pill" data-action="demo">Demo moduna geç</button>
+      <button type="button" class="pill" data-action="fullscreen">Tam ekranı değiştir</button>
+    </div>
+    <form id="connection">
+      <h3>Microsoft Foundry</h3>
+      <p class="muted">Canlı modda görsel üretimi için Foundry kullanılır. Kariyer profilleri temsili kalır. Bu ekrandaki bağlantı bilgileri yalnızca açık sayfada tutulur.</p>
+      <label>Foundry uç noktası<input name="endpoint" required placeholder="https://kaynak.services.ai.azure.com"></label>
+      <label>API anahtarı<input name="key" type="password" autocomplete="off" required></label>
+      <label>Görsel modeli dağıtımı<input name="imageModel" value="MAI-Image-2.7-Flash" required></label>
+      <label>Metin modeli dağıtımı<input name="labModel" value="gpt-5.4-mini"></label>
+      <p id="settingsStatus" role="status"></p>
+      <button type="submit" class="primary">Canlı modu aç</button>
+    </form>
+  </dialog>
+  <dialog id="searchDialog" aria-labelledby="searchTitle">
+    <header><h2 id="searchTitle">Sohbetlerde ara</h2><button type="button" class="icon-btn" data-action="closeSearch" data-icon="close" aria-label="Aramayı kapat"></button></header>
+    <input id="searchInput" type="search" aria-label="Sohbetlerde ara" placeholder="Sohbet adı veya mesaj">
+    <div id="searchResults"></div>
+  </dialog>
+  <dialog id="photoDialog" aria-labelledby="photoTitle">
+    <header><h2 id="photoTitle">Fotoğraf ekle</h2><button type="button" class="icon-btn" data-action="closePhoto" data-icon="close" aria-label="Fotoğraf penceresini kapat"></button></header>
+    <p class="muted">Fotoğraf, üretimi onaylayana kadar bu sayfadan gönderilmez.</p>
+    <video id="cameraPreview" autoplay muted playsinline hidden></video>
+    <p id="cameraStatus" role="status"></p>
+    <div class="dialog-actions">
+      <button type="button" class="pill" data-action="pickPhoto">Dosya seç</button>
+      <button type="button" class="pill" id="cameraStart" data-action="camera">Kamerayı aç</button>
+      <button type="button" class="primary" id="cameraShot" data-action="capture" hidden>Fotoğraf çek</button>
+    </div>
+  </dialog>
+  <input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+  <div id="notice" role="status" class="notice" hidden></div>
+  <script src="samples.js"></script>
+  <script src="kiosk-engine.js"></script>
+  <script src="copilot/app.js"></script>
+</body>
+</html>

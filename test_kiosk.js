@@ -4,14 +4,14 @@ const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
 
-const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8').replace(/\r\n/g, '\n');
+const engine = fs.readFileSync(path.join(__dirname, 'kiosk-engine.js'), 'utf8').replace(/\r\n/g, '\n');
 const sampleSource = fs.readFileSync(path.join(__dirname, 'samples.js'), 'utf8');
 const sourceBetween = (start, end) => {
-  const offset = html.indexOf(start);
+  const offset = engine.indexOf(start);
   assert.notEqual(offset, -1);
-  const finish = html.indexOf(end, offset);
+  const finish = engine.indexOf(end, offset);
   assert.notEqual(finish, -1);
-  return html.slice(offset, finish);
+  return engine.slice(offset, finish);
 };
 
 test('connection selection can repeatedly switch Demo and Live and cancel without changing mode', async () => {
@@ -551,12 +551,30 @@ test('canvas packaging renderer draws the real logo instead of a typeset imitati
   assert.ok(!text.includes('ülker'));
 });
 
-test('inline application and gallery scripts parse', () => {
+test('kiosk, gallery and Copilot application scripts parse', () => {
+  new vm.Script(engine);
   new vm.Script(sampleSource);
-  for (const name of ['index.html', 'samples.html']) {
+  new vm.Script(fs.readFileSync(path.join(__dirname, 'copilot', 'app.js'), 'utf8'));
+  for (const name of ['index.html', 'samples.html', path.join('copilot', 'index.html')]) {
     const content = fs.readFileSync(path.join(__dirname, name), 'utf8');
     for (const match of content.matchAll(/<script>([\s\S]*?)<\/script>/g)) new vm.Script(match[1]);
   }
+});
+
+test('stopping a Copilot run aborts its in-flight Foundry request', async () => {
+  const context = vm.createContext({
+    AbortSignal,
+    FormData,
+    CONFIG: { ai: { endpoint: 'https://test.services.ai.azure.com', apiKey: 'test' } },
+    fetch: (_url, { signal }) => new Promise((_, reject) => {
+      signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+    }),
+  });
+  vm.runInContext(sourceBetween('const MAI = {', 'const Chat = {') + '\nglobalThis.mai = MAI;', context);
+  const controller = new AbortController();
+  const request = context.mai.request('images/generations', {}, undefined, controller.signal);
+  controller.abort();
+  await assert.rejects(request, { name: 'AbortError' });
 });
 
 test('gallery shows only the latest attempt per scenario, then applies experience and search filters', () => {
