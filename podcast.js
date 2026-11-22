@@ -388,19 +388,40 @@ API.podcast = {
     }, null, 2) });
     const selfie = dataUrlToBlob(await resizeDataUrl(values.photo, 896, 1120));
     const productReference = await podcastProductReference(values.product);
-    for (const [index, entry] of scenes.entries()) {
-      stage(index + 2);
-      const artPrompt = podcastFramePrompt(index, entry, { ...values, memoryVisual: scenes[1].visualDirection }, facts, advertisementHeadline);
-      opts.onOutput?.(index + 2, { text: artPrompt });
-      const references = index ? [selfie, productReference] : [productReference];
-      signal?.throwIfAborted();
-      const raw = await MAI.edit(artPrompt, references, signal);
-      signal?.throwIfAborted();
-      opts.onOutput?.(index + 2, { image: raw });
-      entry.image = index === 0 ? raw : await podcastComposeFrame(raw);
-      signal?.throwIfAborted();
-      if (index) opts.onOutput?.(index + 2, { image: entry.image });
-    }
+    stage(2);
+    const imageController = new AbortController();
+    const imageSignal = signal ? AbortSignal.any([signal, imageController.signal]) : imageController.signal;
+    const imageStates = scenes.map(() => 'running');
+    let imageStage = 0;
+    await Promise.allSettled(scenes.map(async (entry, index) => {
+      try {
+        imageSignal.throwIfAborted();
+        opts.onStep?.(index + 2, 'running');
+        const artPrompt = podcastFramePrompt(index, entry, { ...values, memoryVisual: scenes[1].visualDirection }, facts, advertisementHeadline);
+        opts.onOutput?.(index + 2, { text: artPrompt });
+        const references = index ? [selfie, productReference] : [productReference];
+        imageSignal.throwIfAborted();
+        const raw = await MAI.edit(artPrompt, references, imageSignal);
+        imageSignal.throwIfAborted();
+        opts.onOutput?.(index + 2, { image: raw });
+        entry.image = index === 0 ? raw : await podcastComposeFrame(raw);
+        imageSignal.throwIfAborted();
+        if (index) opts.onOutput?.(index + 2, { image: entry.image });
+        imageStates[index] = 'complete';
+        opts.onStep?.(index + 2, 'complete');
+        const next = imageStates.findIndex(state => state !== 'complete');
+        if (next >= 0 && next !== imageStage) {
+          imageStage = next;
+          stage(next + 2);
+        }
+      } catch (error) {
+        const failed = !imageSignal.aborted;
+        imageController.abort(error);
+        if (imageStates[index] !== 'complete') opts.onStep?.(index + 2, failed ? 'error' : 'stopped');
+        throw error;
+      }
+    }));
+    imageSignal.throwIfAborted();
     stage(5);
     for (const entry of scenes) {
       entry.audio = await podcastAudio(entry.text, signal, voice); signal?.throwIfAborted();

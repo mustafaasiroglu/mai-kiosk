@@ -222,6 +222,10 @@ Görsel promptlarında ürün adı yerine genel bir atıştırmalık tanımı ku
 anlatım ve görsel yönlendirmelerden taşınan seçili ürün adı da temizlenir.
 Anı ve kapanış karelerinin her biri orijinal selfieyi ve seçilen ürünün
 görselini referans alır; ürünün görünümü metinsel adından değil referanstan alınır.
+Üç görsel isteği aynı anda başlatılır; sonuçlar sahne sırasına göre yerleştirilir.
+Chat/Cowork her görsel adımının durumunu ayrı gösterir. Bir istek hata verirse
+diğerleri iptal edilir ve hepsi durmadan ses/video üretimine geçilmez;
+servis reddi otomatik tekrar denenmez.
 Kapanışta sahne devamlılığı önceki anının metinsel görsel yönlendirmesiyle
 istenir; önceki üretilmiş fotoğraf ikinci referans olarak gönderilmez.
 Görsel devamlılık talimatları yalnızca `memoryVisual` ve `endingVisual`

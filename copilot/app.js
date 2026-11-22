@@ -262,7 +262,10 @@
 
   function timeline(job, jobIndex) {
     return `<ul class="timeline">${job.steps.map((step, i) => {
-      const icon = i < job.step ? 'check' : job.status === 'running' && i === job.step ? 'loading' : 'circle';
+      const state = job.stepStates?.[i];
+      const complete = state ? state === 'complete' : i < job.step;
+      const running = job.status === 'running' && (state ? state === 'running' : i === job.step);
+      const icon = complete ? 'check' : running ? 'loading' : state === 'error' ? 'close' : 'circle';
       const output = job.outputs?.[i];
       if (!output?.text && !output?.image) return `<li>${svg(icon, icon === 'loading' ? 'spinner' : '')}<div class="step-detail">${esc(step)}</div></li>`;
       return `<li>${svg(icon, icon === 'loading' ? 'spinner' : '')}<details class="step-detail" data-job-index="${jobIndex}" data-step="${i}"${job.stepExpanded?.[i] ? ' open' : ''}>
@@ -736,7 +739,15 @@
         title = v.theme.name;
         output(0, { text: `${title} · ${v.product.name}`, image });
       } else if (t.agent.id === 'podcast') {
-        podcast = await API.podcast.generate(v, { ...opts, onOutput: output, onStage: index => { signal.throwIfAborted(); job.step = index; update(); } });
+        podcast = await API.podcast.generate(v, {
+          ...opts, onOutput: output,
+          onStage: index => { signal.throwIfAborted(); job.step = index; update(); },
+          onStep: (index, status) => {
+            (job.stepStates ??= [])[index] = status;
+            if (status === 'error') job.step = index;
+            update();
+          },
+        });
         ({ image, title } = podcast);
       } else {
         if (revision) {

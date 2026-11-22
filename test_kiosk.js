@@ -510,7 +510,7 @@ test('podcast uses sourced headlines directly before fiction, image and same-end
   const stages = [];
   const result = await context.API.podcast.generate(input, { onStage: index => { stages.push(index); if (index === 2) config.ai.speechVoice = 'en-US-AvaMultilingualNeural'; } });
   assert.deepEqual(stages, [0, 1, 2, 3, 4, 5, 6]);
-  assert.deepEqual(calls.map(call => call[0]), ['research', 'headlines', 'story', 'product-reference', 'edit', 'edit', 'compose', 'edit', 'compose', 'speech', 'speech', 'speech', 'video']);
+  assert.deepEqual(calls.map(call => call[0]), ['research', 'headlines', 'story', 'product-reference', 'edit', 'edit', 'edit', 'compose', 'compose', 'speech', 'speech', 'speech', 'video']);
   for (const call of calls.filter(call => call[0] === 'research')) {
     assert.equal(call[1], 'https://api.microsoft.ai/v3/search/web');
     assert.equal(call[2].headers['x-apikey'], config.ai.webIQApiKey);
@@ -571,7 +571,81 @@ test('podcast reports step outputs as they are produced without exposing private
   for (const privateValue of [input.photo, config.ai.apiKey, config.ai.webIQApiKey, 'currentAge', 'birthYear']) assert.ok(!displayed.includes(privateValue));
 });
 
-test('failed podcast images retain the story, prior image and failed-step prompt without retries', async () => {
+test('podcast starts all three image requests together and preserves scene order after out-of-order completion', async () => {
+  const { context, input, calls } = podcastHarness(), pending = [], states = [];
+  let started;
+  const ready = new Promise(resolve => { started = resolve; });
+  context.MAI.edit = (_prompt, _references, signal) => new Promise(resolve => {
+    pending.push({ resolve, signal });
+    if (pending.length === 3) started();
+  });
+  context.podcastComposeFrame = async raw => `composed:${raw}`;
+  const generation = context.API.podcast.generate(input, { onStep: (index, state) => { states[index] = state; } });
+  await ready;
+  assert.deepEqual(states.slice(2), ['running', 'running', 'running']);
+  assert.equal(calls.some(call => call[0] === 'speech'), false);
+  pending[2].resolve('ending');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(states.slice(2), ['running', 'running', 'complete']);
+  pending[1].resolve('memory');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls.some(call => call[0] === 'speech'), false);
+  pending[0].resolve('newspaper');
+  const result = await generation;
+  assert.deepEqual(Array.from(result.scenes, scene => scene.image), ['newspaper', 'composed:memory', 'composed:ending']);
+  assert.deepEqual(states.slice(2), ['complete', 'complete', 'complete']);
+});
+
+test('parallel image failure aborts siblings and waits for settlement without late outputs or narration', async () => {
+  const { context, input, calls, sessions } = podcastHarness(), pending = [], outputs = [], states = [];
+  let started;
+  const ready = new Promise(resolve => { started = resolve; });
+  context.MAI.edit = (_prompt, _references, signal) => new Promise((resolve, reject) => {
+    pending.push({ resolve, reject, signal });
+    if (pending.length === 3) started();
+  });
+  const error = new Error('Image service rejected the scene');
+  const generation = context.API.podcast.generate(input, {
+    onStep: (index, state) => { states[index] = state; },
+    onOutput: (index, data) => { outputs[index] = { ...outputs[index], ...data }; },
+  });
+  let settled = false;
+  const rejection = assert.rejects(generation, received => received === error).then(() => { settled = true; });
+  await ready;
+  pending[1].reject(error);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(pending.every(request => request.signal.aborted), true);
+  assert.equal(settled, false);
+  assert.equal(sessions[0].disposed, false);
+  pending[0].resolve('late-newspaper');
+  pending[2].resolve('late-ending');
+  await rejection;
+  assert.deepEqual(states.slice(2), ['stopped', 'error', 'stopped']);
+  assert.equal(outputs.slice(2).some(output => output?.image), false);
+  assert.equal(calls.some(call => ['speech', 'video'].includes(call[0])), false);
+  assert.equal(sessions[0].disposed, true);
+});
+
+test('user cancellation aborts all three running image requests', async () => {
+  const { context, input, calls, sessions } = podcastHarness(), controller = new AbortController(), signals = [];
+  let started;
+  const ready = new Promise(resolve => { started = resolve; });
+  context.MAI.edit = (_prompt, _references, signal) => new Promise((_resolve, reject) => {
+    signals.push(signal);
+    signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+    if (signals.length === 3) started();
+  });
+  const generation = context.API.podcast.generate(input, { signal: controller.signal });
+  const rejection = assert.rejects(generation, { name: 'AbortError' });
+  await ready;
+  controller.abort();
+  await rejection;
+  assert.equal(signals.every(signal => signal.aborted), true);
+  assert.equal(calls.some(call => ['speech', 'video'].includes(call[0])), false);
+  assert.equal(sessions[0].disposed, true);
+});
+
+test('failed parallel podcast images retain the story, prior image and failed-step prompt without retries', async () => {
   const { context, input } = podcastHarness(), outputs = [];
   let edits = 0;
   context.MAI.edit = async () => {
@@ -581,12 +655,13 @@ test('failed podcast images retain the story, prior image and failed-step prompt
   await assert.rejects(context.API.podcast.generate(input, {
     onOutput: (index, data) => { outputs[index] = { ...outputs[index], ...data }; },
   }), /rejected/);
-  assert.equal(edits, 2);
+  assert.equal(edits, 3);
   assert.match(outputs[1].text, /O gün kahramanımız/);
   assert.equal(outputs[2].image, 'first-generated-image');
   assert.match(outputs[3].text, /Create the personal memory/);
   assert.equal(outputs[3].image, undefined);
-  assert.equal(outputs[4], undefined);
+  assert.match(outputs[4].text, /Create the continuation/);
+  assert.equal(outputs[4].image, undefined);
 });
 
 test('step details escape outputs and remember their expansion independently of the parent job', () => {
@@ -614,6 +689,28 @@ test('step details escape outputs and remember their expansion independently of 
   node.isConnected = true; node.open = false;
   context.jobUI.rememberJobExpansion({ type: 'click', target: { closest: () => ({ parentElement: node }) } });
   assert.equal(job.stepExpanded[1], true, 'Record the native click before a progress update can replace the node');
+});
+
+test('parallel timeline steps show independent running, complete and failed states', () => {
+  const { context } = podcastHarness();
+  const source = fs.readFileSync(path.join(__dirname, 'copilot', 'app.js'), 'utf8');
+  context.svg = name => `<svg data-icon="${name}"></svg>`;
+  vm.runInContext(source.slice(source.indexOf('  function timeline('), source.indexOf('  const jobLabel')) +
+    '\nglobalThis.renderTimeline = timeline;', context);
+  const job = { steps: ['Newspaper', 'Memory', 'Ending'], step: 0, status: 'running', stepStates: ['running', 'running', 'running'] };
+  assert.equal((context.renderTimeline(job, 0).match(/data-icon="loading"/g) || []).length, 3);
+  job.stepStates[2] = 'complete';
+  const progress = context.renderTimeline(job, 0);
+  assert.equal((progress.match(/data-icon="loading"/g) || []).length, 2);
+  assert.equal((progress.match(/data-icon="check"/g) || []).length, 1);
+  job.status = 'error';
+  job.step = 1;
+  job.stepStates = ['stopped', 'error', 'complete'];
+  const failed = context.renderTimeline(job, 0);
+  assert.equal((failed.match(/data-icon="check"/g) || []).length, 1);
+  assert.equal((failed.match(/data-icon="close"/g) || []).length, 1);
+  assert.equal((failed.match(/data-icon="circle"/g) || []).length, 1);
+  assert.ok(!failed.includes('data-icon="loading"'));
 });
 
 test('podcast stops before fiction and images when WebIQ fails or returns no sources', async () => {
@@ -766,7 +863,7 @@ test('podcast cancellation at every stage prevents later requests and successful
     const controller = new AbortController();
     await assert.rejects(context.API.podcast.generate(input, { signal: controller.signal, onStage: index => { if (index === cancelAt) controller.abort(); } }), /abort/i);
     assert.equal(calls.filter(call => call[0] === 'speech').length, cancelAt === 6 ? 3 : 0);
-    if (cancelAt <= 2) assert.equal(calls.filter(call => call[0] === 'image').length, 0);
+    assert.equal(calls.filter(call => call[0] === 'edit').length, cancelAt <= 2 ? 0 : 3);
     assert.equal(sessions.every(session => session.disposed), true);
   }
 });
