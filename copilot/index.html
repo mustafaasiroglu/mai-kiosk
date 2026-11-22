@@ -13,8 +13,8 @@
     })();
   </script>
   <base href="../">
-  <link rel="stylesheet" href="copilot/style.css">
-  <link rel="stylesheet" href="podcast.css?v=20261122-3">
+  <link rel="stylesheet" href="copilot/style.css?v=20261122-1">
+  <link rel="stylesheet" href="podcast.css?v=20261122-4">
 </head>
 <body>
   <div class="shell">
@@ -83,9 +83,9 @@
       <label>API anahtarı<input name="key" type="password" autocomplete="off" required></label>
       <label>Görsel modeli dağıtımı<input name="imageModel" value="MAI-Image-2.7-Flash" required></label>
       <label>Metin ve WebIQ modeli dağıtımı<input name="labModel" value="gpt-5.4-mini"></label>
-      <input name="voice" type="hidden" value="en-US-Harper:MAI-Voice-2-Flash">
+      <label>Nostalji Podcast anlatıcı sesi<input name="voice" value="en-US-Harper:MAI-Voice-2-Flash"></label>
       <p id="settingsStatus" role="status"></p>
-      <button type="submit" class="primary">Canlı modu aç</button>
+      <button type="submit" class="primary">Bağlantıyı kullan</button>
     </form>
   </dialog>
   <dialog id="searchDialog" aria-labelledby="searchTitle">
@@ -107,9 +107,10 @@
   <input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
   <div id="notice" role="status" class="notice" hidden></div>
   <script src="samples.js?v=20261122-11"></script>
-  <script src="kiosk-engine.js?v=20261122-11"></script>
-  <script src="podcast-video.js?v=20261122-2"></script>
-  <script src="podcast.js?v=20261122-3"></script>
-  <script src="copilot/app.js?v=20261122-10"></script>
+  <script src="kiosk-engine.js?v=20261122-12"></script>
+  <script src="podcast-music.js?v=20261122-2"></script>
+  <script src="podcast-video.js?v=20261122-3"></script>
+  <script src="podcast.js?v=20261122-4"></script>
+  <script src="copilot/app.js?v=20261122-11"></script>
 </body>
 </html>

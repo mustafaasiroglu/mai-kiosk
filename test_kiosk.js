@@ -16,6 +16,38 @@ const sourceBetween = (start, end) => {
 
 const podcastSource = fs.readFileSync(path.join(__dirname, 'podcast.js'), 'utf8');
 const podcastVoice = 'en-US-Harper:MAI-Voice-2-Flash';
+test('decade music validates selections and files, fades, resamples, ducks and clips the original bed', async () => {
+  let response = new Response(fs.readFileSync(path.join(__dirname, 'assets', 'podcast-music', '2000.wav')));
+  const context = vm.createContext({ Uint8Array, fetch: async () => response });
+  vm.runInContext(fs.readFileSync(path.join(__dirname, 'podcast-music.js'), 'utf8') + '\nglobalThis.music = PodcastMusic;', context);
+  const music = context.music;
+  for (const [year, decade] of [[1944, 1940], [1969, 1960], [2004, 2000], [2020, 2020]]) assert.equal(music.decade({ start: year }), decade);
+  for (const year of [1943, '2004', new Date().getFullYear() + 1]) assert.throws(() => music.decade({ start: year }), /geçerli/);
+  assert.ok((await music.load({ start: 2004 })).byteLength > 44);
+  response = new Response('missing', { status: 404 });
+  await assert.rejects(music.load({ start: 2004 }), /HTTP 404/);
+  response = new Response(new Uint8Array(44));
+  await assert.rejects(music.load({ start: 2004 }), /geçerli bir ses/);
+  const controller = new AbortController();
+  controller.abort();
+  await assert.rejects(music.load({ start: 2004 }, controller.signal), /abort/i);
+  const buffer = value => {
+    const samples = new Float32Array(400).fill(value);
+    return { sampleRate: 100, duration: 4, getChannelData: () => samples };
+  };
+  const bed = { sampleRate: 50, getChannelData: () => new Float32Array([1, -.5]) };
+  const quiet = buffer(0), speaking = buffer(.5);
+  music.mix(quiet, bed);
+  music.mix(speaking, bed);
+  const samples = quiet.getChannelData();
+  assert.equal(samples[0], 0);
+  assert.ok(samples[200] > 0 && samples[202] < 0);
+  assert.ok(Math.abs(samples[399]) < .001);
+  assert.ok(speaking.getChannelData()[200] - .5 < samples[200]);
+  const loud = buffer(.999);
+  music.mix(loud, { sampleRate: 100, getChannelData: () => new Float32Array([1]) });
+  assert.ok(loud.getChannelData().every(value => Number.isFinite(value) && value <= 1 && value >= -1));
+});
 function groundedPodcastResponse() {
   const lines = ['2003–2004 öğretim yılı 15 Haziran 2004 tarihinde sona erdi.', '2004–2005 öğretim yılı 13 Eylül 2004 tarihinde başladı.'];
   const text = lines.map((line, index) => `- ${line} [${index + 1}]`).join('\n');
@@ -45,6 +77,7 @@ function podcastHarness(overrides = {}) {
   const context = vm.createContext({
     URL: class extends URL {}, AbortSignal, Blob, Uint8Array, atob,
     CONFIG: config, API: { live: true }, SCREENS: {}, STATE: { podcast: {} },
+    PodcastMusic: { load: async (_era, signal) => { signal?.throwIfAborted(); return new ArrayBuffer(44); }, decade: era => Math.floor(era.start / 10) * 10 },
     PodcastVideo: {
       prepare() { const session = { ready: Promise.resolve(), disposed: false, async dispose() { this.disposed = true; } }; sessions.push(session); return session; },
       async render(options) { calls.push(['video', options]); options.signal?.throwIfAborted(); return { video: new Blob(['test movie'], { type: 'video/mp4' }), videoPoster: 'radio-poster', introDuration: 1, videoDuration: 2 }; },
@@ -90,6 +123,17 @@ test('podcast validates all periods, calendar dates, Other and a single bounded 
   assert.throws(() => context.validatePodcastInput({ ...input, product: { id: 'unknown' } }));
 });
 
+test('both new nostalgia products enter the shared story and illustration generation', async () => {
+  for (const [id, name] of [['hanimeller', 'Hanımeller'], ['cokoprens', 'Çokoprens']]) {
+    const { context, input, calls } = podcastHarness();
+    await context.API.podcast.generate({ ...input, product: { id } });
+    const story = calls.find(call => call[0] === 'story');
+    assert.equal(JSON.parse(story[2]).product.name, name);
+    assert.ok(calls.find(call => call[0] === 'image')[1].includes(name));
+    assert.match(context.SCREENS['podcast.product'].render(), new RegExp(`data-product="${id}"`));
+  }
+});
+
 test('podcast requires completed research, two cited facts and safe, bounded citations', () => {
   const { context } = podcastHarness();
   assert.equal(context.podcastFacts(groundedPodcastResponse()).length, 2);
@@ -126,7 +170,8 @@ test('podcast verifies public sources before fiction, image and same-endpoint Sp
   assert.ok(speech[2].body.includes(podcastVoice));
   assert.equal(result.voice, podcastVoice);
   assert.equal(result.image, 'composed-image');
-  assert.match(result.intro, /^Sayın dinleyicilerimiz, 2004/);
+  assert.match(result.intro, /^Sayın dinleyicilerimiz/);
+  assert.match(result.intro, /2004/);
   assert.ok(result.narration.indexOf('Şimdi hayal edilen') < result.narration.indexOf('Kaynaklı dönem notları'));
   assert.equal(result.video.type, 'video/mp4');
   assert.equal(calls.filter(call => call[0] === 'speech').every(call => call[2].body.includes(podcastVoice)), true);
@@ -282,13 +327,15 @@ test('connection selection can repeatedly switch Demo and Live and cancel withou
   vm.runInContext(sourceBetween('const FoundrySettings =', 'function boot()'), context);
   const reopen = context.chooseConnection(() => transitions.push(config.ai.mode));
   assert.equal((await element('#connection-dialog').dispatch('cancel')).prevented, true);
-  await element('#connection-demo').dispatch('click');
+  element('#connection-demo').checked = true;
+  await element('#connection-demo').dispatch('change');
   assert.equal(element('#connection-dialog').open, true);
   await element('#connection-continue').dispatch('click');
   for (let i = 0; i < 2; i++) {
     reopen();
-    await element('#connection-live').dispatch('click');
-    assert.equal(form.hidden, true);
+    element('#connection-demo').checked = false;
+    await element('#connection-demo').dispatch('change');
+    assert.equal(form.hidden, false);
     assert.equal(config.ai.mode, 'mock');
     await element('#connection-continue').dispatch('click');
     Object.entries({
@@ -302,7 +349,8 @@ test('connection selection can repeatedly switch Demo and Live and cancel withou
     element('#connection-dialog').close();
     assert.equal(config.ai.mode, 'live');
     reopen();
-    await element('#connection-demo').dispatch('click');
+    element('#connection-demo').checked = true;
+    await element('#connection-demo').dispatch('change');
     assert.equal(config.ai.mode, 'live');
     await element('#connection-continue').dispatch('click');
     assert.equal(config.ai.mode, 'mock');
@@ -310,7 +358,7 @@ test('connection selection can repeatedly switch Demo and Live and cancel withou
   }
   assert.deepEqual(transitions, ['mock', 'live', 'mock', 'live', 'mock']);
   assert.equal(form.listeners.get('submit').length, 1);
-  assert.equal(element('#connection-demo').listeners.get('click').length, 1);
+  assert.equal(element('#connection-demo').listeners.get('change').length, 1);
   reopen();
   await element('#connection-chat').dispatch('click');
   blockSession = true;
@@ -359,7 +407,7 @@ test('settings reflect sound and busy state and report fullscreen failures expli
   assert.equal(element('#settings-sound-state').textContent, 'Kapalı');
   assert.equal(element('[data-settings="mode"]').disabled, true);
   assert.equal(element('#settings-busy').hidden, false);
-  assert.ok(labels.every(label => label.textContent === 'Live Mode'));
+  assert.ok(labels.every(label => label.textContent === '' && label.hidden));
   app.cur.def.noIdle = false;
   await settings.toggleFullscreen();
   assert.equal(element('#settings-fullscreen-label').textContent, 'Tam ekrandan çık');
@@ -872,7 +920,7 @@ test('Laboratory revisions send the existing design and logo without replacing t
   await assert.rejects(context.API.lab.revise(request, { signal: controller.signal, onCopy: () => controller.abort() }), { name: 'AbortError' });
   assert.equal(edits.length, 1);
   context.API.live = false;
-  await assert.rejects(context.API.lab.revise(request), /Canlı Mod gerekir/);
+  await assert.rejects(context.API.lab.revise(request), /Demo Modunu kapat/);
   assert.equal(textCalls.length, 3);
   assert.equal(JSON.stringify(previous), original);
 });
@@ -910,6 +958,7 @@ test('kiosk, gallery and Copilot application scripts parse', () => {
   new vm.Script(sampleSource);
   new vm.Script(fs.readFileSync(path.join(__dirname, 'podcast.js'), 'utf8'));
   new vm.Script(fs.readFileSync(path.join(__dirname, 'podcast-video.js'), 'utf8'));
+  new vm.Script(fs.readFileSync(path.join(__dirname, 'podcast-music.js'), 'utf8'));
   new vm.Script(fs.readFileSync(path.join(__dirname, 'copilot', 'app.js'), 'utf8'));
   for (const name of ['index.html', 'samples.html', path.join('copilot', 'index.html')]) {
     const content = fs.readFileSync(path.join(__dirname, name), 'utf8');

@@ -55,7 +55,7 @@ const EXPS = {
     cta: 'Fotoğrafını çek',
   },
   podcast: {
-    id: 'podcast', name: 'Bir Isırıkla O Yıla Dön', tag: 'Podcast', duration: '≈ 2 dk', start: 'podcast.product',
+    id: 'podcast', name: 'Nostalji Podcast', tag: 'Nostalji Podcast', duration: '≈ 2 dk', start: 'podcast.product',
     steps: ['Ürün', 'Dönem', 'An', 'Anı', 'Sonuç'], c1: '#ff9f43', c2: '#ff4d6d',
     desc: 'Ürününü ve yılını seç; anını mikrofonlu, nostaljik bir radyo videosuna dönüştürelim.',
     cta: 'Anını dinle',
@@ -2391,7 +2391,7 @@ const API = {
     },
     async revise({ image, concept, instruction }, opts = {}) {
       instruction = validateLabRevision(instruction);
-      if (!API.live) throw new Error('Revizyon için Canlı Mod gerekir; Demo görselleri değiştirilemez.');
+      if (!API.live) throw new Error('Revizyon için Demo Modunu kapat; Demo görselleri değiştirilemez.');
       if (!CONFIG.ai.endpoint) throw new Error('Canlı üretim için Foundry endpoint’i ayarlanmamış.');
       if (typeof image !== 'string' || !image.trim()) throw new Error('Revizyon için önce bir tasarım oluştur.');
       const copy = validateLabCopy(concept);
@@ -2653,6 +2653,8 @@ const Topbar = {
     const exp = def.exp && EXPS[def.exp];
     this.el.classList.toggle('is-hidden', !exp);
     if (!exp) return;
+    const badge = $('[data-mode-label]', this.el);
+    badge.hidden = API.live; badge.textContent = modeLabel();
     $('.tb-exp b', this.el).textContent = exp.name;
     $('.steps', this.el).innerHTML = exp.steps.map((s, i) => {
       const n = i + 1, cls = def.step > n ? 'is-done' : def.step === n ? 'is-active' : '';
@@ -2904,7 +2906,7 @@ function resultViewHTML({ img, alt, hideImage = false, title = '', text = '', ex
         ${revision ? `<button class="btn btn-lg btn-glass" data-act="revise"${API.live ? '' : ' disabled'}>${icon('edit')} Revizyon İste</button>` : ''}
         <button class="btn btn-lg btn-glass" data-act="restart">${icon('restart')} Baştan başla</button>
       </div>
-      ${revision && !API.live ? '<p class="fine">Revizyon için Canlı Mod gerekir.</p>' : ''}
+      ${revision && !API.live ? '<p class="fine">Revizyon için Demo Modunu kapatman gerekir.</p>' : ''}
       <p class="fine rise" style="--i:6">${icon('shield')} ${esc(CONFIG.share.retentionText)}</p>
     </div>
   </div>`;
@@ -2970,7 +2972,7 @@ SCREENS.home = {
   title: 'Ana ekran',
   render() {
     return `<div class="home">
-      <header class="home-top rise" style="--i:0">${brandLockup('lg')}<div class="live-chip" data-mode="${CONFIG.ai.mode}"><span class="dot"></span><span data-mode-label>${modeLabel()}</span></div></header>
+      <header class="home-top rise" style="--i:0">${brandLockup('lg')}<div class="live-chip" data-mode="${CONFIG.ai.mode}"${API.live ? ' hidden' : ''}><span class="dot"></span><span data-mode-label>${modeLabel()}</span></div></header>
       <div class="home-hero">
         <div class="eyebrow-chip rise" style="--i:1">${icon('sparkle')} Microsoft yapay zekâ teknolojileriyle</div>
         <h1 class="hero-title rise" style="--i:2">Yapay zekâ ile <span class="grad-text">yıldızını parlat.</span></h1>
@@ -3711,7 +3713,7 @@ const PhonePreview = {
   close: null,
 };
 
-function modeLabel() { return API.live ? 'Live Mode' : 'Demo Modu'; }
+function modeLabel() { return API.live ? '' : 'Demo Modu'; }
 
 const Settings = {
   el: null, fab: null, openConnection: null,
@@ -3732,7 +3734,7 @@ const Settings = {
       <div class="settings-body">
         <button class="settings-item" data-settings="sound" role="switch" aria-checked="${CONFIG.sound}">${icon('volume')}<span class="settings-copy"><b>Ses</b><small>Dokunma ve deneyim sesleri</small></span><span class="settings-state" id="settings-sound-state"></span></button>
         <button class="settings-item" data-settings="fullscreen">${icon('fullscreen')}<span class="settings-copy"><b id="settings-fullscreen-label">Tam ekran yap</b><small>Kiosk görünümünü genişlet</small></span></button>
-        <button class="settings-item" data-settings="mode">${icon('key')}<span class="settings-copy"><b>Mod değiştir</b><small>Demo Modu veya Live Mode</small></span></button>
+        <button class="settings-item" data-settings="mode">${icon('key')}<span class="settings-copy"><b>Bağlantı ve arayüz</b><small>Demo, Foundry ve anlatıcı ayarları</small></span></button>
         <p class="settings-note" id="settings-busy" hidden>Mod değişikliği, devam eden işlem tamamlandıktan sonra kullanılabilir.</p>
         <a class="settings-item" href="samples.html">${icon('grid')}<span class="settings-copy"><b>Örnek tasarımlar</b><small>Fotoğraf ve ambalaj galerisini keşfet</small></span>${icon('arrowRight')}</a>
         <a class="settings-item" href="copilot/">${icon('sparkle')}<span class="settings-copy"><b>Copilot</b><small>Üç deneyimi sohbet içinde kullan</small></span>${icon('arrowRight')}</a>
@@ -3764,7 +3766,8 @@ const Settings = {
     const busy = !!App.cur?.def.noIdle;
     $('[data-settings="mode"]', this.el).disabled = busy;
     $('#settings-busy', this.el).hidden = !busy;
-    $$('[data-mode-label]').forEach(el => { el.textContent = modeLabel(); });
+    $$('[data-mode-label]').forEach(el => { el.textContent = modeLabel(); el.hidden = API.live; });
+    $$('.live-chip').forEach(el => { el.hidden = API.live; });
   },
   toggle(force) {
     const open = force == null ? !this.open : force;
@@ -3850,12 +3853,30 @@ const FoundrySettings = {
 function chooseConnection(start) {
   const dialog = $('#connection-dialog'), form = $('#connection-form'), error = $('#connection-error');
   const choice = $('#connection-choice'), help = $('#connection-help'), title = $('#connection-title');
-  let chosen = false, selectedMode = CONFIG.ai.mode, selectedUI = 'kiosk';
+  let chosen = false, selectedMode = CONFIG.ai.mode, selectedUI = 'kiosk', loading = null;
   const updateChoices = () => {
-    $('#connection-demo').setAttribute('aria-pressed', String(selectedMode === 'mock'));
-    $('#connection-live').setAttribute('aria-pressed', String(selectedMode === 'live'));
+    $('#connection-demo').checked = selectedMode === 'mock';
+    form.hidden = selectedMode === 'mock';
+    $('#connection-continue').hidden = selectedMode !== 'mock';
     $('#connection-kiosk').setAttribute('aria-pressed', String(selectedUI === 'kiosk'));
     $('#connection-chat').setAttribute('aria-pressed', String(selectedUI === 'chat'));
+  };
+  const loadSettings = () => {
+    if (loading) return loading;
+    form.inert = true;
+    loading = (async () => {
+      try {
+        FoundrySettings.loadSaved(form);
+        const voice = form.elements.voice.value;
+        await FoundrySettings.loadLocal(form);
+        form.elements.voice.value = voice;
+      } catch (problem) {
+        console.error('Bağlantı ayarları okunamadı:', problem);
+        error.textContent = 'Ayarlar okunamadı. Bilgileri elle gir veya yerel sunucuyu kontrol et.';
+        error.hidden = false;
+      } finally { form.inert = false; }
+    })().finally(() => { loading = null; });
+    return loading;
   };
   const finish = () => {
     if (selectedUI === 'chat') {
@@ -3877,57 +3898,22 @@ function chooseConnection(start) {
     }
   };
   dialog.addEventListener('cancel', (event) => { if (!chosen) event.preventDefault(); });
-  $('#connection-demo').addEventListener('click', () => { selectedMode = 'mock'; updateChoices(); });
-  $('#connection-live').addEventListener('click', () => { selectedMode = 'live'; updateChoices(); });
+  $('#connection-demo').addEventListener('change', async () => {
+    selectedMode = $('#connection-demo').checked ? 'mock' : 'live';
+    error.hidden = true;
+    updateChoices();
+    if (selectedMode === 'live') await loadSettings();
+  });
   $('#connection-kiosk').addEventListener('click', () => { selectedUI = 'kiosk'; updateChoices(); });
   $('#connection-chat').addEventListener('click', () => { selectedUI = 'chat'; updateChoices(); });
-  $('#connection-continue').addEventListener('click', async () => {
-    error.hidden = true;
-    try { FoundrySettings.saveVoice($('#connection-voice').value); }
-    catch (problem) {
-      console.error('Anlatıcı sesi kaydedilemedi:', problem);
-      error.textContent = problem.message; error.hidden = false; return;
-    }
-    if (selectedMode === 'mock') { CONFIG.ai.mode = 'mock'; finish(); return; }
-    choice.hidden = true;
-    form.hidden = false;
-    title.textContent = 'Canlı mod ayarları';
-    help.textContent = 'Microsoft Foundry bağlantı bilgilerini gir.';
-    error.hidden = true;
-    try {
-      FoundrySettings.loadSaved(form);
-    } catch (e) {
-      console.error('Kayıtlı bağlantı ayarları okunamadı:', e);
-      error.textContent = 'Kayıtlı ayarlar okunamadı. Bilgileri yeniden girin ve tarayıcı depolama izinlerini kontrol edin.';
-      error.hidden = false;
-    }
-    if (location.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(location.hostname)) {
-      form.inert = true;
-      help.textContent = 'Yerel .env ayarları okunuyor…';
-      try {
-        await FoundrySettings.loadLocal(form);
-        help.textContent = 'Microsoft Foundry bağlantı bilgilerini kontrol et.';
-      } catch (e) {
-        console.error('Yerel bağlantı ayarları okunamadı:', e);
-        help.textContent = 'Microsoft Foundry bağlantı bilgilerini gir.';
-        error.textContent = 'Yerel .env okunamadı. python local_server.py ile başlatın veya bilgileri elle girin.';
-        error.hidden = false;
-      } finally {
-        form.inert = false;
-      }
-    }
-    form.elements.voice.value = CONFIG.ai.speechVoice;
-    form.elements.endpoint.focus();
-  });
-  $('#connection-back').addEventListener('click', () => {
-    form.hidden = true;
-    choice.hidden = false;
-    title.textContent = 'Microsoft AI Kiosk\'a hoş geldin';
-    help.textContent = 'Modu ve arayüzü seç, ardından ilerle.';
-    $('#connection-continue').focus();
+  $('#connection-continue').addEventListener('click', () => {
+    if (selectedMode !== 'mock') return;
+    CONFIG.ai.mode = 'mock';
+    finish();
   });
   form.addEventListener('submit', (event) => {
     event.preventDefault();
+    if (form.inert || selectedMode !== 'live') return;
     const data = new FormData(form);
     const endpoint = data.get('endpoint').trim();
     const match = /^(https:\/\/[a-z0-9][a-z0-9-]*\.services\.ai\.azure\.com)(?:\/mai\/v1(?:\/images\/(?:generations|edits))?)?\/?$/i.exec(endpoint);
@@ -3957,20 +3943,12 @@ function chooseConnection(start) {
     selectedMode = CONFIG.ai.mode;
     selectedUI = 'kiosk';
     updateChoices();
-    form.hidden = true;
     choice.hidden = false;
     error.hidden = true;
-    try {
-      const saved = localStorage.getItem(FoundrySettings.storageKey);
-      $('#connection-voice').value = FoundrySettings.voice((saved ? JSON.parse(saved).voice : null) || CONFIG.ai.speechVoice);
-    } catch (problem) {
-      console.error('Anlatıcı tercihi okunamadı:', problem);
-      error.textContent = 'Kayıtlı anlatıcı sesi okunamadı. Geçerli bir ses adı gir.';
-      error.hidden = false;
-    }
-    title.textContent = 'Microsoft AI Kiosk\'a hoş geldin';
-    help.textContent = 'Modu ve arayüzü seç, ardından ilerle.';
+    title.textContent = 'Hangi arayüzü kullanmak istersin?';
+    help.textContent = 'Arayüzünü seç ve deneyime başla.';
     dialog.showModal();
+    if (selectedMode === 'live') loadSettings();
   };
   open();
   return open;

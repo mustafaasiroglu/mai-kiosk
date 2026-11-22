@@ -118,6 +118,25 @@ h1 { font-weight: 500; font-size: clamp(34px, 4vw, 48px); letter-spacing: -.045e
 .answer { margin-bottom: 24px; }
 .answer-header { display: flex; align-items: center; gap: 9px; color: var(--cp-text-muted); font-weight: 600; margin-bottom: 8px; }
 .answer-text { font-size: 16px; white-space: pre-wrap; }
+.choice-answer { min-height: max(320px, calc(100dvh - 280px)); display: flex; flex-direction: column; justify-content: center; text-align: center; }
+.choice-answer .answer-header { justify-content: center; }
+.choice-answer .answer-text { font-size: clamp(21px, 2.3vw, 28px); font-weight: 600; line-height: 1.35; }
+.choice-answer .pills { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; width: 100%; margin-top: 24px; }
+.choice-answer .choice-option { min-height: 84px; padding: 16px; font-size: 19px; background: var(--cp-accent-soft); border-radius: 16px; }
+.choice-answer .choice-option:nth-child(3n+2) { background: var(--cp-surface-soft); }
+.choice-answer .choice-option:nth-child(3n) { background: var(--cp-highlight); }
+.choice-answer .choice-option:hover { border-color: var(--cp-accent); background: var(--cp-highlight); }
+.choice-visual { display: grid; place-items: center; width: 28px; height: 28px; flex: none; color: var(--cp-accent); }
+.choice-visual svg { width: 28px; height: 28px; }
+.podcast-choice .choice-visual { width: 64px; height: 64px; }
+.podcast-choice .choice-visual img { width: 64px; height: 64px; object-fit: contain; }
+.podcast-choice .choice-visual svg { width: 56px; height: 56px; }
+@media (max-width: 640px) {
+  .choice-answer .pills { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .choice-answer .choice-option { min-height: 64px; padding: 12px; font-size: 16px; }
+  .podcast-choice .choice-visual, .podcast-choice .choice-visual img { width: 44px; height: 48px; }
+  .podcast-choice .choice-visual svg { width: 40px; height: 40px; }
+}
 .pills, .dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .pill, .primary, .artifact-action { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--cp-border); border-radius: 10px; padding: 7px 12px; text-decoration: none; }
 .pill:hover, .artifact-action:hover { background: var(--cp-surface-soft); border-color: var(--cp-border-strong); }

@@ -86,7 +86,8 @@
     el('workspaceButton').setAttribute('aria-expanded', String(active && panelOpen));
     el('workspace').hidden = !(active && panelOpen);
     el('topTitle').textContent = active ? thread.title : 'Copilot';
-    el('modeBadge').textContent = `${modeName(mode)} · ${API.live ? 'Canlı' : 'Demo'}`;
+    el('modeBadge').textContent = 'Demo Modu';
+    el('modeBadge').hidden = API.live;
     el('catalogMode').textContent = `Copilot ${modeName(mode)}`;
     document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
     const agentsNav = document.querySelector('[data-action="agents"]');
@@ -101,7 +102,7 @@
       ${result.podcast ? '' : `<img src="${esc(result.image)}" alt="${esc(result.title)}">`}
       <figcaption>${result.podcast ? podcastOutputHTML(result.podcast) : `<strong>${esc(result.title)}</strong>${result.slogan ? `<p>${esc(result.slogan)}</p>` : ''}${result.story ? `<p class="muted">${esc(result.story)}</p>` : ''}`}</figcaption>
       ${result.podcast ? '' : `<a class="artifact-action" href="${esc(result.image)}" download="${result.file}">${svg('download')} Görseli indir</a>`}
-      ${revision ? `<div class="pills"><button type="button" class="pill" data-action="revise"${result.canRevise ? '' : ' disabled'}>${svg('edit')} Revizyon İste</button></div>${result.canRevise ? '' : '<p class="muted">Revizyon için Canlı Mod gerekir.</p>'}` : ''}
+      ${revision ? `<div class="pills"><button type="button" class="pill" data-action="revise"${result.canRevise ? '' : ' disabled'}>${svg('edit')} Revizyon İste</button></div>${result.canRevise ? '' : '<p class="muted">Revizyon için Demo Modunu kapatman gerekir.</p>'}` : ''}
     </figure>`;
   }
 
@@ -124,13 +125,13 @@
     }
     const current = i === t.messages.length - 1;
     const options = current ? (entry.options || []).map((o, index) =>
-      `<button type="button" class="pill" data-choice="${index}">${esc(o.name)}</button>`
+      `<button type="button" class="pill choice-option${t.agent.id === 'podcast' ? ' podcast-choice' : ''}" data-choice="${index}"><span class="choice-visual">${t.agent.id === 'podcast' ? podcastOptionArt(o) : svg(t.agent.id === 'photo' ? 'sparkle' : 'lab')}</span><span>${esc(o.name)}</span></button>`
     ).join('') : '';
     const approval = entry.approval ? `<div class="approval">
       <strong>${current ? 'Onay gerekiyor' : 'Üretim planı'}</strong><p>${esc(entry.approval)}</p>
       ${current ? `<div class="pills">${action('cancelPlan', 'İptal')}${action('approve', 'Onayla ve başlat', 'primary')}</div>` : ''}
     </div>` : '';
-    return `<div class="answer">
+    return `<div class="answer${options ? ' choice-answer' : ''}">
       <div class="answer-header">${badge(t.agent, true)}${t.agent.name}</div>
       <p class="answer-text">${esc(entry.text)}</p>
       ${approval}${options ? `<div class="pills">${options}</div>` : ''}${entry.result ? artifactHTML(entry.result, t.agent.id === 'lab' && entry.result === t.result && t.phase === 'finished' && !t.job) : ''}
@@ -223,7 +224,7 @@
         if (t.agent.id === 'photo') {
           ask(t, 'character', 'Ofiste nasıl bir yıldızsın? Sana en çok benzeyeni seç; lezzet ruhunu birlikte bulalım.', characters);
         } else if (t.agent.id === 'podcast') {
-          ask(t, 'podcast-product', 'Bu ürün sana hangi yılı hatırlatıyor? Bir Ülker ürünü seç.', PRODUCTS);
+          ask(t, 'podcast-product', 'Bu ürün sana hangi yılı hatırlatıyor? Bir Ülker ürünü seç.', PODCAST_PRODUCTS);
         } else {
           const bases = matchOptions(LAB_BASES, text);
           if (bases.length === 1) {
@@ -274,8 +275,8 @@
         }
         break;
       case 'podcast-product': {
-        const product = choice || matchOptions(PRODUCTS, text)[0];
-        if (!product) return ask(t, 'podcast-product', 'Bir Ülker ürünü seç.', PRODUCTS);
+        const product = choice || matchOptions(PODCAST_PRODUCTS, text)[0];
+        if (!product) return ask(t, 'podcast-product', 'Bir Ülker ürünü seç.', PODCAST_PRODUCTS);
         v.product = product;
         ask(t, 'podcast-era', 'Hangi yıla dönelim? Bir dönem veya özel bir tarih seç.', PODCAST_ERAS);
         break;
@@ -416,7 +417,7 @@
     prepare(t, `${v.base.name} · ${v.flavors.map(f => f.name).join(' ve ')} · ${v.moment.name}`, description + (v.rdNote ? ` Ar-Ge notun: ${v.rdNote}` : ''));
   }
   function prepareRevision(t, text) {
-    if (!API.live || !t.result?.canRevise) return say(t, 'Revizyon için Canlı Modda bir tasarım oluşturmalısın.');
+    if (!API.live || !t.result?.canRevise) return say(t, 'Revizyon için Demo Modunu kapatıp bir tasarım oluşturmalısın.');
     let instruction;
     try { instruction = validateLabRevision(text); }
     catch (error) { return ask(t, 'lab-revision', error.message, [{ id: 'cancel-revision', name: 'Vazgeç' }]); }
@@ -548,7 +549,7 @@
     thread = null;
     el('settings').close();
     openCatalog();
-    notice(API.live ? 'Canlı mod açıldı.' : 'Demo modu açıldı.');
+    notice(API.live ? 'Foundry bağlantısı hazır.' : 'Demo modu açıldı.');
   }
 
   document.addEventListener('click', async event => {
@@ -752,7 +753,7 @@
     sessionStorage.removeItem('mai-kiosk-launch');
     if (launch && JSON.parse(launch).mode === 'live') {
       el('settings').showModal();
-      el('settingsStatus').textContent = 'Seçtiğin Canlı Mod bağlantısını kontrol et.';
+      el('settingsStatus').textContent = 'Foundry bağlantını kontrol et.';
       FoundrySettings.loadSaved(el('connection'));
       el('connection').requestSubmit();
     }

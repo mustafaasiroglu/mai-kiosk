@@ -30,9 +30,10 @@ yenileme veya Demo/Canlı bağlantı modu değişikliği sohbetleri temizler.
 Klasik kiosk, Chat ve Cowork aynı origin'deki `mai-kiosk-foundry`
 tarayıcı kaydını kullanır: bir arayüzde kaydedilen Foundry uç noktası,
 API anahtarı, model adları ve anlatıcı sesi diğer arayüzün Canlı ayarlarında da doldurulur.
-Ana açılış ekranında **Demo Modu / Canlı Modu** ve
-**Dark Kiosk UI / Copilot Chat UI** seçilir; **İlerle** seçimleri uygular.
-Canlı modda bağlantı formu onaylandıktan sonra seçilen arayüz açılır.
+Ana açılış ekranında **Kiosk UI / Copilot Chat UI** seçilir.
+Alttaki **Demo Modu** anahtarı varsayılan açıktır. Kapatılınca Foundry bağlantısı,
+API anahtarı, model ve anlatıcı sesi alanları görünür; **İlerle** ayarları uygular.
+Sağ üstte yalnızca Demo etkin olduğunda **Demo Modu** etiketi görünür.
 Copilot'a bu ekrandan geçerken seçilen mod ve aynı kayıtlı bağlantı aktarılır;
 doğrudan Copilot adresi yine Demo ile başlar. Kayıtlı anahtar
 kendiliğinden canlı üretim başlatmaz. Yerel `.env` varsa ortak kayıt üstüne
@@ -61,10 +62,11 @@ tercihi olarak iletilir. Demo modunda not alınır ama kayıtlı çıktı deği�
 Ana ekrandaki deneyim sırası **Tatlı Anı Stüdyosu → Lezzet Laboratuvarı →
 Bir Isırıkla O Yıla Dön** şeklindedir.
 
-### Bir Isırıkla O Yıla Dön (Podcast)
+### Nostalji Podcast · Bir Isırıkla O Yıla Dön
 
 Klasik kiosk, Cowork ve Chat aynı sırayı kullanır:
 **Ülker ürünü → dönem/özel tarih → an → tek cümlelik anı → üretim**.
+Hanımeller ve Çokoprens, bu deneyimdeki ürün seçeneklerine eklidir.
 60’lar, 70’ler, 80’ler, 90’lar ve 2000’ler seçilebilir. Özel tarih `2004`
 veya `23.04.2004` biçimindedir; 1944 ile bugün arasında doğrulanır.
 An seçenekleri okul çıkışı, aile ziyareti, ilk iş günü, yolculuk ve Diğer’dir.
@@ -96,6 +98,13 @@ gönderilmez. H.264/AAC MP4 destekleniyorsa MP4, diğer uygun tarayıcılarda We
 Sekme arka plana geçerse eksik animasyonlu video döndürmek yerine açık hata
 gösterilir. Kamera veya mikrofon izni istenmez; yalnızca üretilmiş ses kullanılır.
 
+Her on yıl için 1940–2020 arasında bir kez hazırlanmış özgün enstrümantal döngü
+`assets/podcast-music/` altında bulunur. Bunlar dönemlerden esinlenir; gerçek
+arşiv kayıtları veya bilinen şarkılar değildir. `python tools/generate-podcast-music.py`
+aynı besteleri yeniden üretir. Özel tarihte ilgili on yıl seçilir. Müzik videoya
+karıştırılır, konuşma sırasında kısılır ve başta/sonda yumuşakça girip çıkar.
+Kullanıcı başına yeni müzik servisi çağrısı veya müzik üretim ücreti yoktur.
+
 WebIQ yalnızca yıl aralığı ve genel an türünü araştırır; kişisel anı veya
 Diğer alanının metni web aramasına gönderilmez. Anı, hikâye ve görsel üretimi
 için Foundry’ye; oluşturulan anlatım seslendirme için Speech’e gönderilir.
@@ -103,7 +112,7 @@ Hassas kişisel bilgi yazmayın. Web araması Azure veri işleme sınırlarını
 dışında işlenebilir; [Foundry web search veri işleme koşullarını](https://learn.microsoft.com/azure/foundry/openai/how-to/web-search)
 kurulumunuz için değerlendirin.
 
-Repo kökündeki `.env` dosyası varsa Canlı seçildiğinde bağlantı formu otomatik
+Repo kökündeki `.env` dosyası varsa Demo anahtarı kapatılınca bağlantı formu otomatik
 doldurulur. `FOUNDRY_ENDPOINT`, `FOUNDRY_API_KEY`,
 `FOUNDRY_IMAGE_DEPLOYMENT`, `FOUNDRY_LAB_DEPLOYMENT` ve isteğe bağlı
 `FOUNDRY_SPEECH_VOICE` alanlarını
@@ -114,7 +123,7 @@ seçilen anlatıcı sesi korunur. Boş bağlantı değerleri de
 ilgili alanı temizler. `.env` Git tarafından yok sayılır; commit etmeyin.
 Yerel sunucu yalnızca bu cihazdan erişilir, `.env` ve diğer gizli yolları
 doğrudan sunmaz; form ayarları aynı origin üzerinden önbelleksiz okunur.
-GitHub Pages bu yerel ayarları istemez. Canlı moda devam etmeden model çağrısı
+GitHub Pages bu yerel ayarları istemez. Bağlantıyı onaylamadan model çağrısı
 yapılmaz. HTML'yi doğrudan açarsanız ayarları elle girebilirsiniz.
 
 Canlı mod için Microsoft Foundry kaynak adresini (`https://<kaynak>.services.ai.azure.com`),
@@ -129,7 +138,8 @@ Speech aynı Foundry uç noktası ve anahtarıyla `/tts/cognitiveservices/v1`
 üzerinden SSML ve MP3 kullanır. Varsayılan
 `speech_synthesis_voice_name` **`en-US-Harper:MAI-Voice-2-Flash`**’tır.
 **Açılış ekranındaki Podcast anlatıcı sesi** alanından değiştirilir;
-deneyim içindeki sağ ayarlar panelinde ses seçimi yoktur.
+bu alan Demo anahtarı kapatılınca bağlantı ayarlarıyla birlikte görünür.
+Copilot bağlantı ayarları da aynı anlatıcı tercihini kullanır.
 Ses adı desteklenmiyorsa hata gösterilir; farklı bir sese
 veya tarayıcı sesine sessizce dönülmez. Demo kaydının sesi değişmez.
 GPT modelleri `/openai/v1/chat/completions`, adı `MAI-` ile başlayan metin
@@ -160,8 +170,9 @@ revizyonda da doğrulanır. Cowork revizyonu onaylatır, Chat doğrudan başlat�
 İşlem hata verir veya durdurulursa önceki sonuç korunur; sonraki revizyon en güncel
 başarılı görseli referans alır. Demo modunda buton açıklamayla devre dışıdır.
 
-Açılışta Demo Modu veya Canlı Mod seçin. Üstteki durum etiketi seçime göre
-**Demo Modu** veya **Live Mode** gösterir. Sağdaki kalıcı **Ayarlar** menüsünden
+Açılışta arayüzü seçin; örneklerle devam etmek için varsayılan **Demo Modu**
+anahtarını açık bırakın. Üstteki etiket yalnızca Demo etkinse görünür.
+Sağdaki kalıcı **Ayarlar** menüsünden
 sesi açıp kapatabilir, tam ekrana geçebilir, modu değiştirebilir ve
 **Örnek tasarımlar** galerisine gidebilirsiniz. Mod seçimini onaylamak ana ekrana
 döner, kamerayı durdurur ve mevcut deneyimi sıfırlar; sonradan açılan mod
@@ -169,7 +180,7 @@ penceresini Escape ile kapatmak mevcut modu ve deneyimi korur. İşlem sürerken
 mod değiştirme devre dışıdır.
 
 Canlı bağlantı ayarları ve anahtar tarayıcının
-yerel depolamasında saklanır ve yenilemeden sonra Canlı seçildiğinde tekrar
+yerel depolamasında saklanır ve yenilemeden sonra Demo anahtarı kapatılınca tekrar
 gösterilir. Anahtar bu cihazdaki tarayıcı verilerine erişebilenlerce okunabilir;
 canlı modu yalnızca güvendiğiniz cihazda ve test anahtarıyla kullanın. Ayarları
 silmek için sitenin tarayıcı verilerini temizleyin. Doğrudan tarayıcı bağlantısı için Foundry

@@ -905,7 +905,7 @@ body.lite .pack-float { transform: rotate(-7deg); }
 }
 
 </style>
-<link rel="stylesheet" href="podcast.css?v=20261122-3">
+<link rel="stylesheet" href="podcast.css?v=20261122-4">
 </head>
 <body data-exp="home">
 <div id="app">
@@ -917,27 +917,17 @@ body.lite .pack-float { transform: rotate(-7deg); }
 <div id="modal-root" class="modal-root"></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <dialog id="connection-dialog" class="modal" aria-labelledby="connection-title" aria-describedby="connection-help">
-  <h3 id="connection-title">Microsoft AI Kiosk'a hoş geldin</h3>
-  <p id="connection-help">Modu ve arayüzü seç, ardından ilerle.</p>
+  <h3 id="connection-title">Hangi arayüzü kullanmak istersin?</h3>
+  <p id="connection-help">Arayüzünü seç ve deneyime başla.</p>
   <div id="connection-choice">
-    <fieldset class="connection-group">
-      <legend>Çalışma modu</legend>
-      <div class="connection-options">
-        <button type="button" id="connection-demo" aria-pressed="true">Demo Modu</button>
-        <button type="button" id="connection-live" aria-pressed="false">Canlı Modu</button>
-      </div>
-    </fieldset>
-    <label class="podcast-voice" for="connection-voice">Podcast anlatıcı sesi
-      <input id="connection-voice" value="en-US-Harper:MAI-Voice-2-Flash" spellcheck="false" autocomplete="off" aria-describedby="connection-voice-help">
-      <small id="connection-voice-help">Canlı üretimde kullanılır. Demo videosunun kayıtlı sesi sabittir.</small>
-    </label>
     <fieldset class="connection-group">
       <legend>Arayüz</legend>
       <div class="connection-options">
-        <button type="button" id="connection-kiosk" aria-pressed="true">Dark Kiosk UI</button>
+        <button type="button" id="connection-kiosk" aria-pressed="true">Kiosk UI</button>
         <button type="button" id="connection-chat" aria-pressed="false">Copilot Chat UI</button>
       </div>
     </fieldset>
+    <label class="connection-switch" for="connection-demo"><span>Demo Modu<small>Kayıtlı örneklerle keşfet</small></span><input type="checkbox" role="switch" id="connection-demo" checked></label>
     <div class="btn-row"><button type="button" class="btn btn-ai" id="connection-continue">İlerle</button></div>
   </div>
   <p id="connection-error" role="alert" hidden></p>
@@ -947,6 +937,9 @@ body.lite .pack-float { transform: rotate(-7deg); }
     </label>
     <label>API anahtarı
       <input name="key" type="password" required autocomplete="off">
+    </label>
+    <label>Nostalji Podcast anlatıcı sesi
+      <input id="connection-voice" name="voice" value="en-US-Harper:MAI-Voice-2-Flash" spellcheck="false" autocomplete="off">
     </label>
     <label>Görsel modeli dağıtım adı
       <input name="imageModel" required value="MAI-Image-2.7-Flash" spellcheck="false">
@@ -959,19 +952,18 @@ body.lite .pack-float { transform: rotate(-7deg); }
         <option value="MAI-Thinking-1"></option>
       </datalist>
     </label>
-    <input name="voice" type="hidden" value="en-US-Harper:MAI-Voice-2-Flash">
-    <p>Ayarlar ve anahtar bu tarayıcıda saklanır. Yalnızca güvendiğin cihazda kullan. Canlı modda seçtiğin fotoğraf Foundry’ye gönderilir.</p>
+    <p>Ayarlar ve anahtar bu tarayıcıda saklanır. Yalnızca güvendiğin cihazda kullan. Üretimde seçtiğin fotoğraf Foundry’ye gönderilir.</p>
     <div class="btn-row">
-      <button type="button" class="btn btn-glass" id="connection-back">Geri</button>
-      <button type="submit" class="btn btn-ai">Canlı modda devam et</button>
+      <button type="submit" class="btn btn-ai">İlerle</button>
     </div>
   </form>
 </dialog>
 <noscript><div class="noscript">Bu deneyim için JavaScript gereklidir.</div></noscript>
 <script src="samples.js?v=20261122-11"></script>
-<script src="kiosk-engine.js?v=20261122-11"></script>
-<script src="podcast-video.js?v=20261122-2"></script>
-<script src="podcast.js?v=20261122-3"></script>
+<script src="kiosk-engine.js?v=20261122-12"></script>
+<script src="podcast-music.js?v=20261122-2"></script>
+<script src="podcast-video.js?v=20261122-3"></script>
+<script src="podcast.js?v=20261122-4"></script>
 <script>boot();</script>
 </body>
 </html>

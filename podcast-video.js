@@ -7,29 +7,55 @@ const PodcastVideo = {
     if (!format) throw new Error('Bu tarayıcı sesli video kaydı için uygun bir kodek sunmuyor.');
     return format;
   },
-  microphone(canvas, level = 0, waveform) {
+  microphone(canvas, level = 0, waveform, era) {
     const ctx = canvas.getContext('2d'), w = canvas.width, h = canvas.height;
     const styles = getComputedStyle(document.documentElement);
     const color = name => styles.getPropertyValue(name).trim();
     ctx.fillStyle = color('--cp-bg'); ctx.fillRect(0, 0, w, h);
-    ctx.save(); ctx.translate(w / 2, h / 2); ctx.scale(w / 720, w / 720);
-    ctx.strokeStyle = color('--cp-accent'); ctx.lineWidth = 4;
-    ctx.globalAlpha = .35;
-    ctx.beginPath(); ctx.arc(0, -20, 150 + level * 100, 0, Math.PI * 2); ctx.stroke();
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = color('--cp-surface');
-    ctx.beginPath(); ctx.roundRect(-65, -145, 130, 220, 60); ctx.fill(); ctx.stroke();
+    const glow = ctx.createRadialGradient(w / 2, h * .44, 10, w / 2, h * .44, w * .65);
+    glow.addColorStop(0, color('--cp-accent-soft')); glow.addColorStop(1, color('--cp-bg'));
+    ctx.fillStyle = glow; ctx.fillRect(0, 0, w, h);
+    ctx.save(); ctx.translate(w / 2, h * .47); ctx.scale(w / 720, w / 720);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = color('--cp-text'); ctx.font = '600 34px "Segoe UI", sans-serif';
+    ctx.fillText('NOSTALJİ PODCAST', 0, -310);
+    ctx.fillStyle = color('--cp-text-muted'); ctx.font = '20px "Segoe UI", sans-serif';
+    ctx.fillText('Bir ısırık. Bir frekans. Bin hatıra.', 0, -272);
+    ctx.strokeStyle = color('--cp-border'); ctx.lineWidth = 1;
+    for (const radius of [195, 220, 245]) {
+      ctx.beginPath(); ctx.arc(0, -25, radius, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.strokeStyle = color('--cp-accent'); ctx.lineWidth = 2; ctx.globalAlpha = .4;
+    ctx.beginPath(); ctx.arc(0, -25, 200 + level * 100, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
+    const metal = ctx.createLinearGradient(-82, 0, 82, 0);
+    metal.addColorStop(0, color('--cp-border-strong'));
+    metal.addColorStop(.25, color('--cp-text-soft'));
+    metal.addColorStop(.52, color('--cp-surface'));
+    metal.addColorStop(.85, color('--cp-text-muted'));
+    metal.addColorStop(1, color('--cp-border-strong'));
+    ctx.fillStyle = metal; ctx.strokeStyle = color('--cp-text-muted'); ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.roundRect(-82, -185, 164, 260, 52); ctx.fill(); ctx.stroke();
+    ctx.save(); ctx.beginPath(); ctx.roundRect(-62, -164, 124, 218, 38); ctx.clip();
+    ctx.fillStyle = color('--cp-bg');
+    for (let y = -153; y < 48; y += 16) { ctx.beginPath(); ctx.roundRect(-68, y, 136, 6, 3); ctx.fill(); }
+    ctx.restore();
+    ctx.fillStyle = metal; ctx.beginPath(); ctx.roundRect(-7, -168, 14, 222, 6); ctx.fill();
+    ctx.strokeStyle = color('--cp-accent'); ctx.lineWidth = 9;
+    ctx.beginPath(); ctx.moveTo(-112, -38); ctx.lineTo(-112, 55);
+    ctx.bezierCurveTo(-112, 168, 112, 168, 112, 55); ctx.lineTo(112, -38); ctx.stroke();
+    ctx.fillStyle = color('--cp-accent');
+    for (const x of [-107, 107]) { ctx.beginPath(); ctx.arc(x, -40, 12, 0, Math.PI * 2); ctx.fill(); }
+    ctx.strokeStyle = color('--cp-text-muted'); ctx.lineWidth = 12;
+    ctx.beginPath(); ctx.moveTo(0, 140); ctx.lineTo(0, 210); ctx.stroke();
+    ctx.fillStyle = metal; ctx.beginPath(); ctx.roundRect(-85, 203, 170, 24, 12); ctx.fill();
+    ctx.fillStyle = color('--cp-text-soft'); ctx.font = '600 18px "Segoe UI", sans-serif';
+    ctx.fillText(era ? (era.start === era.end ? String(era.start) : `${era.start} — ${era.end}`) : 'HATIRA FREKANSI', 0, 274);
+    ctx.strokeStyle = color('--cp-accent'); ctx.lineWidth = 3;
     ctx.beginPath();
-    for (let y = -110; y < 45; y += 20) { ctx.moveTo(-35, y); ctx.lineTo(35, y); }
-    ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-95, -15); ctx.lineTo(-95, 30);
-    ctx.bezierCurveTo(-95, 150, 95, 150, 95, 30); ctx.lineTo(95, -15);
-    ctx.moveTo(0, 120); ctx.lineTo(0, 170); ctx.moveTo(-60, 170); ctx.lineTo(60, 170); ctx.stroke();
-    ctx.beginPath();
-    for (let x = 0; x <= 420; x += 4) {
-      const sample = waveform ? waveform[Math.floor(x / 420 * (waveform.length - 1))] : 0;
-      const y = 235 + sample * 100;
-      if (!x) ctx.moveTo(x - 210, y); else ctx.lineTo(x - 210, y);
+    for (let x = 0; x <= 480; x += 4) {
+      const sample = waveform ? waveform[Math.floor(x / 480 * (waveform.length - 1))] : 0;
+      const y = 322 + sample * 140;
+      if (!x) ctx.moveTo(x - 240, y); else ctx.lineTo(x - 240, y);
     }
     ctx.stroke(); ctx.restore();
   },
@@ -56,7 +82,7 @@ const PodcastVideo = {
       },
     };
   },
-  async render({ introAudio, storyAudio, image, signal, session }) {
+  async render({ introAudio, storyAudio, image, signal, session, music, era }) {
     signal?.throwIfAborted();
     if (document.hidden) throw new Error('Video oluştururken bu sekmeyi açık tut ve yeniden dene.');
     await session.ready;
@@ -65,17 +91,18 @@ const PodcastVideo = {
       const bytes = Uint8Array.from(atob(data.slice(data.indexOf(',') + 1)), char => char.charCodeAt(0));
       return session.context.decodeAudioData(bytes.buffer);
     };
-    const [intro, story, picture] = await Promise.all([decode(introAudio), decode(storyAudio), loadImage(image)]);
+    const [intro, story, picture, bed] = await Promise.all([decode(introAudio), decode(storyAudio), loadImage(image), session.context.decodeAudioData(music.slice(0))]);
     signal?.throwIfAborted();
     if (document.hidden) throw new Error('Video oluştururken bu sekmeyi açık tut ve yeniden dene.');
     const context = session.context, gap = Math.round(context.sampleRate * .16);
     const buffer = context.createBuffer(1, intro.length + gap + story.length, context.sampleRate);
     buffer.copyToChannel(intro.getChannelData(0), 0);
     buffer.copyToChannel(story.getChannelData(0), 0, intro.length + gap);
+    PodcastMusic.mix(buffer, bed);
     if (!Number.isFinite(buffer.duration) || buffer.duration <= 0 || buffer.duration > 150) throw new Error('Video için ses süresi geçersiz veya çok uzun.');
     const introDuration = (intro.length + gap) / context.sampleRate;
     const canvas = document.createElement('canvas'); canvas.width = 720; canvas.height = 900;
-    this.microphone(canvas);
+    this.microphone(canvas, 0, undefined, era);
     const videoPoster = canvas.toDataURL('image/png');
     const destination = context.createMediaStreamDestination(), analyser = context.createAnalyser();
     analyser.fftSize = 512;
@@ -111,7 +138,7 @@ const PodcastVideo = {
           const time = Math.max(0, context.currentTime - startAt);
           analyser.getFloatTimeDomainData(waveform);
           const level = Math.sqrt(waveform.reduce((sum, value) => sum + value * value, 0) / waveform.length);
-          this.microphone(canvas, level, waveform);
+          this.microphone(canvas, level, waveform, era);
           if (time >= introDuration) {
             drawing.globalAlpha = Math.min(1, (time - introDuration) / .6);
             drawing.drawImage(picture, 0, 0, canvas.width, canvas.height);

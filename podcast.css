@@ -1,7 +1,12 @@
 .screen[data-screen^="podcast."] { overflow-y: auto; overscroll-behavior: contain; }
-.podcast-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 20px; width: min(100%, 1200px); margin: 24px auto; }
-.podcast-options .choice { min-height: 112px; padding: 20px; }
-.podcast-options h3 { font-size: max(18px, 2.4vmin); }
+.screen[data-screen="podcast.product"], .screen[data-screen="podcast.era"], .screen[data-screen="podcast.moment"] { justify-content: center; }
+.podcast-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; width: min(100%, 1100px); margin: 20px auto; }
+.podcast-options .choice { min-height: 164px; padding: 20px; border: 1px solid var(--cp-border); border-radius: 16px; background: var(--cp-accent-soft); color: var(--cp-text); }
+.podcast-options .choice:nth-child(3n+2) { background: var(--cp-surface-soft); }
+.podcast-options .choice:nth-child(3n) { background: var(--cp-highlight); }
+.podcast-options .choice:hover, .podcast-options .choice[aria-pressed="true"] { border-color: var(--cp-accent); background: var(--cp-highlight); }
+.podcast-options h3 { font-size: clamp(20px, 2.2vw, 28px); }
+.podcast-option-art { display: block; width: 80px; height: 80px; margin: auto; color: var(--cp-accent); }
 .podcast-pack { width: 100%; height: 100px; object-fit: contain; }
 .podcast-entry { width: min(100%, 1000px); }
 .podcast-entry .lab-note-entry { min-height: 56px; }
@@ -22,10 +27,26 @@
 .podcast-entry-back { position: sticky; top: 0; z-index: 3; align-self: flex-start; background: var(--cp-surface); color: var(--cp-text); }
 .podcast-voice { display: grid; gap: 8px; }
 .podcast-voice input { border: 1px solid var(--cp-border); background: var(--cp-surface); color: var(--cp-text); border-radius: 10px; padding: 12px; width: 100%; font: inherit; }
+#connection-dialog { width: min(660px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); overflow-y: auto; background: var(--cp-bg-elevated); color: var(--cp-text); border: 1px solid var(--cp-border); font-family: "Segoe UI", Aptos, Calibri, sans-serif; }
+#connection-dialog h3 { font-size: clamp(24px, 3vw, 32px); line-height: 1.25; }
+#connection-dialog #connection-form input { background: var(--cp-surface); color: var(--cp-text); border-color: var(--cp-border); min-height: 44px; }
+#connection-dialog .connection-options { gap: 12px; }
+#connection-dialog .connection-options button { min-height: 88px; padding: 16px; font-size: 20px; border-radius: 16px; }
+.connection-switch { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 0; border-top: 1px solid var(--cp-border); font-size: 18px; cursor: pointer; }
+.connection-switch small { display: block; font-size: 14px; color: var(--cp-text-muted); margin-top: 4px; }
+.connection-switch input { appearance: none; width: 52px; height: 30px; flex: none; position: relative; border-radius: 20px; background: var(--cp-border-strong); cursor: pointer; }
+.connection-switch input::before { content: ""; position: absolute; width: 22px; height: 22px; top: 4px; left: 4px; background: var(--cp-surface); border-radius: 50%; transition: transform .15s; }
+.connection-switch input:checked { background: var(--cp-accent); }
+.connection-switch input:checked::before { transform: translateX(22px); }
+.connection-switch input:focus-visible { outline: 2px solid var(--cp-accent); outline-offset: 4px; }
+#connection-continue[hidden], .live-chip[hidden], .tb-mode[hidden] { display: none; }
 @media (max-width: 640px) {
   .screen[data-screen^="podcast."] .kbd { display: none; }
   .podcast-options { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .podcast-options .choice { padding: 16px 8px; }
+  .podcast-options .choice { padding: 12px 8px; min-height: 124px; }
+  .podcast-options h3 { font-size: 18px; }
+  .podcast-pack { height: 64px; }
+  .podcast-option-art { width: 56px; height: 56px; }
   .podcast-entry { padding: 16px; }
 }
 @media (orientation: landscape) {

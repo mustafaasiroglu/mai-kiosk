@@ -132,9 +132,9 @@ async function initialize(page, state, ui, live, scheme = 'light') {
   await page.goto(`${baseURL}/${ui === 'classic' ? '' : 'copilot/'}?scoutTheme=${scheme}`);
   await page.evaluate(() => { CONFIG.sound = false; CONFIG.ambientMotion = false; CONFIG.mock.speed = 0; });
   if (ui === 'classic') {
-    await page.locator(live ? '#connection-live' : '#connection-demo').click();
-    await page.locator('#connection-continue').click();
-    if (!live) return;
+    await page.locator('#connection-demo').setChecked(!live);
+    if (!live) { await page.locator('#connection-continue').click(); return; }
+    await page.waitForFunction(() => !document.getElementById('connection-form').inert);
   } else {
     if (ui === 'chat') {
       if (await page.locator('#openSidebar').isVisible()) await page.locator('#openSidebar').click();
@@ -160,37 +160,44 @@ describe('opening mode and interface choices', { concurrency: 3 }, () => {
   for (const platform of platforms) for (const live of [false, true]) for (const ui of ['kiosk', 'chat']) {
     test(`${platform.name}: opening ${live ? 'Live' : 'Demo'} / ${ui} applies only after Continue`, { timeout: 30000 }, () => withPage(platform, async (page, state) => {
       await page.goto(`${baseURL}/?scoutTheme=light`);
-      assert.equal(await page.locator('.connection-group').count(), 2);
-      await page.locator(live ? '#connection-live' : '#connection-demo').click();
+      assert.equal(await page.locator('.connection-group').count(), 1);
+      assert.equal(await page.locator('#connection-demo').isChecked(), true);
+      assert.equal(await page.locator('#connection-voice').isVisible(), false);
+      await page.locator('#connection-demo').setChecked(!live);
       await page.locator(ui === 'chat' ? '#connection-chat' : '#connection-kiosk').click();
       assert.equal(await page.locator('#connection-dialog').evaluate(node => node.open), true);
       assert.equal(await page.evaluate(() => CONFIG.ai.mode), 'mock');
-      assert.equal(await page.locator('#connection-form').isVisible(), false);
-      await page.locator('#connection-continue').click();
+      assert.equal(await page.locator('#connection-form').isVisible(), live);
       if (live) {
-        await page.locator('#connection-back').click();
-        assert.equal(await page.locator('#connection-live').getAttribute('aria-pressed'), 'true');
+        await page.waitForFunction(() => !document.getElementById('connection-form').inert);
+        assert.equal(await page.locator('#connection-voice').isVisible(), true);
+        await page.locator('#connection-demo').check();
+        assert.equal(await page.locator('#connection-form').isVisible(), false);
         assert.equal(await page.locator(ui === 'chat' ? '#connection-chat' : '#connection-kiosk').getAttribute('aria-pressed'), 'true');
-        await page.locator('#connection-continue').click();
+        await page.locator('#connection-demo').uncheck();
+        await page.waitForFunction(() => !document.getElementById('connection-form').inert);
         const form = page.locator('#connection-form');
         await form.locator('[name="endpoint"]').fill(endpoint);
         await form.locator('[name="key"]').fill(key);
         await form.locator('[name="imageModel"]').fill('test-image');
         await form.locator('[name="labModel"]').fill('gpt-test-text');
         await form.locator('[type="submit"]').click();
-      }
+      } else await page.locator('#connection-continue').click();
       if (ui === 'chat') {
         await page.waitForURL('**/copilot/?ui=chat');
         await page.waitForFunction(live => CONFIG.ai.mode === (live ? 'live' : 'mock'), live);
         assert.equal(await page.locator('[data-mode="chat"]').getAttribute('aria-pressed'), 'true');
+        assert.equal(await page.locator('#modeBadge').isVisible(), !live);
         assert.equal(await page.evaluate(() => sessionStorage.getItem('mai-kiosk-launch')), null);
         if (live) {
           assert.deepEqual(await page.evaluate(() => ({ endpoint: CONFIG.ai.endpoint, key: CONFIG.ai.apiKey, image: CONFIG.ai.imageDeployment })), { endpoint, key, image: 'test-image' });
         }
       } else {
         await page.waitForFunction(() => !document.getElementById('connection-dialog').open);
+        await screenIs(page, 'home');
         assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
         assert.equal(await page.evaluate(() => CONFIG.ai.mode), live ? 'live' : 'mock');
+        assert.equal(await screen(page, '.home-top .live-chip').isVisible(), !live);
       }
       assert.equal(state.calls.length, 0, 'Choosing an interface does not start generation');
     }));
@@ -405,7 +412,7 @@ async function podcastFlow(page, state, ui, live, index = 0) {
   if (ui === 'classic') {
     await screen(page, '[data-go="podcast.product"]').click();
     await screenIs(page, 'podcast.product');
-    await screen(page, 'button[data-product]').nth(index % 4).click();
+    await screen(page, 'button[data-product]').nth(index % 6).click();
     await screenIs(page, 'podcast.era');
     await screen(page, 'button[data-era]').nth(eraIndex).click();
     if (eraIndex === 5) {
@@ -443,7 +450,7 @@ async function podcastFlow(page, state, ui, live, index = 0) {
     await submit.click();
   } else {
     await startAgent(page, 'podcast');
-    await option(page, index % 4).click();
+    await option(page, index % 6).click();
     await option(page, eraIndex).click();
     if (eraIndex === 5) {
       await page.locator('#message').fill('31.02.2004');
@@ -520,6 +527,35 @@ async function podcastResult(page, state, ui, live) {
     }
   }
 }
+
+describe('nostalgia visual choices', { concurrency: 3 }, () => {
+  for (const platform of platforms) for (const ui of ['classic', 'cowork', 'chat']) {
+    test(`${platform.name} / ${ui}: six large illustrated product choices are centered and fit the viewport`, () => withPage(platform, async (page, state) => {
+      await initialize(page, state, ui, false);
+      if (ui === 'classic') {
+        await screen(page, '[data-go="podcast.product"]').click();
+        await screenIs(page, 'podcast.product');
+      } else await startAgent(page, 'podcast');
+      const container = ui === 'classic' ? screen(page) : page.locator('#messages .choice-answer').last();
+      const buttons = container.locator(ui === 'classic' ? '.podcast-options button' : '.choice-option');
+      assert.equal(await buttons.count(), 6);
+      for (const name of ['Hanımeller', 'Çokoprens']) assert.equal(await container.getByRole('button', { name, exact: true }).count(), 1);
+      const geometry = await container.evaluate((el, classic) => {
+        const root = el.getBoundingClientRect();
+        const boxes = [...el.querySelectorAll(classic ? '.scr-head,.podcast-options' : '.answer-header,.answer-text,.pills')].map(child => child.getBoundingClientRect());
+        const choices = [...el.querySelectorAll(classic ? '.podcast-options button' : '.choice-option')].map(button => {
+          const rect = button.getBoundingClientRect();
+          return { height: rect.height, left: rect.left, right: rect.right };
+        });
+        return { centerOffset: Math.abs((Math.min(...boxes.map(b => b.top)) + Math.max(...boxes.map(b => b.bottom))) / 2 - (root.top + root.bottom) / 2), choices, viewport: innerWidth };
+      }, ui === 'classic');
+      assert.ok(geometry.centerOffset < 40, `Question and choices center offset: ${geometry.centerOffset}`);
+      assert.ok(geometry.choices.every(button => button.height >= (ui === 'classic' ? 120 : 64) && button.left >= 0 && button.right <= geometry.viewport));
+      if (process.env.KIOSK_TEST_ARTIFACTS) await page.screenshot({ path: path.join(process.env.KIOSK_TEST_ARTIFACTS, `nostalgia-choices-${ui}-${platform.browser}-${platform.viewport.width}.png`), fullPage: true });
+      assert.equal(state.calls.length, 0);
+    }));
+  }
+});
 
 describe('podcast flow, sources and native video matrix', { concurrency: 3 }, () => {
   for (const [platformIndex, platform] of platforms.entries()) for (const [uiIndex, ui] of ['classic', 'cowork', 'chat'].entries()) for (const live of [false, true]) {
@@ -637,7 +673,8 @@ describe('podcast keyboard back and recording interruptions', { concurrency: 2 }
           return stream;
         };
         const session = PodcastVideo.prepare(controller.signal);
-        const render = PodcastVideo.render({ introAudio: 'data:audio/mpeg;base64,' + audio, storyAudio: 'data:audio/mpeg;base64,' + audio, image: 'data:image/png;base64,' + image, signal: controller.signal, session });
+        const music = await PodcastMusic.load({ start: 2004 }, controller.signal);
+        const render = PodcastVideo.render({ introAudio: 'data:audio/mpeg;base64,' + audio, storyAudio: 'data:audio/mpeg;base64,' + audio, image: 'data:image/png;base64,' + image, signal: controller.signal, session, music, era: { start: 2004, end: 2004 } });
         const timer = setTimeout(() => {
           if (interruption === 'abort') controller.abort(new Error('Test recording cancelled'));
           else {
@@ -671,18 +708,18 @@ describe('podcast narrator settings across interfaces', { concurrency: 2 }, () =
       await page.locator('.settings-fab').click();
       assert.equal(await page.locator('#settings-voice').count(), 0);
       await page.locator('[data-settings="mode"]').click();
+      await page.waitForFunction(() => !document.getElementById('connection-form').inert);
       await page.locator('#connection-voice').fill('invalid voice');
-      await page.locator('#connection-continue').click();
+      await page.locator('#connection-form [type="submit"]').click();
       assert.equal(await page.evaluate(() => CONFIG.ai.speechVoice), 'en-US-Harper:MAI-Voice-2-Flash');
       assert.equal(await page.locator('#connection-error').isVisible(), true);
       await page.locator('#connection-voice').fill('en-US-AvaMultilingualNeural');
-      await page.locator('#connection-continue').click();
       await page.locator('#connection-form [type="submit"]').click();
       await initialize(page, state, 'cowork', true);
       assert.equal(await page.evaluate(() => CONFIG.ai.speechVoice), 'en-US-AvaMultilingualNeural');
       assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('mai-kiosk-foundry')).key), key);
       await settingsButton(page);
-      assert.equal(await page.locator('#connection [name="voice"]').isVisible(), false);
+      assert.equal(await page.locator('#connection [name="voice"]').isVisible(), true);
       await page.locator('[data-action="closeSettings"]').click();
       await initialize(page, state, 'chat', true);
       assert.equal(await page.evaluate(() => CONFIG.ai.speechVoice), 'en-US-AvaMultilingualNeural');
@@ -803,7 +840,7 @@ describe('laboratory design revisions', { concurrency: 3 }, () => {
       await labFlow(page, state, ui, false, 0);
       const button = ui === 'classic' ? screen(page, '[data-act="revise"]') : page.locator('#messages [data-action="revise"]');
       assert.equal(await button.isDisabled(), true);
-      assert.match(await (ui === 'classic' ? screen(page) : page.locator('#messages')).innerText(), /Revizyon için Canlı Mod gerekir/);
+      assert.match(await (ui === 'classic' ? screen(page) : page.locator('#messages')).innerText(), /Revizyon için Demo Modunu kapat/);
       assert.equal(state.calls.length, 0);
     }));
   }
@@ -1098,8 +1135,8 @@ describe('camera, approval and failure regressions', { concurrency: 3 }, () => {
       await page.waitForFunction(() => !document.getElementById('connection').inert);
       assert.equal(await page.locator('#connection [name="key"]').inputValue(), 'second-regression-placeholder');
       await page.goto(baseURL);
-      await page.locator('#connection-live').click();
-      await page.locator('#connection-continue').click();
+      await page.locator('#connection-demo').uncheck();
+      await page.waitForFunction(() => !document.getElementById('connection-form').inert);
       assert.equal(await page.locator('#connection-form [name="key"]').inputValue(), 'second-regression-placeholder');
       assert.equal(state.calls.length, 0);
     }));
@@ -1128,6 +1165,8 @@ describe('camera, approval and failure regressions', { concurrency: 3 }, () => {
       await startAgent(page, 'lab');
       await option(page, 0).click();
       await option(page, 0).click();
+      assert.match(await page.locator('#messages .answer-text').last().innerText(), /İkinci malzeme/);
+      await option(page, 1).click();
       await option(page, 0).click();
       await option(page, 0).click();
       state.failure = 'invalid-copy';
