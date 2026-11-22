@@ -50,6 +50,8 @@ Laboratuvar adı, sloganı ve hikâyesi de gösterilen çıktının JSON kaydın
 
 Laboratuvar akışı **Temel → Lezzet → An → Ar-Ge notu → Üretim** şeklindedir;
 Chat ve Cowork da an seçiminden sonra aynı not sorusunu sorar.
+Chat ve Cowork'ta ilk ve ikinci malzeme ayrı sorularda seçilir; ikinci soruda
+**Tek malzemeyle devam et** seçeneği de vardır. Aynı malzeme iki kez seçilemez.
 **Onlara Güveniyorum** not eklemeden devam eder. **Özel Not Ekle**, klasik
 kioskta cihaz klavyesi ve masaüstü ekran klavyesiyle, sohbet arayüzünde mesaj
 alanıyla en fazla 500 karakterlik bir not yazmayı sağlar. Canlı modda not,

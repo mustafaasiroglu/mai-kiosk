@@ -325,8 +325,11 @@ async function labFlow(page, state, ui, live, index) {
   } else {
     await startAgent(page, 'lab');
     await option(page, index % 4).click();
-    await page.locator('#message').fill(picks.flavors.map(flavor => flavor.name).join(' ve '));
-    await page.locator('#send').click();
+    for (const [ingredientIndex, flavor] of picks.flavors.entries()) {
+      assert.match(await page.locator('#messages .answer-text').last().innerText(), ingredientIndex ? /İkinci malzeme/ : /İlk malzemeni/);
+      await page.locator('#message').fill(flavor.name);
+      await page.locator('#send').click();
+    }
     await option(page, index).click();
     assert.equal(state.calls.length, 0);
     assert.match(await page.locator('#messages .answer-text').last().innerText(), /Ar-Ge ekibine özel bir notunuz var mı/);
@@ -356,6 +359,42 @@ describe('complete kiosk, Chat and Cowork scenario matrix', { concurrency: 3 }, 
         for (let i = 0; i < count; i++) await flow(page, state, ui, live, i);
       }));
     }
+  }
+});
+
+describe('laboratory sequential ingredient questions', { concurrency: 3 }, () => {
+  for (const platform of platforms) for (const ui of ['chat', 'cowork']) {
+    test(`${platform.name} / ${ui}: separate ingredient prompts reject duplicates and allow one ingredient`, () => withPage(platform, async (page, state) => {
+      await initialize(page, state, ui, false);
+      const names = await page.evaluate(() => LAB_FLAVORS.map(flavor => flavor.name));
+      await page.evaluate(() => {
+        const concept = API.lab.concept;
+        API.lab.concept = function (values, opts) {
+          window.selectedLabFlavors = values.flavors.map(flavor => flavor.name);
+          return concept.call(this, values, opts);
+        };
+      });
+      await startAgent(page, 'lab');
+      await option(page, 0).click();
+      assert.match(await page.locator('#messages .answer-text').last().innerText(), /İlk malzemeni/);
+      await page.locator('#message').fill(names.slice(0, 2).join(' ve '));
+      await page.locator('#send').click();
+      assert.match(await page.locator('#messages .answer-text').last().innerText(), /bu adımda tek bir malzeme/);
+      await option(page, 0).click();
+      assert.match(await page.locator('#messages .answer-text').last().innerText(), /İkinci malzeme/);
+      assert.equal((await page.locator('#messages [data-choice]').allTextContents()).includes(names[0]), false);
+      await page.locator('#message').fill(names[0]);
+      await page.locator('#send').click();
+      assert.match(await page.locator('#messages .answer-text').last().innerText(), /zaten seçtin/);
+      await page.locator('#messages [data-choice]').filter({ hasText: 'Tek malzemeyle devam et' }).click();
+      assert.match(await page.locator('#messages .answer-text').last().innerText(), /hangi anda/);
+      await option(page, 0).click();
+      await option(page, 0).click();
+      await approve(page, ui, false);
+      await output(page, state, ui, false, 'samples/reference-photo/pack-cake.jpg');
+      assert.deepEqual(await page.evaluate(() => window.selectedLabFlavors), [names[0]]);
+      assert.equal(state.calls.length, 0);
+    }));
   }
 });
 

@@ -318,15 +318,25 @@
         const base = choice || matchOptions(LAB_BASES, text)[0];
         if (!base) return promptLab(t);
         v.base = base;
-        ask(t, 'flavors', 'Bir veya iki lezzet seç. İki lezzet için adlarını aynı mesajda yazabilirsin.', LAB_FLAVORS);
+        promptLabFlavor(t);
         break;
       }
-      case 'flavors': {
+      case 'flavors':
+      case 'second-flavor': {
+        const second = t.phase === 'second-flavor';
+        if (second && (choice?.id === singleFlavor.id || normalize(text) === normalize(singleFlavor.name))) {
+          ask(t, 'moment', 'Bu ürünü hangi anda tüketmek için tasarlayalım?', LAB_MOMENTS);
+          break;
+        }
         const found = choice ? [choice] : matchOptions(LAB_FLAVORS, text);
         const flavors = found.filter(f => !found.some(other => other !== f && ` ${normalize(other.name)} `.includes(` ${normalize(f.name)} `)));
-        if (!flavors.length || flavors.length > 2) return ask(t, 'flavors', 'Bir veya iki lezzet seç veya adlarını yaz.', LAB_FLAVORS);
-        v.flavors = flavors;
-        ask(t, 'moment', 'Bu ürünü hangi anda tüketmek için tasarlayalım?', LAB_MOMENTS);
+        if (flavors.length !== 1) return promptLabFlavor(t, second, 'Lütfen bu adımda tek bir malzeme seç.');
+        if (second && v.flavors.some(flavor => flavor.id === flavors[0].id)) {
+          return promptLabFlavor(t, true, 'Bu malzemeyi zaten seçtin. İkinci malzeme farklı olmalı.');
+        }
+        v.flavors = second ? [...v.flavors, ...flavors] : flavors;
+        if (second) ask(t, 'moment', 'Bu ürünü hangi anda tüketmek için tasarlayalım?', LAB_MOMENTS);
+        else promptLabFlavor(t, true);
         break;
       }
       case 'moment': {
@@ -387,8 +397,16 @@
     { id: 'sample', name: 'Örnek fotoğrafı kullan' },
   ];
   const followups = [{ id: 'change', name: 'Seçimleri değiştir' }, { id: 'retry', name: 'Yeniden dene' }];
+  const singleFlavor = { id: 'single-flavor', name: 'Tek malzemeyle devam et' };
   function promptLab(t) {
     ask(t, 'base', 'Ürünün temeli ne olsun?', LAB_BASES);
+  }
+  function promptLabFlavor(t, second = false, notice = '') {
+    const options = second ? [...LAB_FLAVORS.filter(flavor => flavor.id !== t.values.flavors[0].id), singleFlavor] : LAB_FLAVORS;
+    const question = second
+      ? 'İkinci malzeme olarak ne ekleyelim? İstersen tek malzemeyle devam edebilirsin.'
+      : 'İlk malzemeni seç.';
+    ask(t, second ? 'second-flavor' : 'flavors', (notice ? notice + ' ' : '') + question, options);
   }
   function prepareLab(t) {
     const v = t.values;
