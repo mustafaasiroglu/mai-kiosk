@@ -213,8 +213,80 @@ Uç nokta CORS’a izin vermiyorsa bu statik sürümde demo
 modunu kullanın.
 
 Canlı fotoğraf üretiminde referans fotoğraf Foundry’ye gider.
-Kişisel sonuçlar paylaşım sunucusuna yüklenmez: indirme çalışır, QR
-bağlantısı yalnızca örnek sonuç gösterir.
+Azure SAS girilmezse senaryolar ve cihazdan indirme çalışır, ancak canlı
+sonuç için telefon bağlantısı oluşturulmaz. Demo QR/linkleri seçili temanın
+statik JPEG’ine, Laboratuvarın kayıtlı ambalajına veya Podcast MP4’üne doğrudan
+gider; paylaşım sunucusu gerekmez.
+
+### Azure Blob ile isteğe bağlı fotoğraf paylaşımı
+
+Klasik kiosk bağlantı formunda veya Copilot **Ayarlar** menüsünde tek bir
+**Azure Blob container SAS URL’si** girin. GitHub Pages’te backend gerekmez.
+Alan boş bırakılabilir; SAS tarayıcı depolamasına veya repoya yazılmaz,
+yalnızca açık sayfanın belleğinde tutulur. Yenileme ve arayüzler arası
+navigasyonda yeniden girilir. Demo moduna geçiş SAS’ı temizler.
+
+Private, yalnızca bu etkinliğe ayrılmış bir container kullanın. HTTPS ile
+sınırlı, başlangıcı geçmiş ve bitişi belirli bir **container SAS** üretin:
+**Read + Create** (`rc`), **Read + Write** (`rw`) veya **Read + Create + Write**
+(`rcw`). List ve Delete yetkileri verilmez. Account SAS ve stored access
+policy bağlı SAS bu arayüzde desteklenmez. Shared Key kapalıysa kurumun izin
+verdiği Entra tabanlı user delegation SAS kullanılabilir. SAS, ağ veya Azure
+Policy engellerini aşmaz. Storage account key’i uygulamaya girmeyin.
+
+**Önemli:** Tek SAS, QR ve indirme linklerinde de bulunur. Linki alan kişi
+aynı yetkilerle container’a dosya yükleyebilir; Write varsa mevcut dosyaları
+da değiştirebilir. GUID tahmin edilmesi zor bir dosya adıdır, yetki izolasyonu
+değildir; başka fotoğrafın adını bilen kişi ona da erişebilir. Silme kuralı
+bu yetkileri veya kötüye kullanım riskini ortadan kaldırmaz. Kısa SAS süresi,
+ayrı container ve kurum/katılımcı onayı kullanın.
+
+Storage hesabının **Blob service CORS** ayarında origin olarak
+`https://mustafaasiroglu.github.io` (yerelde kullanılan tam origin de ayrıca),
+method olarak `PUT`, izin verilen başlıklar olarak `Content-Type`,
+`x-ms-blob-type`, `x-ms-blob-cache-control`, `If-None-Match` ekleyin.
+Tarayıcıdaki Blob GET istekleri için `GET` de izinli olabilir; doğrudan
+fotoğrafı açan telefonun container’a ağ erişimi bulunmalıdır.
+
+Canlı Fotoğraf ve Laboratuvar sonuçlarında **Azure’a yükle ve QR oluştur**
+düğmesi yüklemeyi ayrıca onaylatır. Yalnızca üretilen PNG/JPEG/WebP,
+`<GUID>.<uzantı>` adıyla yüklenir; referans selfie ve metinler yüklenmez.
+Mevcut dosya üzerine yazılmaz; cache başlığı `private, no-store` olur.
+QR doğrudan Blob dosyasını açar, ayrı sosyal paylaşım sayfası sunmaz.
+Hata durumunda çıktı korunur ve yeniden yükleme mümkündür.
+Podcast video yüklemesi bu fotoğraf paylaşımı kapsamında değildir.
+
+Eski dosyaları temizlemek için Azure Portal’da **Lifecycle management**
+altına yalnızca etkinlik container’ını hedefleyen bir silme kuralı ekleyin.
+Örneğin `kiosk-results` container’ındaki bir günden eski dosyalar için:
+
+```json
+{
+  "rules": [{
+    "name": "deleteKioskResults",
+    "enabled": true,
+    "type": "Lifecycle",
+    "definition": {
+      "filters": {
+        "blobTypes": ["blockBlob"],
+        "prefixMatch": ["kiosk-results/"]
+      },
+      "actions": {
+        "baseBlob": { "delete": { "daysAfterCreationGreaterThan": 1 } },
+        "version": { "delete": { "daysAfterCreationGreaterThan": 1 } },
+        "snapshot": { "delete": { "daysAfterCreationGreaterThan": 1 } }
+      }
+    }
+  }]
+}
+```
+
+Bu kural uygulama tarafından kurulmaz; mevcut policy’ye ilgili kuralı ekleyin,
+diğer kuralları değiştirmeyin. Lifecycle gün bazlı ve asenkrondur; **bir saat
+sonra silinme veya tam 24 saatte temizlenme garantisi yoktur**. Soft delete
+açıksa silinen veriler onun retention süresince tutulabilir. Linkler, dosya
+silinirse veya ortak SAS biterse erişilemez olur; SAS bitişi dosyayı silmez.
+Blob kullanımı ücretsiz depolama garantisi sağlamaz.
 
 ## Canlı test örnekleri
 

@@ -952,13 +952,10 @@ body.lite .pack-float { transform: rotate(-7deg); }
         <option value="MAI-Thinking-1"></option>
       </datalist>
     </label>
-    <label>Azure Blob yükleme SAS URL’si (isteğe bağlı)
-      <input name="blobUpload" type="password" autocomplete="off" spellcheck="false" placeholder="https://hesap.blob.core.windows.net/container?…">
+    <label>Azure Blob container SAS URL’si (isteğe bağlı)
+      <input name="blobSas" type="password" autocomplete="off" spellcheck="false" placeholder="https://hesap.blob.core.windows.net/container?…">
     </label>
-    <label>Azure Blob salt-okuma SAS URL’si
-      <input name="blobRead" type="password" autocomplete="off" spellcheck="false" placeholder="https://hesap.blob.core.windows.net/container?…">
-    </label>
-    <p>Azure için aynı private container’a ait iki SAS gir: yükleme Create / Create + Write; okuma yalnızca Read. SAS’lar yalnızca açık sayfada tutulur; yenileme veya Copilot’a geçişte yeniden girilir. Sonuçta yüklemeyi ayrıca onaylarsın. GUID dosya adları yetki izolasyonu sağlamaz; başka dosyanın adını bilen ortak okuma SAS’ıyla ona da erişebilir. Silme kuralını Azure’da ayrıca kur.</p>
+    <p>SAS Read + Create veya Write yetkili olmalı; List ve Delete ekleme. Yalnızca açık sayfada tutulur; yenileme veya Copilot’a geçişte yeniden girilir. QR aynı SAS’ı taşır: linki bilenler container’a yükleme yapabilir ve adını bildikleri diğer dosyalara erişebilir. GUID yetki izolasyonu değildir. Sonuçta yüklemeyi ayrıca onaylarsın. Silme kuralını Azure’da ayrıca kur. SAS boşsa deneyimler ve cihazdan indirme çalışır; canlı telefon bağlantısı oluşmaz.</p>
     <p>Foundry ayarları ve anahtarı bu tarayıcıda saklanır. Yalnızca güvendiğin cihazda kullan. Üretimde seçtiğin fotoğraf Foundry’ye gönderilir.</p>
     <div class="btn-row">
       <button type="submit" class="btn btn-ai">İlerle</button>

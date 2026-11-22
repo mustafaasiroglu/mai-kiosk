@@ -84,9 +84,8 @@
       <label>Görsel modeli dağıtımı<input name="imageModel" value="MAI-Image-2.7-Flash" required></label>
       <label>Metin ve WebIQ modeli dağıtımı<input name="labModel" value="gpt-5.4-mini"></label>
       <label>Nostalji Podcast anlatıcı sesi<input name="voice" value="en-US-Harper:MAI-Voice-2-Flash"></label>
-      <label>Azure Blob yükleme SAS URL’si (isteğe bağlı)<input name="blobUpload" type="password" autocomplete="off" spellcheck="false" placeholder="https://hesap.blob.core.windows.net/container?…"></label>
-      <label>Azure Blob salt-okuma SAS URL’si<input name="blobRead" type="password" autocomplete="off" spellcheck="false" placeholder="https://hesap.blob.core.windows.net/container?…"></label>
-      <p class="muted">Aynı private container: yükleme Create / Create + Write; okuma yalnızca Read. SAS’lar yalnızca açık sayfada tutulur; yenilemede yeniden girilir. Sonuçta Azure yüklemesini ayrıca onaylarsın. GUID yetki izolasyonu sağlamaz; başka dosyanın adını bilen ortak okuma SAS’ıyla ona da erişebilir. Lifecycle temizliğini Azure’da ayrıca kur.</p>
+      <label>Azure Blob container SAS URL’si (isteğe bağlı)<input name="blobSas" type="password" autocomplete="off" spellcheck="false" placeholder="https://hesap.blob.core.windows.net/container?…"></label>
+      <p class="muted">Read + Create veya Write; List ve Delete ekleme. SAS yalnızca açık sayfada tutulur. QR aynı SAS’ı taşır: linki bilenler yükleme yapabilir ve adını bildikleri diğer dosyalara erişebilir. GUID yetki izolasyonu değildir. Yüklemeyi ayrıca onaylarsın; lifecycle temizliğini Azure’da ayrıca kur. SAS boşsa deneyimler ve cihazdan indirme çalışır; canlı telefon bağlantısı oluşmaz.</p>
       <p id="settingsStatus" role="status"></p>
       <button type="submit" class="primary">Bağlantıyı kullan</button>
     </form>

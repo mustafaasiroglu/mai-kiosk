@@ -242,9 +242,10 @@ async function output(page, state, ui, live, samplePath) {
   }
 }
 
-async function photoFlow(page, state, ui, live, index) {
+async function photoFlow(page, state, ui, live, index, setup) {
   const theme = themes[index];
   await initialize(page, state, ui, live, index % 2 ? 'dark' : 'light');
+  if (setup) await setup();
   if (ui === 'classic') {
     const touch = state.hasTouch;
     await screen(page, '[data-go="photo.quiz"]').click();
@@ -271,6 +272,7 @@ async function photoFlow(page, state, ui, live, index) {
     } else {
       await screen(page, '[data-act="retake"]').click();
     }
+
     assert.equal(await page.evaluate(() => STATE.photo.photo), 'samples/reference.jpg');
     assert.equal(state.calls.length, 0);
     await screen(page, '[data-act="start"]').click();
@@ -297,6 +299,71 @@ async function photoFlow(page, state, ui, live, index) {
   }
 }
 
+describe('Azure single SAS photo sharing', { concurrency: 2 }, () => {
+  for (const ui of ['classic', 'chat', 'cowork']) {
+    test(`${ui}: optional SAS, explicit upload, retry and GUID download link`, { timeout: 60000 }, () => withPage(platforms[0], async (page, state) => {
+      const sas = `https://kioskupload.blob.core.windows.net/kiosk-results?sv=2023-11-03&sr=c&sp=rc&spr=https&se=${encodeURIComponent(new Date(Date.now() + 3600000).toISOString())}&sig=browser-test-placeholder`;
+      const uploads = [];
+      await page.route('https://kioskupload.blob.core.windows.net/**', async route => {
+        if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: {
+          'access-control-allow-origin': '*', 'access-control-allow-methods': 'PUT',
+          'access-control-allow-headers': 'content-type,x-ms-blob-type,x-ms-blob-cache-control,if-none-match',
+        } });
+        uploads.push(route.request());
+        await route.fulfill({ status: uploads.length === 1 ? 403 : 201, headers: { 'access-control-allow-origin': '*' }, body: '' });
+      });
+      await photoFlow(page, state, ui, true, 0, async () => {
+        if (ui === 'classic') {
+          await page.locator('.settings-fab').click();
+          await page.locator('[data-settings="mode"]').click();
+        } else await settingsButton(page);
+        const form = page.locator(ui === 'classic' ? '#connection-form' : '#connection');
+        await form.locator('[name="blobSas"]').fill(sas);
+        await form.locator('[type="submit"]').click();
+      });
+      assert.equal(uploads.length, 0, 'Generation alone does not upload a personal image');
+      const image = ui === 'classic' ? screen(page, '.res-img') : page.locator('.artifact img');
+      const original = await image.getAttribute('src');
+      const button = ui === 'classic' ? screen(page, '[data-act="publish"]') : page.locator('#messages [data-action="publish"]');
+      await button.click();
+      await page.getByText(/Azure yüklemesi HTTP 403/).waitFor();
+      assert.equal(await image.getAttribute('src'), original);
+      assert.equal(await button.isEnabled(), true);
+      await button.click();
+      const root = ui === 'classic' ? screen(page) : page.locator('#messages .artifact');
+      await root.locator('.qr-box svg').waitFor();
+      assert.equal(uploads.length, 2);
+      const url = uploads[1].url();
+      assert.match(new URL(url).pathname, /^\/kiosk-results\/[0-9a-f-]{36}\.jpg$/);
+      assert.equal(new URL(url).searchParams.get('sig'), 'browser-test-placeholder');
+      assert.equal(uploads[1].method(), 'PUT');
+      assert.deepEqual(uploads[1].postDataBuffer(), Buffer.from(original.split(',')[1], 'base64'));
+      const shared = ui === 'classic' ? await page.evaluate(() => STATE.lastShare.url) : await root.locator('a[target="_blank"]').getAttribute('href');
+      assert.equal(shared, url);
+      assert.equal(await page.evaluate(() => JSON.stringify(localStorage).includes('browser-test-placeholder') || JSON.stringify(sessionStorage).includes('browser-test-placeholder')), false);
+      await page.reload();
+      assert.equal(await page.evaluate(() => BlobShare.enabled), false);
+    }));
+    test(`${ui}: without SAS Live still generates; Demo links open the static selected photo`, { timeout: 60000 }, () => withPage(platforms[0], async (page, state) => {
+      await photoFlow(page, state, ui, true, 0);
+      if (ui === 'classic') {
+        assert.equal(await screen(page, '.qr-box svg').count(), 1, 'Info icon rather than a fabricated QR');
+        assert.match(await screen(page, '.qr-url').innerText(), /SAS girilmedi/);
+        assert.equal(await page.evaluate(() => STATE.lastShare), null);
+        assert.equal(await screen(page, 'a[download]').count(), 1);
+      } else {
+        assert.match(await page.locator('.artifact').innerText(), /Telefon bağlantısı oluşturulmadı/);
+        assert.equal(await page.locator('.artifact .qr-box').count(), 0);
+      }
+      await photoFlow(page, state, ui, false, 5);
+      const shared = ui === 'classic' ? await page.evaluate(() => STATE.lastShare.url) : await page.locator('.artifact a[target="_blank"]').getAttribute('href');
+      assert.equal(shared, `${baseURL}/samples/photo-popart.jpg`);
+      const download = ui === 'classic' ? screen(page, 'a[download]') : page.locator('.artifact a[download]');
+      assert.equal(await download.getAttribute('href'), shared);
+      assert.equal((await page.request.get(shared)).status(), 200);
+    }));
+  }
+});
 async function labFlow(page, state, ui, live, index) {
   await initialize(page, state, ui, live);
   const rdNote = index % 2 ? 'Fıstık tadı öne çıksın; ambalajda "sade" bir görünüm olsun.' : '';

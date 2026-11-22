@@ -101,8 +101,9 @@
     return `<figure class="artifact">
       ${result.podcast ? '' : `<img src="${esc(result.image)}" alt="${esc(result.title)}">`}
       <figcaption>${result.podcast ? podcastOutputHTML(result.podcast) : `<strong>${esc(result.title)}</strong>${result.slogan ? `<p>${esc(result.slogan)}</p>` : ''}${result.story ? `<p class="muted">${esc(result.story)}</p>` : ''}`}</figcaption>
-      ${result.podcast ? '' : `<a class="artifact-action" href="${esc(result.image)}" download="${result.file}">${svg('download')} Görseli indir</a>`}
-      ${!result.podcast && result.live && BlobShare.enabled ? `<div class="blob-share">${result.share ? `<div class="qr-box" style="width:180px;height:180px">${QR.svg(result.share.url, { ecl: 'M', border: 2 })}</div><a class="artifact-action" href="${esc(result.share.url)}" target="_blank" rel="noopener noreferrer">Görseli telefonda aç</a><p class="muted">Son erişim: ${esc(new Date(result.share.expires).toLocaleString('tr-TR'))}</p>` : `<button type="button" class="pill" data-action="publish" data-output="${threads.flatMap(t => t.messages).findIndex(m => m.result === result)}"${result.publishing ? ' disabled' : ''}>${result.publishing ? 'Azure’a yükleniyor…' : 'Azure’a yükle ve QR oluştur'}</button><p class="muted">Yüklemeyi onayladığında üretilen görsel Azure’a gönderilir. Bağlantıyı bilenler erişebilir.</p>${result.shareError ? `<p role="alert">${esc(result.shareError)}</p>` : ''}`}<p class="muted">${esc(BlobShare.retentionText)}</p></div>` : ''}
+      ${result.podcast ? '' : `<a class="artifact-action" href="${esc(result.share?.demo ? result.share.url : result.image)}" download="${result.file}">${svg('download')} Görseli indir</a>`}
+      ${result.share ? `<div class="blob-share"><div class="qr-box" style="width:180px;height:180px">${QR.svg(result.share.url, { ecl: 'M', border: 2 })}</div><a class="artifact-action" href="${esc(result.share.url)}" target="_blank" rel="noopener noreferrer">${result.share.demo ? 'Statik demo dosyasını aç' : 'Görseli telefonda aç'}</a><p class="muted">${result.share.demo ? 'Repodaki kayıtlı demo dosyası.' : `SAS bitişi: ${esc(new Date(result.share.expires).toLocaleString('tr-TR'))}`}</p></div>` : !result.podcast && result.live && BlobShare.enabled ? `<div class="blob-share"><button type="button" class="pill" data-action="publish" data-output="${thread.messages.findIndex(m => m.result === result)}"${result.publishing ? ' disabled' : ''}>${result.publishing ? 'Azure’a yükleniyor…' : 'Azure’a yükle ve QR oluştur'}</button>${result.shareError ? `<p role="alert">${esc(result.shareError)}</p>` : ''}</div>` : result.live ? '<p class="muted">Telefon bağlantısı oluşturulmadı; sonucu bu cihazdan indirebilirsin.</p>' : ''}
+      ${!result.podcast && result.live && BlobShare.enabled ? `<p class="muted">Yüklemeyi onayladığında üretilen görsel Azure’a gönderilir. Linkteki ortak SAS okuma ve yükleme yetkisi taşır; linki bilenler container’a dosya da yükleyebilir. ${esc(BlobShare.retentionText)}</p>` : ''}
       ${revision ? `<div class="pills"><button type="button" class="pill" data-action="revise"${result.canRevise ? '' : ' disabled'}>${svg('edit')} Revizyon İste</button></div>${result.canRevise ? '' : '<p class="muted">Revizyon için Demo Modunu kapatman gerekir.</p>'}` : ''}
     </figure>`;
   }
@@ -147,7 +148,7 @@
     const videoSources = new Map(t.messages.filter(entry => entry.result?.podcast).map((entry, index) => [entry.result.podcast, players[index]?.src]));
     el('workspaceBody').innerHTML = `<section><h3>Agent</h3><p class="answer-header">${badge(t.agent, true)}${t.agent.name}</p><p class="muted">${t.agent.description}</p></section>
       <section><h3>Etkinlik</h3>${job ? `<p>${jobLabel(job)}</p>${timeline(job)}` : '<p class="muted">Üretim başladığında adımlar burada görünür.</p>'}</section>
-      <section><h3>Çıktılar</h3>${outputs.length ? outputs.map(r => `<p><a class="artifact-action" href="${esc(r.podcast ? videoSources.get(r.podcast) : r.image)}" download="${r.podcast ? `ani-videosu.${r.podcast.video.type.startsWith('video/mp4') ? 'mp4' : 'webm'}` : r.file}">${svg('download')} ${esc(r.title)}${r.podcast ? ' · Video' : ''}</a></p>`).join('') : '<p class="muted">Henüz çıktı yok.</p>'}</section>`;
+      <section><h3>Çıktılar</h3>${outputs.length ? outputs.map(r => `<p><a class="artifact-action" href="${esc(r.share?.demo ? r.share.url : r.podcast ? videoSources.get(r.podcast) : r.image)}" download="${r.podcast ? `ani-videosu.${r.podcast.video.type.startsWith('video/mp4') ? 'mp4' : 'webm'}` : r.file}">${svg('download')} ${esc(r.title)}${r.podcast ? ' · Video' : ''}</a></p>`).join('') : '<p class="muted">Henüz çıktı yok.</p>'}</section>`;
   }
 
   function syncComposer() {
@@ -513,6 +514,7 @@
       job.step++;
       job.status = 'complete';
       t.result = { image, title, story, slogan, concept, podcast, live, canRevise: t.agent.id === 'lab' && live, file: `copilot-${t.agent.id}.jpg` };
+      if (!live) t.result.share = await API.share.publish(t.agent.id, image, { theme: v.theme?.id });
       t.revision = null;
       say(t, revision ? 'Revizyonun hazır. Önceki tasarımın da sohbette duruyor.' : podcast ? (live ? 'Üç sahneli radyo tiyatron hazır. Buradan izleyebilir ve indirebilirsin.' : 'Kayıtlı demo videosu hazır. Bu işlemde yeni bir video üretilmedi.') : live ? 'Çıktın hazır. Görseli buradan indirebilirsin.' : 'Kayıtlı demo çıktısı hazır. Bu işlemde yeni bir görsel üretilmedi.', {
         result: t.result,
@@ -561,7 +563,7 @@
   }
 
   function changeConnection(settings, blobSettings = null) {
-    if (threads.some(t => t.job)) return notice('Modu değiştirmek için devam eden işlemleri bitir veya durdur.');
+    if (threads.some(t => t.job || t.messages.some(m => m.result?.publishing))) return notice('Modu değiştirmek için devam eden işlemleri bitir veya durdur.');
     if (settings.mode === 'live') {
       try { FoundrySettings.save(settings); }
       catch (error) {
@@ -572,8 +574,7 @@
     }
     FoundrySettings.apply(settings);
     BlobShare.settings = blobSettings;
-    el('connection').elements.blobUpload.value = '';
-    el('connection').elements.blobRead.value = '';
+    el('connection').elements.blobSas.value = '';
     renderCards();
     for (const t of threads) t.values.photo = null;
     threads.length = 0;
@@ -607,7 +608,7 @@
     switch (command) {
       case 'publish': {
         const owner = thread;
-        const result = threads.flatMap(t => t.messages)[Number(target.dataset.output)]?.result;
+        const result = thread.messages[Number(target.dataset.output)]?.result;
         if (!result || result.podcast || !result.live || result.publishing || result.share) return;
         result.publishing = true;
         result.shareError = '';

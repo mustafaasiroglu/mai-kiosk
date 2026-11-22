@@ -434,7 +434,7 @@ test('connection selection can repeatedly switch Demo and Live and cancel withou
     localStorage: { getItem: key => stored.get(key), setItem: (key, value) => stored.set(key, value) },
     FormData: class { constructor(form) { this.form = form; } get(name) { return this.form.elements[name].value; } },
   });
-  vm.runInContext(sourceBetween('const FoundrySettings =', 'function boot()'), context);
+  vm.runInContext(sourceBetween('const BlobShare =', 'function boot()'), context);
   const reopen = context.chooseConnection(() => transitions.push(config.ai.mode));
   assert.equal((await element('#connection-dialog').dispatch('cancel')).prevented, true);
   element('#connection-demo').checked = true;
@@ -781,6 +781,101 @@ test('Demo returns saved gallery outputs and matching Lab copy without generatin
   await assert.rejects(context.api.lab.packaging(concept), /Foundry endpoint/);
 });
 
+function blobShareHarness() {
+  let now = Date.now();
+  const calls = [];
+  const context = vm.createContext({
+    URL, Blob, Uint8Array, atob, AbortSignal,
+    Date: class extends Date { static now() { return now; } },
+    crypto: require('node:crypto').webcrypto,
+    fetch: async (url, options) => { calls.push({ url, options }); return new Response('', { status: 201 }); },
+  });
+  vm.runInContext(sourceBetween('function dataUrlToBlob(', 'function makeCanvas('), context);
+  vm.runInContext(sourceBetween('const BlobShare =', 'const FoundrySettings =') + '\nglobalThis.share = BlobShare;', context);
+  const url = new URL('https://kioskupload.blob.core.windows.net/kiosk-results');
+  url.search = new URLSearchParams({ sv: '2023-11-03', sr: 'c', sp: 'rc', spr: 'https', se: new Date(now + 3600000).toISOString(), sig: 'unit-test-placeholder' }).toString();
+  return { context, calls, sas: url.href, expire: () => { now += 3600001; } };
+}
+
+test('Azure single SAS upload uses GUID names, correct image bytes and the same token in the download link', async () => {
+  const { context, calls, sas } = blobShareHarness();
+  const form = { elements: { blobSas: { value: sas } } };
+  context.share.settings = context.share.readForm(form);
+  for (const [mime, extension] of [['image/png', 'png'], ['image/jpeg', 'jpg'], ['image/webp', 'webp']]) {
+    const result = await context.share.publish(`data:${mime};base64,aW1hZ2U=`);
+    const call = calls.at(-1);
+    assert.match(new URL(call.url).pathname, new RegExp(`^/kiosk-results/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\.${extension}$`));
+    assert.equal(call.url, result.url);
+    assert.equal(new URL(result.url).search, new URL(sas).search);
+    assert.equal(call.options.method, 'PUT');
+    assert.equal(call.options.headers['x-ms-blob-type'], 'BlockBlob');
+    assert.equal(call.options.headers['If-None-Match'], '*');
+    assert.equal(call.options.headers['x-ms-blob-cache-control'], 'private, no-store');
+    assert.equal(call.options.credentials, 'omit');
+    assert.equal(call.options.referrerPolicy, 'no-referrer');
+    assert.equal(call.options.headers['Content-Type'], mime);
+    assert.equal(await call.options.body.text(), 'image');
+    assert.equal(result.expires, new URL(sas).searchParams.get('se'));
+  }
+  assert.equal(new Set(calls.map(call => call.url)).size, 3);
+  form.elements.blobSas.value = '';
+  assert.equal(context.share.readForm(form), null);
+  form.elements.blobSas.value = 'must not persist';
+  context.share.fill(form);
+  assert.equal(form.elements.blobSas.value, sas);
+});
+
+test('Azure rejects invalid or expired SAS and surfaces HTTP and network upload failures without leaking the token', async () => {
+  const { context, calls, sas, expire } = blobShareHarness();
+  for (const edit of [
+    url => { url.protocol = 'http:'; },
+    url => { url.hostname = 'untrusted.example'; },
+    url => { url.pathname += '/file.jpg'; },
+    url => { url.searchParams.set('sp', 'r'); },
+    url => { url.searchParams.set('sp', 'rcwdl'); },
+    url => { url.searchParams.set('sr', 'b'); },
+    url => { url.searchParams.set('spr', 'https,http'); },
+    url => { url.searchParams.set('srt', 'o'); },
+    url => { url.searchParams.set('si', 'stored-policy'); },
+    url => { url.searchParams.delete('sig'); },
+    url => { url.searchParams.append('sp', 'rc'); },
+    url => { url.searchParams.set('se', 'invalid'); },
+    url => { url.searchParams.set('st', new Date(Date.now() + 86400000).toISOString()); },
+  ]) {
+    const url = new URL(sas);
+    edit(url);
+    assert.throws(() => context.share.readForm({ elements: { blobSas: { value: url.href } } }));
+  }
+  context.share.settings = { sas };
+  await assert.rejects(context.share.publish('data:text/html;base64,aW1hZ2U='), /PNG, JPEG/);
+  await assert.rejects(context.share.publish('data:image/png;base64,'), /boş/);
+  assert.equal(calls.length, 0);
+  context.fetch = async () => new Response('', { status: 403 });
+  await assert.rejects(context.share.publish('data:image/png;base64,aW1hZ2U='), /HTTP 403/);
+  context.fetch = async () => { throw new Error(sas); };
+  await assert.rejects(context.share.publish('data:image/png;base64,aW1hZ2U='), error => /CORS/.test(error.message) && !error.message.includes('unit-test-placeholder'));
+  expire();
+  await assert.rejects(context.share.publish('data:image/png;base64,aW1hZ2U='), /süresi dolmuş/);
+});
+
+test('Demo sharing uses static repository files and Live without SAS never fabricates a download URL', async () => {
+  const context = vm.createContext({
+    URL, document: { baseURI: 'https://example.test/mai-kiosk/' },
+    CONFIG: { ai: { mode: 'mock' } },
+    BlobShare: { enabled: false },
+  });
+  vm.runInContext(sampleSource, context);
+  vm.runInContext(sourceBetween('const SavedSamples =', 'function shareUrlFor(') + '\nglobalThis.api = API;', context);
+  for (const theme of ['snowglobe', 'popart']) {
+    const result = await context.api.share.publish('photo', '', { theme });
+    assert.equal(result.url, `https://example.test/mai-kiosk/samples/photo-${theme}.jpg`);
+    assert.equal(result.demo, true);
+  }
+  assert.equal((await context.api.share.publish('lab', '')).url, 'https://example.test/mai-kiosk/samples/reference-photo/pack-cake.jpg');
+  assert.equal((await context.api.share.publish('podcast', '')).url, 'https://example.test/mai-kiosk/samples/podcast/radio-memory.mp4');
+  context.CONFIG.ai.mode = 'live';
+  await assert.rejects(context.api.share.publish('photo', ''), /Azure SAS/);
+});
 test('Minecraft package references become low-resolution pixel images while other themes retain the source', async () => {
   const pack = { naturalWidth: 1000, naturalHeight: 300 };
   let output;

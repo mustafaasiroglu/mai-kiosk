@@ -30,7 +30,7 @@ const CONFIG = {
   idle: { warnAfterSec: 75, countdownSec: 12 },
   share: {
     baseUrl: '',           // Paylaşım sayfası kök adresi (ör. https://alan-adiniz/m/). Boşsa bu sayfa kullanılır.
-    retentionText: 'Sonucunu cihazına indirebilirsin. QR bağlantısı yalnızca örnek gösterir.',
+    retentionText: 'Sonucunu cihazına indirebilirsin. Demo bağlantıları repodaki kayıtlı dosyaları açar.',
   },
   ai: {
     mode: 'mock',          // 'mock' | 'live'
@@ -2310,6 +2310,10 @@ function mockConcept(base, flavors, moment, variation = 0) {
 }
 
 const SavedSamples = {
+  download(exp, theme) {
+    const sample = sampleFor(exp === 'photo' ? 'photo-' + theme : exp);
+    return new URL(exp === 'podcast' ? sample.video : sample.path + '.jpg', document.baseURI).href;
+  },
   async response(path, signal) {
     const response = await fetch(path, { cache: 'no-cache', signal });
     if (!response.ok) throw new Error('Kayıtlı örnek yüklenemedi (HTTP ' + response.status + '): ' + path);
@@ -2423,13 +2427,12 @@ const API = {
         if (!meta.uploadConsent) throw new Error('Azure paylaşımı için yüklemeyi onayla.');
         return BlobShare.publish(image);
       }
-      const id = uid();
       if (API.live && CONFIG.ai.shareUploadUrl) {
         const r = await Backend.post(CONFIG.ai.shareUploadUrl, { image, meta: { exp, ...meta } });
-        return { id, url: r.url };
+        return { id: uid(), url: r.url };
       }
-      await API.wait(500);
-      return { id, url: shareUrlFor(exp, id), demo: true };
+      if (API.live) throw new Error('Paylaşım bağlantısı için Azure SAS ayarlarını gir. Sonucunu bu cihazdan indirebilirsin.');
+      return { url: SavedSamples.download(exp, meta.theme), demo: true };
     },
   },
 };
@@ -2900,7 +2903,7 @@ function runGenView(el, ctx, { stages, estimateMs, task, tipsCount, onRetry, get
 }
 
 /* Sonuç ekranı */
-function resultViewHTML({ img, alt, hideImage = false, title = '', text = '', extra = '', regenLabel = 'Yeniden üret', revision = false, step = 4 }) {
+function resultViewHTML({ img, downloadUrl = img, alt, hideImage = false, title = '', text = '', extra = '', regenLabel = 'Yeniden üret', revision = false, step = 4 }) {
   return `<div class="res-layout">
     ${hideImage ? '' : `<div class="res-frame"><img class="res-img" src="${img}" alt="${esc(alt)}"></div>`}
     <div class="res-side">
@@ -2909,9 +2912,10 @@ function resultViewHTML({ img, alt, hideImage = false, title = '', text = '', ex
       ${API.live ? '' : '<p class="fine demo-sample-note">Demo Modu: kayıtlı gerçek örnek gösterilir; seçimler ve yeniden üretme bu görseli değiştirmez.</p>'}
       <div class="qr-card rise" style="--i:4">
         <div class="qr-box"><div class="spinner"></div></div>
-        <div class="qr-copy"><b>${icon('phone')} Telefonuna al</b><span>${!hideImage && API.live && BlobShare.enabled ? 'QR oluşturmak için üretilen görseli Azure’a yüklemeyi onayla. Bağlantıyı bilenler görsele erişebilir.' : `Telefonunun kamerasını QR koda tut; ${hideImage ? 'videon' : 'görselin'} açılsın, indir ya da LinkedIn ve Instagram’da paylaş.`}</span><small class="qr-url">Bağlantı hazırlanıyor…</small>${!hideImage && API.live && BlobShare.enabled ? '<button class="btn btn-glass" data-act="publish">Azure’a yükle ve QR oluştur</button>' : ''}</div>
+        <div class="qr-copy"><b>${icon('phone')} Telefonuna al</b><span>${!hideImage && API.live && BlobShare.enabled ? 'QR oluşturmak için üretilen görseli Azure’a yüklemeyi onayla. Linkteki ortak SAS okuma ve yükleme yetkisi taşır; linki bilenler aynı container’a dosya da yükleyebilir.' : API.live && !CONFIG.ai.shareUploadUrl ? 'Bu sonuç için telefon bağlantısı yok. Sonucunu bu cihazdan indirebilirsin.' : `Telefonunun kamerasını QR koda tut; ${hideImage ? 'videon' : 'görselin'} açılsın, indir ya da paylaş.`}</span><small class="qr-url">Bağlantı hazırlanıyor…</small>${!hideImage && API.live && BlobShare.enabled ? '<button class="btn btn-glass" data-act="publish">Azure’a yükle ve QR oluştur</button>' : ''}</div>
       </div>
       <div class="btn-row rise" style="--i:5">
+        ${hideImage ? '' : `<a class="btn btn-lg btn-glass" href="${esc(downloadUrl)}" download="yildiz-ai.jpg">${icon('download')} Görseli indir</a>`}
         <button class="btn btn-lg btn-primary" data-act="regen">${icon('refresh')} ${API.live ? regenLabel : 'Örneği tekrar göster'}</button>
         ${revision ? `<button class="btn btn-lg btn-glass" data-act="revise"${API.live ? '' : ' disabled'}>${icon('edit')} Revizyon İste</button>` : ''}
         <button class="btn btn-lg btn-glass" data-act="restart">${icon('restart')} Baştan başla</button>
@@ -2925,6 +2929,7 @@ function mountResult(el, ctx, { exp, img, meta = {}, onRegen, colors }) {
   Sound.success();
   ctx.timeout(() => Confetti.burst(colors, { x: 0.32, y: 0.42 }), 380);
   const upload = API.live && exp !== 'podcast' && BlobShare.enabled;
+  STATE.lastShare = null;
   const button = $('[data-act="publish"]', el);
   let publishing = false;
   const publish = async () => {
@@ -2937,7 +2942,7 @@ function mountResult(el, ctx, { exp, img, meta = {}, onRegen, colors }) {
       if (!ctx.alive) return;
       STATE.lastShare = { exp, img, url: sh.url, meta, demo: !!sh.demo };
       $('.qr-box', el).innerHTML = QR.svg(sh.url, { ecl: 'M', border: 2 });
-      $('.qr-url', el).textContent = sh.blob ? `Görsel bağlantısı hazır · son erişim: ${new Date(sh.expires).toLocaleString('tr-TR')}` : sh.url.replace(/^https?:\/\//, '') + (sh.demo ? '  ·  demo bağlantısı' : '');
+      $('.qr-url', el).textContent = sh.blob ? `Görsel bağlantısı hazır · SAS bitişi: ${new Date(sh.expires).toLocaleString('tr-TR')}` : sh.url.replace(/^https?:\/\//, '') + (sh.demo ? '  ·  kayıtlı demo dosyası' : '');
       if (button) button.hidden = true;
     } catch (error) {
       console.error('Paylaşım bağlantısı hazırlanamadı:', error);
@@ -2956,6 +2961,9 @@ function mountResult(el, ctx, { exp, img, meta = {}, onRegen, colors }) {
   if (upload) {
     $('.qr-box', el).innerHTML = icon('shield');
     $('.qr-url', el).textContent = 'Henüz Azure’a yüklenmedi.';
+  } else if (API.live && !CONFIG.ai.shareUploadUrl) {
+    $('.qr-box', el).innerHTML = icon('info');
+    $('.qr-url', el).textContent = exp === 'podcast' ? 'Video paylaşımı için bir paylaşım sunucusu gerekir.' : 'Azure SAS girilmedi; telefon bağlantısı oluşturulmadı.';
   } else publish();
 }
 
@@ -3285,6 +3293,7 @@ SCREENS['photo.result'] = {
     const s = STATE.photo, p = photoDisplayProduct(), t = byId(THEMES, s.themeId);
     return resultViewHTML({
       img: s.result, alt: `${t.name} temasında, ${p.name} ile yapay zekâ anı fotoğrafı`,
+      downloadUrl: API.live ? s.result : SavedSamples.download('photo', t.id),
       title: 'Tatlı anın hazır!',
       text: API.live ? `${esc(t.name)} sahnesinde, ${esc(CONFIG.event.productBrand + ' ' + p.name)} ile sen. Beğenmezsen yeniden üret; beğendiysen hemen telefonuna al.` : `${esc(t.name)} temasının ${esc(CONFIG.event.productBrand + ' ' + p.name)} ile daha önce oluşturulmuş örneği.`,
     });
@@ -3529,7 +3538,7 @@ SCREENS['lab.result'] = {
         <div class="chip-row">${c.notes.map((n) => `<span class="chip">${esc(n)}</span>`).join('')}</div>
         <p class="lab-story">${esc(c.story)}</p>
       </div>`;
-    return resultViewHTML({ img: STATE.lab.result, alt: `${c.name} adlı yeni lezzet konseptinin ambalaj tasarımı`, extra, regenLabel: 'Yeni varyasyon', revision: true, step: 5 });
+    return resultViewHTML({ img: STATE.lab.result, downloadUrl: API.live ? STATE.lab.result : SavedSamples.download('lab'), alt: `${c.name} adlı yeni lezzet konseptinin ambalaj tasarımı`, extra, regenLabel: 'Yeni varyasyon', revision: true, step: 5 });
   },
   mount(el, ctx) {
     const s = STATE.lab, c = s.concept;
@@ -3850,9 +3859,9 @@ function perfGuard() {
 }
 const BlobShare = {
   settings: null,
-  retentionText: 'Tüm bağlantılar ortak okuma SAS’ının bitişinde kapanır. Eski dosyalar Azure lifecycle kuralıyla gün bazlı, asenkron temizlenir; bir saatlik silinme garantisi yoktur.',
+  retentionText: 'Tüm bağlantılar ortak SAS’ın bitişinde kapanır. Eski dosyalar için Azure lifecycle kuralını ayrıca kur; temizlik gün bazlı ve asenkrondur, bir saatlik silinme garantisi yoktur.',
   get enabled() { return this.settings !== null; },
-  parse(value, kind) {
+  parse(value) {
     let url;
     try { url = new URL(value); }
     catch { throw new Error('Geçerli bir Azure container SAS URL’si gir.'); }
@@ -3867,8 +3876,8 @@ const BlobShare = {
       throw new Error('HTTPS ile sınırlı, bitiş tarihi olan container SAS kullan; account SAS veya stored access policy kullanma.');
     }
     const permissions = params.get('sp');
-    if (kind === 'upload' ? !['c', 'cw'].includes(permissions) : permissions !== 'r') {
-      throw new Error(kind === 'upload' ? 'Yükleme SAS’ı yalnızca Create veya Create + Write yetkili olmalı.' : 'Okuma SAS’ı yalnızca Read yetkili olmalı; List, Write ve Delete ekleme.');
+    if (!['rc', 'rw', 'rcw'].includes(permissions)) {
+      throw new Error('SAS Read ve Create veya Write yetkili olmalı; List ve Delete ekleme.');
     }
     const expiry = Date.parse(params.get('se'));
     const start = params.get('st');
@@ -3879,40 +3888,34 @@ const BlobShare = {
     return { url, expiry };
   },
   readForm(form) {
-    const upload = form.elements.blobUpload?.value.trim() || '';
-    const read = form.elements.blobRead?.value.trim() || '';
-    if (!upload && !read) return null;
-    if (!upload || !read) throw new Error('Azure paylaşımı için hem yükleme hem salt-okuma SAS URL’sini gir.');
-    const a = this.parse(upload, 'upload'), b = this.parse(read, 'read');
-    if (a.url.origin + a.url.pathname !== b.url.origin + b.url.pathname) throw new Error('İki SAS da aynı container’a ait olmalı.');
-    return { upload: a.url.href, read: b.url.href };
+    const sas = form.elements.blobSas?.value.trim() || '';
+    return sas ? { sas: this.parse(sas).url.href } : null;
   },
   fill(form) {
-    if (form.elements.blobUpload) form.elements.blobUpload.value = this.settings?.upload || '';
-    if (form.elements.blobRead) form.elements.blobRead.value = this.settings?.read || '';
+    if (form.elements.blobSas) form.elements.blobSas.value = this.settings?.sas || '';
   },
   async publish(image) {
     if (!this.settings) throw new Error('Azure paylaşım ayarlarını gir.');
-    const upload = this.parse(this.settings.upload, 'upload'), read = this.parse(this.settings.read, 'read');
+    const upload = this.parse(this.settings.sas), read = new URL(upload.url.href);
     if (typeof image !== 'string' || !/^data:image\/(?:png|jpeg|webp);base64,/.test(image)) throw new Error('Paylaşılacak görsel PNG, JPEG veya WebP olmalı.');
     const blob = dataUrlToBlob(image);
     const extension = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }[blob.type];
     if (!extension || !blob.size) throw new Error('Paylaşılacak görsel boş veya geçersiz.');
     const id = crypto.randomUUID(), filename = `${id}.${extension}`;
     upload.url.pathname += '/' + filename;
-    read.url.pathname += '/' + filename;
+    read.pathname += '/' + filename;
     let response;
     try {
       response = await fetch(upload.url.href, {
         method: 'PUT', body: blob, credentials: 'omit', referrerPolicy: 'no-referrer',
-        headers: { 'Content-Type': blob.type, 'x-ms-blob-type': 'BlockBlob', 'If-None-Match': '*' },
+        headers: { 'Content-Type': blob.type, 'x-ms-blob-type': 'BlockBlob', 'x-ms-blob-cache-control': 'private, no-store', 'If-None-Match': '*' },
         signal: AbortSignal.timeout(60000),
       });
     } catch {
       throw new Error('Azure yüklemesi tamamlanamadı. Ağ, CORS ve SAS ayarlarını kontrol et.');
     }
     if (!response.ok) throw new Error(`Azure yüklemesi HTTP ${response.status}. SAS yetkilerini, süresini ve ağ erişimini kontrol et.`);
-    return { id, url: read.url.href, expires: new Date(read.expiry).toISOString(), blob: true };
+    return { id, url: read.href, expires: new Date(upload.expiry).toISOString(), blob: true };
   },
 };
 const FoundrySettings = {
@@ -4013,6 +4016,7 @@ function chooseConnection(start) {
   $('#connection-continue').addEventListener('click', () => {
     if (selectedMode !== 'mock') return;
     CONFIG.ai.mode = 'mock';
+    BlobShare.settings = null;
     finish();
   });
   form.addEventListener('submit', (event) => {
