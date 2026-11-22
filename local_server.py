@@ -12,6 +12,7 @@ from urllib.parse import unquote, urlsplit
 ENV_FIELDS = {
     "FOUNDRY_ENDPOINT": "endpoint",
     "FOUNDRY_API_KEY": "key",
+    "WEBIQ_API_KEY": "webIQKey",
     "FOUNDRY_IMAGE_DEPLOYMENT": "imageModel",
     "FOUNDRY_LAB_DEPLOYMENT": "labModel",
     "FOUNDRY_SPEECH_VOICE": "voice",

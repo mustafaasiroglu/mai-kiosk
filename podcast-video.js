@@ -7,11 +7,14 @@ const PodcastVideo = {
     if (!format) throw new Error('Bu tarayıcı sesli video kaydı için uygun bir kodek sunmuyor.');
     return format;
   },
-  drawFrame(canvas, picture, time, grain) {
+  drawFrame(canvas, picture, time, grain, duration = 1, sceneIndex = 0) {
     const g = canvas.getContext('2d'), w = canvas.width, h = canvas.height;
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    const zoom = reduced ? 1 : 1.025 + Math.sin(time * .08) * .012;
-    const x = reduced ? 0 : Math.sin(time * 13) * 1.2, y = reduced ? 0 : Math.cos(time * 17) * .8;
+    const progress = Math.max(0, Math.min(1, time / duration)), eased = progress * progress * (3 - 2 * progress);
+    const direction = sceneIndex % 2 ? -1 : 1;
+    const zoom = reduced ? 1 : 1.08 + .12 * (direction === 1 ? eased : 1 - eased);
+    const x = reduced ? 0 : w * .028 * (2 * eased - 1) * (sceneIndex === 0 ? -1 : direction);
+    const y = reduced ? 0 : h * .022 * (2 * eased - 1) * direction;
     g.save(); g.filter = 'sepia(.85) saturate(.45) contrast(.95)';
     g.drawImage(picture, (w - w * zoom) / 2 + x, (h - h * zoom) / 2 + y, w * zoom, h * zoom);
     g.filter = 'none';
@@ -29,6 +32,15 @@ const PodcastVideo = {
       g.globalAlpha = .035; g.drawImage(grain, 0, 0, w, h);
     }
     g.restore();
+  },
+  timeline(durations) {
+    if (!Array.isArray(durations) || durations.length !== 3 || durations.some(value => !Number.isFinite(value) || value <= 0)) throw new Error('Üç sahnenin ses süreleri geçerli olmalı.');
+    const gap = .16, memorySpeech = durations[1] + durations[2] + gap;
+    if (durations[0] > 10) throw new Error('Gazete seslendirmesi 10 saniyeyi aşıyor. Daha kısa bir girişle yeniden dene.');
+    if (memorySpeech > 20) throw new Error('İki anı cümlesinin seslendirmesi 20 saniyeyi aşıyor. Daha kısa bir anıyla yeniden dene.');
+    const newspaper = Math.max(9, durations[0]), memory = Math.max(18, memorySpeech);
+    const padding = (memory - memorySpeech) / 2;
+    return { starts: [0, newspaper, newspaper + durations[1] + gap + padding], duration: newspaper + memory };
   },
   prepare(signal) {
     signal?.throwIfAborted();
@@ -68,13 +80,11 @@ const PodcastVideo = {
     ]);
     signal?.throwIfAborted();
     if (document.hidden) throw new Error('Video oluştururken bu sekmeyi açık tut ve yeniden dene.');
-    const context = session.context, gap = Math.round(context.sampleRate * .16);
-    const buffer = context.createBuffer(1, audio.reduce((sum, clip) => sum + clip.length, 0) + gap * 2, context.sampleRate);
-    const starts = [];
-    let offset = 0;
+    const context = session.context, timeline = this.timeline(audio.map(clip => clip.duration));
+    const buffer = context.createBuffer(1, Math.ceil(timeline.duration * context.sampleRate), context.sampleRate);
+    const starts = timeline.starts.map(time => Math.round(time * context.sampleRate) / context.sampleRate);
     for (const [index, clip] of audio.entries()) {
-      starts.push(offset / context.sampleRate); buffer.copyToChannel(clip.getChannelData(0), 0, offset);
-      offset += clip.length + (index < 2 ? gap : 0);
+      buffer.copyToChannel(clip.getChannelData(0), 0, Math.round(starts[index] * context.sampleRate));
     }
     PodcastMusic.mix(buffer, bed);
     if (!Number.isFinite(buffer.duration) || buffer.duration <= 0 || buffer.duration > 180) throw new Error('Video için ses süresi geçersiz veya çok uzun.');
@@ -114,7 +124,8 @@ const PodcastVideo = {
         const draw = () => {
           const time = Math.max(0, context.currentTime - startAt);
           const index = time >= starts[2] ? 2 : time >= starts[1] ? 1 : 0;
-          this.drawFrame(canvas, pictures[index], time, grain);
+          const duration = (index < 2 ? starts[index + 1] : buffer.duration) - starts[index];
+          this.drawFrame(canvas, pictures[index], time - starts[index], grain, duration, index);
           frame = requestAnimationFrame(draw);
         };
         source.onended = () => { stopTimer = setTimeout(() => finish(), 160); };

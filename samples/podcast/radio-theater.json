@@ -1,0 +1,83 @@
+{
+  "videoPoster": "samples/podcast/radio-theater-poster.png",
+  "sceneStartTimes": [
+    0,
+    9,
+    17.852
+  ],
+  "videoDuration": 27.75,
+  "scenes": [
+    {
+      "kind": "context",
+      "text": "Takvimler 2004 yılını gösterirken, güneşli bir yaz gününde ülke gündemi oldukça hareketliydi.",
+      "visualDirection": "Recreated sepia newspaper on a period desk, verified headlines and a clearly fictional Ulker snack advertisement; not an archive document.",
+      "image": "samples/podcast/radio-theater-context.jpg"
+    },
+    {
+      "kind": "memory",
+      "text": "O gün kahramanımız okul çıkışında gofretini arkadaşlarıyla bölüşmüş, eve giden yolu gülüşerek biraz uzatmıştı.",
+      "visualDirection": "Sepia-toned radio theater still of the same child at a school exit, holding a chocolate wafer snack with friends, same backpack and jacket, warm nostalgic grain, candid laughter, corridor and gate in the background, soft contrast, cinematic framing",
+      "image": "samples/podcast/radio-theater-memory.jpg"
+    },
+    {
+      "kind": "ending",
+      "text": "Yıllar sonra o günü hatırladığında, aklında çikolatanın tadı ve birlikte paylaşılan küçük mutlulukların sıcaklığı kalmıştı.",
+      "visualDirection": "Sepia-toned radio theater still continuing in the same school exit staircase, same child, same friends, same jacket and backpack, sharing the last piece of a chocolate wafer snack, warm nostalgic grain, gentle smiles, evening light mood, cinematic framing",
+      "image": "samples/podcast/radio-theater-ending.jpg"
+    }
+  ],
+  "advertisementHeadline": "Çikolatalı Gofret ile paylaşılan anılar",
+  "referenceCounts": [
+    1,
+    1,
+    1
+  ],
+  "generationNotes": "The newspaper is fully model-designed with the selected product reference; both personal frames use only the original selfie. The video uses slow pan and alternating zoom. The previous successful original-selfie ending frame was explicitly retained after the revised ending prompt received content_safety_violation.",
+  "facts": [
+    {
+      "year": 2004,
+      "date": "2004-01-19",
+      "text": "MEB Talim ve Terbiye Kurulu, Kürtçe Kurs Programı’nı kabul etti.",
+      "url": "https://ttkb.meb.gov.tr/meb_iys_dosyalar/2025_04/30114822_fihrist_2004.pdf",
+      "title": "TTKB-Kurul Kararlar 2004 YILI TALİM VE TERBİYE KURULU KARARLARI",
+      "evidence": "“19.01.2004 ... Milli Eğitim Bakanlığı Kürtçe Kurs Programı.”"
+    },
+    {
+      "year": 2004,
+      "date": "2004-12-11",
+      "text": "İstanbul Modern açıldı.",
+      "url": "https://www.istanbulmodern.org/sayfalar/istanbul-modern-20-yasinda",
+      "title": "İstanbul Modern 20 Yaşında!",
+      "evidence": "“11 Aralık 2004'teki kuruluşumuzdan bu yana”"
+    }
+  ],
+  "format": "radio-theater-v1",
+  "title": "Okul Çıkışı Gofretin Hışırtısı",
+  "narration": "Takvimler 2004 yılını gösterirken, güneşli bir yaz gününde ülke gündemi oldukça hareketliydi. O gün kahramanımız okul çıkışında gofretini arkadaşlarıyla bölüşmüş, eve giden yolu gülüşerek biraz uzatmıştı. Yıllar sonra o günü hatırladığında, aklında çikolatanın tadı ve birlikte paylaşılan küçük mutlulukların sıcaklığı kalmıştı.",
+  "scene": "O gün kahramanımız okul çıkışında gofretini arkadaşlarıyla bölüşmüş, eve giden yolu gülüşerek biraz uzatmıştı. Yıllar sonra o günü hatırladığında, aklında çikolatanın tadı ve birlikte paylaşılan küçük mutlulukların sıcaklığı kalmıştı.",
+  "image": "samples/podcast/radio-theater.jpg",
+  "voice": "en-US-Harper:MAI-Voice-2-Flash",
+  "age": {
+    "currentYear": 2026,
+    "currentAge": 28,
+    "birthYear": 1998,
+    "year": 2004,
+    "age": 10,
+    "min": 10,
+    "max": 10
+  },
+  "musicDecade": 2000,
+  "estimatedAge": 28,
+  "memory": "Okul çıkışında arkadaşlarımla gofretimi paylaşır, eve giden yolu gülüşerek biraz uzatırdım.",
+  "productId": "gofret",
+  "era": {
+    "id": "custom",
+    "name": "2004"
+  },
+  "moment": {
+    "id": "school"
+  },
+  "generatedAt": "2026-11-22T20:40:55.441Z",
+  "demo": true,
+  "videoSource": "samples/podcast/radio-theater.mp4"
+}

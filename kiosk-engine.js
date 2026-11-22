@@ -36,10 +36,11 @@ const CONFIG = {
     mode: 'mock',          // 'mock' | 'live'
     endpoint: '',          // https://<kaynak-adı>.services.ai.azure.com  (Microsoft Foundry)
     apiKey: '',
+    webIQApiKey: '',
     imageDeployment: '',   // MAI görüntü modeli dağıtım adınız
     modelLabel: 'MAI-Image',
     photoSize: { w: 896, h: 1120 },  // ≥ 768 px; MAI-Image-2.5 için w×h ≤ 1.048.576
-    labDeployment: 'gpt-5.4-mini', // Laboratuvar, Podcast ve WebIQ metin modeli
+    labDeployment: 'gpt-5.4-mini', // Laboratuvar ve Podcast metin modeli
     speechVoice: 'en-US-Harper:MAI-Voice-2-Flash',
     shareUploadUrl: '',    // POST {image, meta}      → {url}
   },
@@ -2210,7 +2211,7 @@ const Backend = {
 
 /* ---------- Prompt şablonları (MAI) ---------- */
 function buildPhotoPrompt(p, t, variation) {
-  const brand = `${CONFIG.event.productBrand} ${p.name}`;
+  const snack = 'snack';
   const characterStyle = t.id === 'blocky'
     ? 'A friendly blocky voxel character with cubic forms, keeping the distinctive face and hairstyle recognizable.'
     : t.id === 'popart'
@@ -2222,11 +2223,11 @@ function buildPhotoPrompt(p, t, variation) {
     characterStyle,
     p.image
       ? t.id === 'blocky'
-        ? `Reference image 2 is a pixelated reference of the ${brand} package. Rebuild the held package as genuine low-resolution pixel art with visible square pixel clusters, a blocky silhouette and bitmap lettering. Keep the recognizable package proportions, main colors and brand layout, but simplify all details into discrete pixels. No photographic wrapper, smooth gradients, glossy foil, smooth curves or realistic product texture: the package must belong to the same voxel world as the character.`
-        : `Reference image 2 is the official ${brand} package: preserve its exact silhouette, proportions, colors, logo and label layout. Adapt its surface shading to the scene without inventing or redesigning the branding.`
-      : `Include one ${brand} snack package in the scene.`,
+        ? 'Reference image 2 is a pixelated reference of the snack package. Rebuild the held package as genuine low-resolution pixel art with visible square pixel clusters, a blocky silhouette and bitmap lettering. Keep the recognizable package proportions, main colors and brand layout, but simplify all details into discrete pixels. No photographic wrapper, smooth gradients, glossy foil, smooth curves or realistic product texture: the package must belong to the same voxel world as the character.'
+        : 'Reference image 2 is the snack package: preserve its exact silhouette, proportions, colors, logo and label layout. Adapt its surface shading to the scene without inventing or redesigning the branding.'
+      : 'Include one snack package in the scene.',
     'Promotional pose: exactly one hand holds a single product package at chest level, with its front facing the camera, upright and clearly legible. The other hand points its index finger toward that package in a cheerful presenting gesture. Both hands and arms are clearly visible; fingers stay away from the logo and label. Natural wrists, coherent anatomy, no extra hands or fingers.',
-    t.prompt.replace(/\{product\}/g, brand).replace(/\{ingredient\}/g, p.ingredientEn),
+    t.prompt.replace(/\{product\}/g, snack).replace(/\{ingredient\}/g, snack),
     'One character and one package only: no duplicate packs, additional people or added logos on clothing or scenery. Tasteful, brand-safe and family-friendly. No captions, slogans, speech bubbles or watermarks; text appears only on the reference package.',
     'Continue the scene naturally to every edge. Keep only the lowest 8% visually calm for the kiosk signature, without a solid blank strip or horizontal divider. Keep the face, hands, package and feet above that area.',
     variation ? `Variation ${variation}: vary the camera angle, lighting and color accent while keeping the same one-hand-holds, other-hand-points pose.` : '',
@@ -3892,7 +3893,7 @@ const BlobShare = {
     return sas ? { sas: this.parse(sas).url.href } : null;
   },
   fill(form) {
-    if (form.elements.blobSas) form.elements.blobSas.value = this.settings?.sas || '';
+    if (form.elements.blobSas && this.settings) form.elements.blobSas.value = this.settings.sas;
   },
   async publish(image) {
     if (!this.settings) throw new Error('Azure paylaşım ayarlarını gir.');
@@ -3920,7 +3921,24 @@ const BlobShare = {
 };
 const FoundrySettings = {
   storageKey: 'mai-kiosk-foundry',
-  fields: ['endpoint', 'key', 'imageModel', 'labModel', 'voice'],
+  modeStorageKey: 'mai-kiosk-mode',
+  loadMode() {
+    const mode = localStorage.getItem(this.modeStorageKey);
+    if (mode == null) return null;
+    if (!['mock', 'live'].includes(mode)) throw new Error('Kayıtlı Demo Mode seçimi geçersiz.');
+    return mode;
+  },
+  saveMode(mode) {
+    if (!['mock', 'live'].includes(mode)) throw new Error('Demo Mode seçimi geçersiz.');
+    localStorage.setItem(this.modeStorageKey, mode);
+  },
+  fields: ['endpoint', 'key', 'webIQKey', 'imageModel', 'labModel', 'voice', 'blobSas'],
+  webIQKey(value = '') {
+    if (typeof value !== 'string' || value.trim().length > 512 || /[^\x21-\x7e]|\*/.test(value.trim())) {
+      throw new Error('Geçerli ve maskelenmemiş bir WebIQ API anahtarı gir.');
+    }
+    return value.trim();
+  },
   voice(value) {
     if (typeof value !== 'string' || !/^[a-z0-9:._-]{1,120}$/i.test(value.trim())) throw new Error('Geçerli bir Speech ses adı gir.');
     return value.trim();
@@ -3940,9 +3958,10 @@ const FoundrySettings = {
     if (!response.ok) throw new Error(`Yerel ayarlar HTTP ${response.status}`);
     this.fill(form, await response.json());
   },
-  save({ endpoint, apiKey, imageDeployment, labDeployment, speechVoice }) {
+  save({ endpoint, apiKey, webIQApiKey, imageDeployment, labDeployment, speechVoice }, blobSettings = null) {
     localStorage.setItem(this.storageKey, JSON.stringify({
-      endpoint, key: apiKey, imageModel: imageDeployment, labModel: labDeployment, voice: speechVoice,
+      endpoint, key: apiKey, webIQKey: this.webIQKey(webIQApiKey), imageModel: imageDeployment, labModel: labDeployment, voice: speechVoice,
+      blobSas: blobSettings?.sas || '',
     }));
   },
   saveVoice(value) {
@@ -4006,7 +4025,16 @@ function chooseConnection(start) {
   };
   dialog.addEventListener('cancel', (event) => { if (!chosen) event.preventDefault(); });
   $('#connection-demo').addEventListener('change', async () => {
-    selectedMode = $('#connection-demo').checked ? 'mock' : 'live';
+    const mode = $('#connection-demo').checked ? 'mock' : 'live';
+    try { FoundrySettings.saveMode(mode); }
+    catch (problem) {
+      console.error('Demo Mode seçimi kaydedilemedi:', problem);
+      error.textContent = 'Demo Mode seçimi kaydedilemedi. Tarayıcı depolama izinlerini kontrol et.';
+      error.hidden = false;
+      updateChoices();
+      return;
+    }
+    selectedMode = mode;
     error.hidden = true;
     updateChoices();
     if (selectedMode === 'live') await loadSettings();
@@ -4027,17 +4055,18 @@ function chooseConnection(start) {
     const match = /^(https:\/\/[a-z0-9][a-z0-9-]*\.services\.ai\.azure\.com)(?:\/mai\/v1(?:\/images\/(?:generations|edits))?)?\/?$/i.exec(endpoint);
     const apiKey = data.get('key').trim(), imageDeployment = data.get('imageModel').trim();
     const labDeployment = data.get('labModel').trim();
-    let speechVoice, blobSettings;
-    try { speechVoice = FoundrySettings.voice(data.get('voice')); blobSettings = BlobShare.readForm(form); }
+    let speechVoice, blobSettings, webIQApiKey;
+    try { speechVoice = FoundrySettings.voice(data.get('voice')); blobSettings = BlobShare.readForm(form); webIQApiKey = FoundrySettings.webIQKey(data.get('webIQKey') || ''); }
     catch (problem) { error.textContent = problem.message; error.hidden = false; return; }
     if (!match || !apiKey || !imageDeployment) {
       error.textContent = 'Geçerli bir HTTPS Foundry endpoint’i, API anahtarı ve görsel modeli dağıtım adı girin.';
       error.hidden = false;
       return;
     }
-    const settings = { mode: 'live', endpoint: match[1], apiKey, imageDeployment, labDeployment, speechVoice };
+    const settings = { mode: 'live', endpoint: match[1], apiKey, webIQApiKey, imageDeployment, labDeployment, speechVoice };
     try {
-      FoundrySettings.save(settings);
+      FoundrySettings.save(settings, blobSettings);
+      FoundrySettings.saveMode('live');
     } catch (e) {
       console.error('Bağlantı ayarları kaydedilemedi:', e);
       error.textContent = 'Ayarlar tarayıcıya kaydedilemedi. Tarayıcı depolama izinlerini kontrol edin.';
@@ -4054,6 +4083,13 @@ function chooseConnection(start) {
     updateChoices();
     choice.hidden = false;
     error.hidden = true;
+    try { selectedMode = FoundrySettings.loadMode() || selectedMode; }
+    catch (problem) {
+      console.error('Demo Mode seçimi okunamadı:', problem);
+      error.textContent = 'Demo Mode seçimi okunamadı. Tarayıcı depolama izinlerini kontrol et.';
+      error.hidden = false;
+    }
+    updateChoices();
     title.textContent = 'Hangi arayüzü kullanmak istersin?';
     help.textContent = 'Arayüzünü seç ve deneyime başla.';
     dialog.showModal();

@@ -15,9 +15,12 @@ const SAMPLE_ATTEMPTS = [
     raw: `samples/reference-photo/${sample.id}-raw.png`,
     prompt: `samples/reference-photo/${sample.id}.json`,
   })),
-  { id: 'lab', title: 'Lezzet Laboratuvarı', product: 'Fıstamel · Antep Fıstığı & Tuzlu Karamel', kind: 'pack', path: 'samples/reference-photo/pack-wafer', prompt: 'samples/reference-photo/pack-wafer.json' },
+  { id: 'lab-wafer', title: 'Lezzet Laboratuvarı', product: 'Fıstamel · Antep Fıstığı & Tuzlu Karamel', kind: 'pack', path: 'samples/reference-photo/pack-wafer', prompt: 'samples/reference-photo/pack-wafer.json' },
   { id: 'lab', title: 'Lezzet Laboratuvarı', product: 'Vişkora · Vişne & Bitter Kakao', kind: 'pack', path: 'samples/reference-photo/pack-cake', prompt: 'samples/reference-photo/pack-cake.json' },
+  { id: 'lab-biscuit', title: 'Lezzet Laboratuvarı', product: 'Çivana · Çilek & Hindistan Cevizi', kind: 'pack', path: 'samples/reference-photo/pack-biscuit', prompt: 'samples/reference-photo/pack-biscuit.json' },
+  { id: 'lab-chocolate', title: 'Lezzet Laboratuvarı', product: 'Portahve · Portakal & Türk Kahvesi', kind: 'pack', path: 'samples/reference-photo/pack-chocolate', prompt: 'samples/reference-photo/pack-chocolate.json' },
   { id: 'podcast', title: 'Bir Isırıkla O Yıla Dön', product: '2004 · Okul çıkışı · Çikolatalı Gofret', kind: 'podcast', path: 'samples/podcast/radio-memory', raw: 'samples/podcast/radio-memory-raw.png', prompt: 'samples/podcast/radio-memory.json', video: 'samples/podcast/radio-memory.mp4', poster: 'samples/podcast/radio-poster.png' },
+  { id: 'podcast', title: 'Okul Çıkışı Gofretin Hışırtısı', product: '2004 · Okul çıkışı · Çikolatalı Gofret', kind: 'podcast', path: 'samples/podcast/radio-theater', raw: 'samples/podcast/radio-theater-raw.png', prompt: 'samples/podcast/radio-theater.json', video: 'samples/podcast/radio-theater.mp4', poster: 'samples/podcast/radio-theater-poster.png' },
 ];
 
 function latestSamples() {

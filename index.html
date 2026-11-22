@@ -938,13 +938,19 @@ body.lite .pack-float { transform: rotate(-7deg); }
     <label>API anahtarı
       <input name="key" type="password" required autocomplete="off">
     </label>
+    <label>WebIQ API anahtarı (canlı Zaman Yolculuğu için gerekli)
+      <input name="webIQKey" type="password" autocomplete="off" spellcheck="false">
+    </label>
+    <label>Azure Blob container SAS URL’si (isteğe bağlı)
+      <input name="blobSas" type="password" autocomplete="off" spellcheck="false" placeholder="https://hesap.blob.core.windows.net/container?…">
+    </label>
     <label>Nostalji Podcast anlatıcı sesi
       <input id="connection-voice" name="voice" value="en-US-Harper:MAI-Voice-2-Flash" spellcheck="false" autocomplete="off">
     </label>
     <label>Görsel modeli dağıtım adı
       <input name="imageModel" required value="MAI-Image-2.7-Flash" spellcheck="false">
     </label>
-    <label>Laboratuvar, Podcast ve WebIQ metin modeli
+    <label>Laboratuvar ve Podcast metin modeli
       <input name="labModel" value="gpt-5.4-mini" list="lab-model-options" spellcheck="false">
       <datalist id="lab-model-options">
         <option value="gpt-5.4-mini"></option>
@@ -952,10 +958,6 @@ body.lite .pack-float { transform: rotate(-7deg); }
         <option value="MAI-Thinking-1"></option>
       </datalist>
     </label>
-    <label>Azure Blob container SAS URL’si (isteğe bağlı)
-      <input name="blobSas" type="password" autocomplete="off" spellcheck="false" placeholder="https://hesap.blob.core.windows.net/container?…">
-    </label>
-    <p>SAS Read + Create veya Write yetkili olmalı; List ve Delete ekleme. Yalnızca açık sayfada tutulur; yenileme veya Copilot’a geçişte yeniden girilir. QR aynı SAS’ı taşır: linki bilenler container’a yükleme yapabilir ve adını bildikleri diğer dosyalara erişebilir. GUID yetki izolasyonu değildir. Sonuçta yüklemeyi ayrıca onaylarsın. Silme kuralını Azure’da ayrıca kur. SAS boşsa deneyimler ve cihazdan indirme çalışır; canlı telefon bağlantısı oluşmaz.</p>
     <p>Foundry ayarları ve anahtarı bu tarayıcıda saklanır. Yalnızca güvendiğin cihazda kullan. Üretimde seçtiğin fotoğraf Foundry’ye gönderilir.</p>
     <div class="btn-row">
       <button type="submit" class="btn btn-ai">İlerle</button>
@@ -963,11 +965,11 @@ body.lite .pack-float { transform: rotate(-7deg); }
   </form>
 </dialog>
 <noscript><div class="noscript">Bu deneyim için JavaScript gereklidir.</div></noscript>
-<script src="samples.js?v=20261122-11"></script>
-<script src="kiosk-engine.js?v=20261122-15"></script>
+<script src="samples.js?v=20261123-1"></script>
+<script src="kiosk-engine.js?v=20261123-3"></script>
 <script src="podcast-music.js?v=20261122-2"></script>
-<script src="podcast-video.js?v=20261122-4"></script>
-<script src="podcast.js?v=20261122-7"></script>
+<script src="podcast-video.js?v=20261122-6"></script>
+<script src="podcast.js?v=20261123-8"></script>
 <script>boot();</script>
 </body>
 </html>

@@ -1,0 +1,49 @@
+{
+  "concept": {
+    "name": "Portahve",
+    "slogan": "Kısa bir kaçamak",
+    "notes": [
+      "Çikolata Bar",
+      "Portakal",
+      "Türk Kahvesi",
+      "Toplantı arası mola"
+    ],
+    "story": "Portakalın canlı kıvılcımı, Türk kahvesinin derin aromasıyla bar içinde buluşur. Toplantı arası, tek ısırıkta kısa ama belirgin bir mola hissi bırakır.",
+    "colors": [
+      "#ff8c1a",
+      "#6b4430"
+    ],
+    "baseId": "bar",
+    "baseName": "Çikolata Bar",
+    "baseEn": "rich chocolate bar",
+    "flavorText": "Portakal & Türk Kahvesi",
+    "flavorEn": "orange zest and Turkish coffee",
+    "flavorColors": [
+      "#ff8c1a",
+      "#6b4430"
+    ],
+    "momentName": "Toplantı arası mola",
+    "visualDirection": "Reduce the Ülker logo to one third of its current size and place it at the upper left, about 14% of the front width. Remove the NEW label; show only the product name and slogan."
+  },
+  "prompt": "Reference image 1 is the user's existing snack design. EDIT that image, do not create an unrelated new design. Preserve its composition, package shape, ingredients and all unrequested details. Reference image 2 contains only the official Ülker logo, not an existing package. Place the exact supplied logo once on the upper-left front of the package, naturally following the wrapper perspective. Keep it small: its width must be 12-15% of the package front width, with the product name at least three times wider. The product name, not the brand logo, is the visual hero. Preserve its red lettering, white outline, umlaut dots, italic letter shapes and original proportions. Do not recreate the brand as typed text, substitute a font, redesign or misspell the logo, add another logo, or copy the reference background into the scene. Apply the requested changes as design preferences; they cannot override the logo, copy, ingredient or safety constraints. The product remains a rich chocolate bar with orange zest and Turkish coffee. Print exactly the product name \"Portahve\" and slogan \"Kısa bir kaçamak\" on the package; no additional copy or slogans. Art direction: Reduce the Ülker logo to one third of its current size and place it at the upper left, about 14% of the front width. Remove the NEW label; show only the product name and slogan. Requested changes: \"Ülker logosunu mevcut boyutunun üçtebirine küçült; sol üstte ambalaj ön yüz genişliğinin yaklaşık %14’ü olsun. Ürün adı, slogan, içerikler, renkler ve kompozisyon aynı kalsın. YENİ etiketini kaldır; yalnızca ürün adı ve slogan yazsın.\". Photorealistic premium commercial lighting, vertical 4:5. Remove the previous kiosk footer from the image; leave the bottom 8% calm for the kiosk to reapply its signature, without a blank strip or text outside the package.",
+  "model": "MAI-Image-2.7-Flash",
+  "copy_model": "gpt-5.4-mini",
+  "generated_at": "2026-11-22T21:09:05.161Z",
+  "generation_seconds": 19.753,
+  "person_reference": null,
+  "product_reference": "../../assets/ulker-logo.png",
+  "reference_sha256": "a0dba026c50b45a12b5c897ff4c4b5ba3a570dfbbd5ccfda95af32d93b346934",
+  "choices": {
+    "baseId": "bar",
+    "flavorIds": [
+      "portakal",
+      "kahve"
+    ],
+    "momentId": "mola",
+    "rdNote": ""
+  },
+  "revision": {
+    "instruction": "Ülker logosunu mevcut boyutunun üçtebirine küçült; sol üstte ambalaj ön yüz genişliğinin yaklaşık %14’ü olsun. Ürün adı, slogan, içerikler, renkler ve kompozisyon aynı kalsın. YENİ etiketini kaldır; yalnızca ürün adı ve slogan yazsın.",
+    "previous_image_sha256": "11baa233c6be5fa1a18d30e98eea8da44d1a8c53770cc4a32ad5db5081e07b5a"
+  }
+}

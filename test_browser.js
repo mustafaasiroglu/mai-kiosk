@@ -18,18 +18,10 @@ const key = 'browser-regression-placeholder';
 const png = fs.readFileSync(path.join(__dirname, 'assets', 'ulker-logo.png')).toString('base64');
 const concept = JSON.parse(fs.readFileSync(path.join(__dirname, 'samples', 'reference-photo', 'pack-cake.json'), 'utf8')).concept;
 const podcastMP3 = () => fs.readFileSync(path.join(__dirname, 'samples', 'podcast', 'radio-memory.mp3'));
-const podcastStory = { title: 'Paylaşılan küçük mutluluk', contextLead: 'serin bir okul çıkışında gazeteler usulca hışırdıyor',
-  memorySentence: 'Kahramanımız okul kapısında en yakın arkadaşlarını beklerken çantasından gofretini çıkarmış, çıtır katmanları özenle bölerek herkese küçük bir pay uzatmış ve birlikte geçirilen bu sıradan molanın sıcaklığını yıllar sonra bile hatırlamıştı.',
-  endingSentence: 'Arkadaşlarıyla aynı okul kapısından ağır ağır uzaklaşırken avucunda kalan kırıntılara gülümseyen kahramanımız, paylaşmanın küçücük bir gofreti nasıl kocaman bir hatıraya dönüştürdüğünü o an anlamıştı.',
+const podcastStory = { title: 'Paylaşılan küçük mutluluk', advertisementHeadline: 'Çikolatalı Gofret ile paylaşmanın tadı', contextLead: 'güneşli bir yaz gününde',
+  memorySentence: 'O gün kahramanımız okul çıkışında gofretini arkadaşlarıyla bölüşmüş, eve giden yolu gülüşerek biraz uzatmıştı.',
+  endingSentence: 'Yıllar sonra o günü hatırladığında, aklında çikolatanın tadı ve birlikte paylaşılan küçük mutlulukların sıcaklığı kalmıştı.',
   memoryVisual: 'Younger selfie person sharing a wafer at a schoolyard.', endingVisual: 'Same person, clothes and schoolyard, continuing the memory.' };
-function podcastResearchFixture(body, verified = true) {
-  const year = JSON.parse(body.input).start;
-  const facts = [15, 13].map((day, index) => ({ year, text: `${year} yılında okul takviminde ${day} ${index ? 'Eylül' : 'Haziran'} tarihi yer aldı.`, url: 'https://example.test/school-calendar', title: 'Intercepted test archive', evidence: `${year} okul takvimi.` }));
-  return { status: 'completed', output: [
-    { type: 'web_search_call', status: 'completed', action: { sources: [{ url: facts[0].url }] } },
-    { type: 'message', content: [{ type: 'output_text', text: JSON.stringify({ verified, facts: verified ? facts : [] }) }] },
-  ] };
-}
 const browsers = {};
 let server, baseURL;
 
@@ -84,18 +76,16 @@ async function withPage(platform, task) {
   await page.route('**/local-config', route => route.fulfill({ json: {} }));
   await page.route('https://**/*', async route => {
     const request = route.request();
-    assert.ok(request.url().startsWith(endpoint + '/'), 'No real external service may be called by a regression test');
-    state.calls.push({ path: new URL(request.url()).pathname, key: request.headers()['api-key'] || request.headers()['ocp-apim-subscription-key'], body: request.postDataBuffer()?.toString('utf8'), bytes: request.postDataBuffer(), contentType: request.headers()['content-type'] });
+    assert.ok(request.url().startsWith(endpoint + '/') || request.url() === 'https://api.microsoft.ai/v3/search/web', 'No real external service may be called by a regression test');
+    state.calls.push({ path: new URL(request.url()).pathname, key: request.headers()['api-key'] || request.headers()['ocp-apim-subscription-key'] || request.headers()['x-apikey'], body: request.postDataBuffer()?.toString('utf8'), bytes: request.postDataBuffer(), contentType: request.headers()['content-type'] });
     if (state.failure === 'hold') return;
     if (state.failure === 'network') return route.abort('failed');
     if (state.failure === 'unauthorized') return route.fulfill({ status: 401, json: { error: 'Test authorization failure' } });
-    if (request.url().endsWith('/responses')) {
-      const body = request.postDataJSON();
-      if (body.text) return route.fulfill({ json: podcastResearchFixture(body, state.failure !== 'unverified') });
-      const text = '- Okullar 2004 yılında haziranda kapandı. [1]\n- Okullar 2004 yılında eylülde açıldı. [2]';
-      return route.fulfill({ json: { status: 'completed', output: [
-        { type: 'web_search_call', status: 'completed' },
-        { type: 'message', content: [{ type: 'output_text', text, annotations: state.failure === 'no-sources' ? [] : [1, 2].map(index => ({ type: 'url_citation', start_index: text.indexOf(`[${index}]`), end_index: text.indexOf(`[${index}]`) + 3, url: 'https://example.test/school-calendar', title: 'Intercepted test archive' })) }] },
+    if (request.url() === 'https://api.microsoft.ai/v3/search/web') {
+      assert.equal(request.headers()['x-apikey'], 'webiq-test-placeholder');
+      return route.fulfill({ json: { webResults: state.failure === 'no-sources' ? [] : [
+        { title: 'Intercepted test archive', url: 'https://example.test/school-calendar', content: 'Okullar 2004 yılında haziranda kapandı.' },
+        { title: 'Intercepted test archive', url: 'https://example.test/school-calendar', content: 'Okullar 2004 yılında eylülde açıldı.' },
       ] } });
     }
     if (request.url().endsWith('/tts/cognitiveservices/v1')) {
@@ -105,6 +95,10 @@ async function withPage(platform, task) {
     }
     const text = request.url().includes('chat/completions');
     if (text && request.postDataJSON().response_format?.json_schema?.name === 'podcast_age') return route.fulfill({ json: { choices: [{ message: { content: JSON.stringify(state.ageResponse || { hasSingleFace: true, estimatedAge: 80 }) } }] } });
+    if (text && request.postDataJSON().response_format?.json_schema?.name === 'period_headlines') return route.fulfill({ json: { choices: [{ message: { content: JSON.stringify({ facts: [
+      { text: 'Okullar 2004 yılında haziranda kapandı.', sourceIndex: 0 },
+      { text: 'Okullar 2004 yılında eylülde açıldı.', sourceIndex: 1 },
+    ] }) } }] } });
     if (!text && state.holdImage) return;
     if (text && state.failure === 'invalid-copy') return route.fulfill({ json: { choices: [{ message: { content: '{"name":""}' } }] } });
     await route.fulfill({ json: text
@@ -129,38 +123,149 @@ async function withPage(platform, task) {
 async function settingsButton(page) {
   if (await page.locator('#openSidebar').isVisible()) await page.locator('#openSidebar').click();
   await page.locator('[data-action="settings"]').click();
+  await page.locator('[data-settings-tab="connections"]').click();
 }
 
 async function initialize(page, state, ui, live, scheme = 'light') {
   state.calls.length = 0;
-  await page.goto(`${baseURL}/${ui === 'classic' ? '' : 'copilot/'}?scoutTheme=${scheme}`);
+  await page.goto(`${baseURL}/${ui === 'classic' ? '' : 'copilot/'}?scoutTheme=${scheme}${ui === 'classic' ? '' : `&ui=${ui}`}`);
   await page.evaluate(() => { CONFIG.sound = false; CONFIG.ambientMotion = false; CONFIG.mock.speed = 0; });
   if (ui === 'classic') {
     await page.locator('#connection-demo').setChecked(!live);
     if (!live) { await page.locator('#connection-continue').click(); return; }
     await page.waitForFunction(() => !document.getElementById('connection-form').inert);
   } else {
-    if (ui === 'chat') {
-      if (await page.locator('#openSidebar').isVisible()) await page.locator('#openSidebar').click();
-      await page.locator('[data-mode="chat"]').click();
-      if (await page.evaluate(() => matchMedia('(max-width: 780px)').matches)) {
-        await page.locator('#sidebar [data-action="sidebar"]').click();
-      }
-    }
     if (!live) return;
     await settingsButton(page);
     await page.waitForFunction(() => !document.getElementById('connection').inert);
+    await page.locator('#connectionsDemo').setChecked(false);
   }
   const form = page.locator(ui === 'classic' ? '#connection-form' : '#connection');
   await form.locator('[name="endpoint"]').fill(endpoint);
   await form.locator('[name="key"]').fill(key);
+  await form.locator('[name="webIQKey"]').fill('webiq-test-placeholder');
   await form.locator('[name="imageModel"]').fill('test-image');
   await form.locator('[name="labModel"]').fill('gpt-test-text');
   await form.locator('[type="submit"]').click();
+  if (ui !== 'classic') {
+    await page.locator('[data-action="closeSettings"]').click();
+  }
   await page.waitForFunction(() => CONFIG.ai.mode === 'live');
 }
 
+describe('Copilot tabbed settings', () => {
+  for (const platform of platforms.filter(platform => platform.browser === 'chromium')) {
+    test(`${platform.name}: defaults, connection locking and independent voice persistence`, () => withPage(platform, async (page, state) => {
+      await initialize(page, state, 'chat', false);
+      assert.equal(await page.locator('nav [data-action="new"]').isDisabled(), true);
+      assert.equal(await page.locator('nav [data-action="search"]').isDisabled(), true);
+      assert.equal(await page.locator('#catalog .intro').innerText(), 'Bir agent seç ve hemen konuşmaya başla.');
+      await page.locator('#modeBadge').click();
+      await page.waitForFunction(() => !document.getElementById('connection').inert);
+      assert.equal(await page.locator('#connectionsTab').getAttribute('aria-selected'), 'true');
+      await page.locator('[data-action="closeSettings"]').click();
+      if (await page.locator('#openSidebar').isVisible()) await page.locator('#openSidebar').click();
+      await page.locator('[data-action="settings"]').click();
+      await page.waitForFunction(() => !document.getElementById('connection').inert);
+      assert.equal(await page.locator('#generalTab').getAttribute('aria-selected'), 'true');
+      assert.equal(await page.locator('#generalDemo').isChecked(), true);
+      assert.equal(await page.locator('#settingsFullscreen').isChecked(), false);
+      assert.equal(await page.locator('#settingsLanguage').isDisabled(), true);
+      assert.equal(await page.locator('#settingsLanguage').inputValue(), 'English');
+      assert.equal(await page.locator('#settingsTheme').isDisabled(), true);
+      assert.equal(await page.locator('#settingsTheme').inputValue(), 'System');
+      assert.equal(await page.locator('#connection [name="key"]').isDisabled(), true);
+      await page.locator('#generalDemo').click();
+      assert.equal(await page.locator('#generalDemo').isChecked(), false);
+      assert.equal(await page.locator('#connectionsDemo').isChecked(), false);
+      assert.equal(await page.locator('#connectionsTab').getAttribute('aria-selected'), 'true');
+      assert.equal(await page.evaluate(() => API.live), false, 'No live generation until a valid connection is saved');
+      assert.equal(await page.locator('#connection [name="key"]').isEnabled(), true);
+      assert.equal(await page.locator('#connection [type="submit"]').isEnabled(), true);
+      const form = page.locator('#connection');
+      const sas = `https://kioskexample.blob.core.windows.net/results?sv=2023-11-03&sr=c&sp=rc&spr=https&se=${encodeURIComponent(new Date(Date.now() + 3600000).toISOString())}&sig=settings-test-placeholder`;
+      await form.locator('[name="endpoint"]').fill(endpoint);
+      await form.locator('[name="key"]').fill(key);
+      await form.locator('[name="blobSas"]').fill(sas);
+      await form.locator('[type="submit"]').click();
+      assert.equal(await page.evaluate(() => API.live), true, 'Saving applies the configured connection');
+      assert.equal(await page.locator('#settings').evaluate(dialog => dialog.open), true);
+      await page.locator('#connectionsDemo').setChecked(true);
+      assert.equal(await page.locator('#generalDemo').isChecked(), true);
+      assert.equal(await form.locator('[name="key"]').isDisabled(), true);
+      assert.equal(await form.locator('[type="submit"]').isDisabled(), true);
+      await page.evaluate(() => {
+        const form = document.getElementById('connection');
+        form.elements.key.value = 'unsaved-placeholder';
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      });
+      assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem(FoundrySettings.storageKey)).key), key);
+      await page.locator('#voiceTab').click();
+      await page.locator('#voiceModel').fill('en-US-AvaMultilingualNeural');
+      await page.locator('#voiceSettings [type="submit"]').click();
+      const saved = await page.evaluate(() => JSON.parse(localStorage.getItem(FoundrySettings.storageKey)));
+      assert.equal(saved.key, key, 'Voice saving cannot commit unsaved connection edits');
+      assert.equal(saved.blobSas, sas);
+      assert.equal(saved.voice, 'en-US-AvaMultilingualNeural');
+      await page.locator('#voiceModel').fill('invalid voice');
+      await page.locator('#voiceSettings [type="submit"]').click();
+      assert.match(await page.locator('#settingsStatus').innerText(), /valid Speech voice/);
+      assert.equal(await page.evaluate(() => CONFIG.ai.speechVoice), saved.voice);
+      await page.reload();
+      await settingsButton(page);
+      await page.waitForFunction(() => !document.getElementById('connection').inert);
+      assert.equal(await form.locator('[name="key"]').inputValue(), key);
+      assert.equal(await form.locator('[name="blobSas"]').inputValue(), sas);
+      assert.equal(await page.locator('#connectionsDemo').isChecked(), true, 'Reload defaults to Demo Mode');
+      await page.locator('#voiceTab').click();
+      assert.equal(await page.locator('#voiceModel').inputValue(), saved.voice);
+      assert.equal(state.calls.length, 0);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    }));
+  }
+});
+
 describe('opening mode and interface choices', { concurrency: 3 }, () => {
+  for (const platform of platforms) {
+    test(`${platform.name}: Home stays selected and Library previews samples without losing the chat`, { timeout: 45000 }, () => withPage(platform, async (page, state) => {
+      for (const ui of ['chat', 'cowork']) {
+        await initialize(page, state, ui, false);
+        if (await page.locator('#openSidebar').isVisible()) await page.locator('#openSidebar').click();
+        assert.equal(await page.locator('#homeTab').getAttribute('aria-pressed'), 'true');
+        assert.equal(await page.locator('#codeTab').isDisabled(), true);
+        assert.equal(await page.locator('#pinned [data-agent]').count(), 3);
+        await page.locator('#pinned [data-agent="photo"]').click();
+        await page.locator('#conversation [data-action="start"]').click();
+        const firstReply = await agentText(page);
+        if (await page.locator('#openSidebar').isVisible()) await page.locator('#openSidebar').click();
+        await page.locator('nav [data-action="library"]').click();
+        assert.equal(await page.locator('#library').isVisible(), true);
+        assert.equal(await page.locator('#conversation').isVisible(), false);
+        assert.equal(await page.locator('#libraryGrid [data-sample]').count(), await page.evaluate(() => latestSamples().length));
+        await page.locator('[data-action="libraryFilter"]').click();
+        await page.locator('#libraryKind').selectOption('photo');
+        assert.equal(await page.locator('#libraryGrid [data-sample]').count(), await page.evaluate(() => PHOTO_SAMPLE_CASES.length));
+        await page.locator('[data-action="librarySearch"]').click();
+        await page.locator('#libraryInput').fill('unmatched-library-query');
+        assert.equal(await page.locator('#libraryGrid [data-sample]').count(), 0);
+        await page.locator('#libraryInput').fill('');
+        await page.locator('#libraryKind').selectOption('podcast');
+        await page.locator('[data-library-view="list"]').click();
+        assert.equal(await page.locator('#libraryGrid').evaluate(node => node.classList.contains('list-view')), true);
+        await page.locator('[data-library-view="grid"]').click();
+        await page.locator('#libraryGrid [data-sample="0"]').click();
+        assert.equal(await page.locator('#sampleDialog').evaluate(node => node.open), true);
+        assert.ok((await page.locator('#sampleBody video').getAttribute('src')).endsWith('radio-theater.mp4'));
+        await page.locator('[data-action="closeSample"]').click();
+        if (await page.locator('#openSidebar').isVisible()) await page.locator('#openSidebar').click();
+        await page.locator('#recent [data-thread]').first().click();
+        assert.equal(await agentText(page), firstReply);
+        assert.equal(await page.locator('#homeTab').getAttribute('aria-pressed'), 'true');
+        assert.equal(await page.locator('#codeTab').isDisabled(), true);
+        assert.equal(state.calls.length, 0, 'Browsing samples does not start generation');
+      }
+    }));
+  }
   for (const platform of platforms) for (const live of [false, true]) for (const ui of ['kiosk', 'chat']) {
     test(`${platform.name}: opening ${live ? 'Live' : 'Demo'} / ${ui} applies only after Continue`, { timeout: 30000 }, () => withPage(platform, async (page, state) => {
       await page.goto(`${baseURL}/?scoutTheme=light`);
@@ -190,7 +295,8 @@ describe('opening mode and interface choices', { concurrency: 3 }, () => {
       if (ui === 'chat') {
         await page.waitForURL('**/copilot/?ui=chat');
         await page.waitForFunction(live => CONFIG.ai.mode === (live ? 'live' : 'mock'), live);
-        assert.equal(await page.locator('[data-mode="chat"]').getAttribute('aria-pressed'), 'true');
+        assert.equal(await page.locator('#homeTab').getAttribute('aria-pressed'), 'true');
+        assert.equal(await page.locator('#codeTab').isDisabled(), true);
         assert.equal(await page.locator('#modeBadge').isVisible(), !live);
         assert.equal(await page.evaluate(() => sessionStorage.getItem('mai-kiosk-launch')), null);
         if (live) {
@@ -210,10 +316,18 @@ describe('opening mode and interface choices', { concurrency: 3 }, () => {
 
 const screen = (page, selector = '') => page.locator(`.screen.is-in${selector ? ' ' + selector : ''}`);
 const option = (page, index) => page.locator(`#messages [data-choice="${index}"]`);
-const screenIs = (page, id) => page.waitForFunction(value => App.cur.id === value && App.cur.el.classList.contains('is-in'), id);
+const screenIs = (page, id, timeout = 15000) => page.waitForFunction(value => App.cur.id === value && App.cur.el.classList.contains('is-in'), id, { timeout });
 async function startAgent(page, id) {
   await page.locator(`#cards [data-agent="${id}"]`).click();
-  await page.locator('#messages [data-action="start"]').click();
+  await page.locator('#conversation [data-action="start"]').click();
+  await agentText(page);
+  const offset = await page.locator('#messages .user-turn[data-message]').last().evaluate(node =>
+    node.getBoundingClientRect().top - document.getElementById('scroll').getBoundingClientRect().top);
+  assert.ok(Math.abs(offset - 16) < 2, `Last user input must stay aligned at the top: ${offset}`);
+}
+async function agentText(page, selector = '#messages .answer-text') {
+  await page.waitForFunction(() => !document.querySelector('#messages .typing-response, #messages .streaming-answer'));
+  return page.locator(selector).last().innerText();
 }
 async function approve(page, ui, live) {
   if (ui === 'cowork' || live) {
@@ -279,12 +393,12 @@ async function photoFlow(page, state, ui, live, index, setup) {
     await screenIs(page, 'photo.result');
   } else {
     await startAgent(page, 'photo');
-    assert.match(await page.locator('#messages .answer-text').last().innerText(), /nasıl bir yıldızsın/);
+    assert.match(await agentText(page), /nasıl bir yıldızsın/);
     assert.equal(await option(page, 0).innerText(), 'Ortama güneş getiren');
     await option(page, 0).click();
-    assert.match(await page.locator('#messages .answer-text').last().innerText(), /hangi dünyada/);
+    assert.match(await agentText(page), /hangi dünyada/);
     await option(page, index).click();
-    assert.match(await page.locator('#messages .answer-text').last().innerText(), live ? /kamerayı açıp/ : /Demo Modu/);
+    assert.match(await agentText(page), live ? /kamerayı açıp/ : /Demo Modu/);
     assert.equal(state.calls.length, 0);
     await page.locator('#messages [data-choice]').filter({ hasText: 'Örnek fotoğrafı kullan' }).click();
     if (ui === 'cowork' || live) assert.equal(state.calls.length, 0, 'No generation before approval');
@@ -298,6 +412,64 @@ async function photoFlow(page, state, ui, live, index, setup) {
     assert.match(state.calls[0].body, /Cocostar/);
   }
 }
+
+describe('Copilot output history', () => {
+  test('Completed output history survives reload, is shared with Cowork and keeps only the latest 20 outputs', { timeout: 60000 }, () => withPage(platforms[0], async (page, state) => {
+    await photoFlow(page, state, 'chat', false, 0);
+    const initial = await page.evaluate(async () => {
+      const records = await OutputLibrary.list();
+      return records.map(record => ({ agentId: record.agentId, live: record.live, type: record.image.type, size: record.image.size }));
+    });
+    assert.equal(initial.length, 1, 'A completed generation saves its output');
+    assert.deepEqual(initial[0], { agentId: 'photo', live: false, type: 'image/jpeg', size: fs.statSync(path.join(__dirname, 'samples', 'photo-snowglobe.jpg')).size });
+    await page.evaluate(async png => {
+      const image = dataUrlToBlob(`data:image/png;base64,${png}`);
+      for (let i = 0; i < 21; i++) {
+        await OutputLibrary.save({
+          agentId: 'lab', agentName: 'Lezzet Laboratuvarı', title: `Son çıktı ${i}`, description: 'Örnek slogan', image, live: true,
+          photo: 'source-photo-must-not-be-stored', apiKey: 'test-placeholder-must-not-be-stored', share: { url: 'must-not-be-stored' },
+        });
+        await new Promise(resolve => setTimeout(resolve, 1));
+      }
+    }, png);
+    await page.goto(`${baseURL}/copilot/?ui=cowork`);
+    await page.locator('nav [data-action="library"]').click();
+    await page.locator('[data-library-tab="recents"]').click();
+    await page.waitForFunction(() => document.querySelectorAll('#libraryGrid [data-sample]').length === 20);
+    assert.match(await page.locator('#libraryGrid [data-sample]').first().innerText(), /Lezzet Laboratuvarı · Son çıktı 20 · Örnek slogan/);
+    assert.equal(await page.locator('#libraryGrid .agent-lab').count(), 20);
+    const recordKeys = await page.evaluate(async () => (await OutputLibrary.list()).map(record => Object.keys(record).sort()));
+    for (const keys of recordKeys) assert.deepEqual(keys, ['agentId', 'agentName', 'createdAt', 'description', 'id', 'image', 'live', 'title', 'video']);
+    await page.locator('#libraryGrid [data-sample]').first().click();
+    await page.waitForFunction(() => document.querySelector('#sampleBody img')?.naturalWidth > 0);
+    const previewURL = await page.locator('#sampleBody img').getAttribute('src');
+    await page.evaluate(() => {
+      const input = document.getElementById('libraryInput');
+      input.value = 'Son çıktı 20';
+      input.dispatchEvent(new Event('input'));
+    });
+    assert.equal(await page.locator('#sampleBody img').getAttribute('src'), previewURL, 'Grid refresh does not revoke the open preview');
+    const download = page.waitForEvent('download');
+    await page.locator('#sampleBody a[download]').click();
+    const file = await download;
+    assert.equal(file.suggestedFilename(), 'output.png');
+    assert.deepEqual(fs.readFileSync(await file.path()), Buffer.from(png, 'base64'));
+    assert.equal(state.calls.length, 0);
+  }));
+  test('Storage failure is an agent message and leaves the completed output and its actions available', { timeout: 60000 }, () => withPage(platforms[0], async (page, state) => {
+    await photoFlow(page, state, 'chat', false, 0, () => page.evaluate(() => {
+      OutputLibrary.save = async () => { throw new DOMException('Storage quota exceeded', 'QuotaExceededError'); };
+    }));
+    await agentText(page);
+    assert.match(await page.locator('#messages').innerText(), /tarayıcı hafızasına kaydedilemedi/);
+    assert.equal(await page.locator('.artifact a[download]').isVisible(), true);
+    const change = page.locator('.artifact [data-action="change"]');
+    assert.equal(await change.isEnabled(), true);
+    await change.click();
+    assert.match(await agentText(page), /nasıl bir yıldızsın/);
+    assert.equal(await page.evaluate(async () => (await OutputLibrary.list()).length), 0);
+  }));
+});
 
 describe('Azure single SAS photo sharing', { concurrency: 2 }, () => {
   for (const ui of ['classic', 'chat', 'cowork']) {
@@ -316,10 +488,17 @@ describe('Azure single SAS photo sharing', { concurrency: 2 }, () => {
         if (ui === 'classic') {
           await page.locator('.settings-fab').click();
           await page.locator('[data-settings="mode"]').click();
-        } else await settingsButton(page);
+        } else {
+          await settingsButton(page);
+          await page.locator('#connectionsDemo').setChecked(false);
+        }
         const form = page.locator(ui === 'classic' ? '#connection-form' : '#connection');
         await form.locator('[name="blobSas"]').fill(sas);
         await form.locator('[type="submit"]').click();
+        if (ui !== 'classic') {
+          await page.locator('#connectionsDemo').setChecked(false);
+          await page.locator('[data-action="closeSettings"]').click();
+        }
       });
       assert.equal(uploads.length, 0, 'Generation alone does not upload a personal image');
       const image = ui === 'classic' ? screen(page, '.res-img') : page.locator('.artifact img');
@@ -327,11 +506,24 @@ describe('Azure single SAS photo sharing', { concurrency: 2 }, () => {
       const button = ui === 'classic' ? screen(page, '[data-act="publish"]') : page.locator('#messages [data-action="publish"]');
       await button.click();
       await page.getByText(/Azure yüklemesi HTTP 403/).waitFor();
+      if (ui !== 'classic') {
+        assert.match(await page.locator('#messages .answer .answer-text[role="alert"]').last().innerText(), /Azure yüklemesi HTTP 403/);
+        assert.equal(await page.locator('#messages .artifact [role="alert"]').count(), 0);
+      }
       assert.equal(await image.getAttribute('src'), original);
       assert.equal(await button.isEnabled(), true);
       await button.click();
       const root = ui === 'classic' ? screen(page) : page.locator('#messages .artifact');
       await root.locator('.qr-box svg').waitFor();
+      if (ui !== 'classic') {
+        const qr = await root.locator('.qr-box svg').evaluate(node => ({
+          width: node.getBoundingClientRect().width,
+          height: node.getBoundingClientRect().height,
+          boxWidth: node.parentElement.getBoundingClientRect().width,
+        }));
+        assert.ok(qr.width >= 180);
+        assert.ok(Math.abs(qr.width - qr.boxWidth) < 1 && Math.abs(qr.width - qr.height) < 1);
+      }
       assert.equal(uploads.length, 2);
       const url = uploads[1].url();
       assert.match(new URL(url).pathname, /^\/kiosk-results\/[0-9a-f-]{36}\.jpg$/);
@@ -340,9 +532,12 @@ describe('Azure single SAS photo sharing', { concurrency: 2 }, () => {
       assert.deepEqual(uploads[1].postDataBuffer(), Buffer.from(original.split(',')[1], 'base64'));
       const shared = ui === 'classic' ? await page.evaluate(() => STATE.lastShare.url) : await root.locator('a[target="_blank"]').getAttribute('href');
       assert.equal(shared, url);
-      assert.equal(await page.evaluate(() => JSON.stringify(localStorage).includes('browser-test-placeholder') || JSON.stringify(sessionStorage).includes('browser-test-placeholder')), false);
+      assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('mai-kiosk-foundry')).blobSas), sas);
+      assert.equal(await page.evaluate(() => JSON.stringify(sessionStorage).includes('browser-test-placeholder')), false);
       await page.reload();
       assert.equal(await page.evaluate(() => BlobShare.enabled), false);
+      await initialize(page, state, ui, true);
+      assert.equal(await page.evaluate(() => BlobShare.settings?.sas), sas);
     }));
     test(`${ui}: without SAS Live still generates; Demo links open the static selected photo`, { timeout: 60000 }, () => withPage(platforms[0], async (page, state) => {
       await photoFlow(page, state, ui, true, 0);
@@ -404,13 +599,13 @@ async function labFlow(page, state, ui, live, index) {
     await startAgent(page, 'lab');
     await option(page, index % 4).click();
     for (const [ingredientIndex, flavor] of picks.flavors.entries()) {
-      assert.match(await page.locator('#messages .answer-text').last().innerText(), ingredientIndex ? /İkinci malzeme/ : /İlk malzemeni/);
+      assert.match(await agentText(page), ingredientIndex ? /İkinci malzeme/ : /İlk malzemeni/);
       await page.locator('#message').fill(flavor.name);
       await page.locator('#send').click();
     }
     await option(page, index).click();
     assert.equal(state.calls.length, 0);
-    assert.match(await page.locator('#messages .answer-text').last().innerText(), /Ar-Ge ekibine özel bir notunuz var mı/);
+    assert.match(await agentText(page), /Ar-Ge ekibine özel bir notunuz var mı/);
     await option(page, rdNote ? 1 : 0).click();
     if (rdNote) {
       await page.locator('#message').fill(rdNote);
@@ -454,18 +649,18 @@ describe('laboratory sequential ingredient questions', { concurrency: 3 }, () =>
       });
       await startAgent(page, 'lab');
       await option(page, 0).click();
-      assert.match(await page.locator('#messages .answer-text').last().innerText(), /İlk malzemeni/);
+      assert.match(await agentText(page), /İlk malzemeni/);
       await page.locator('#message').fill(names.slice(0, 2).join(' ve '));
       await page.locator('#send').click();
-      assert.match(await page.locator('#messages .answer-text').last().innerText(), /bu adımda tek bir malzeme/);
+      assert.match(await agentText(page), /bu adımda tek bir malzeme/);
       await option(page, 0).click();
-      assert.match(await page.locator('#messages .answer-text').last().innerText(), /İkinci malzeme/);
+      assert.match(await agentText(page), /İkinci malzeme/);
       assert.equal((await page.locator('#messages [data-choice]').allTextContents()).includes(names[0]), false);
       await page.locator('#message').fill(names[0]);
       await page.locator('#send').click();
-      assert.match(await page.locator('#messages .answer-text').last().innerText(), /zaten seçtin/);
+      assert.match(await agentText(page), /zaten seçtin/);
       await page.locator('#messages [data-choice]').filter({ hasText: 'Tek malzemeyle devam et' }).click();
-      assert.match(await page.locator('#messages .answer-text').last().innerText(), /hangi anda/);
+      assert.match(await agentText(page), /hangi anda/);
       await option(page, 0).click();
       await option(page, 0).click();
       await approve(page, ui, false);
@@ -533,7 +728,7 @@ async function podcastFlow(page, state, ui, live, index = 0) {
     if (eraIndex === 5) {
       await page.locator('#message').fill('31.02.2004');
       await page.locator('#send').click();
-      assert.match(await page.locator('#messages').innerText(), /geçerli bir yıl veya tarih/);
+      await page.locator('#messages').filter({ hasText: /geçerli bir yıl veya tarih/ }).waitFor();
       await page.locator('#message').fill('2004');
       await page.locator('#send').click();
     }
@@ -549,7 +744,7 @@ async function podcastFlow(page, state, ui, live, index = 0) {
     await page.locator('#messages').filter({ hasText: 'Anını tek cümleyle anlat.' }).waitFor();
     await page.locator('#message').fill('Bir anı. İkinci anı.');
     await page.locator('#send').click();
-    assert.match(await page.locator('#messages').innerText(), /tek bir cümle/);
+    await page.locator('#messages').filter({ hasText: /tek bir cümle/ }).waitFor();
     await page.locator('#message').fill(memory);
     await page.locator('#send').click();
     if (ui === 'cowork' || live) {
@@ -565,9 +760,9 @@ async function podcastResult(page, state, ui, live) {
     assert.equal(state.calls.length, 0, 'Unsupported recording must fail before paid services are called');
     return;
   }
-  if (ui === 'classic') await screenIs(page, 'podcast.result');
+  if (ui === 'classic') await screenIs(page, 'podcast.result', live ? 45000 : 15000);
   const root = ui === 'classic' ? screen(page, '.podcast-output') : page.locator('.artifact .podcast-output').last();
-  await root.waitFor();
+  await root.waitFor({ timeout: live ? 45000 : 15000 });
   const audio = root.locator('video');
   assert.equal(await audio.getAttribute('autoplay'), null);
   assert.equal(await audio.evaluate(node => node.paused), true);
@@ -583,27 +778,61 @@ async function podcastResult(page, state, ui, live) {
   assert.ok(Math.abs(size.width / size.height - .8) < .005);
   // Windows WebKit reports its scaled decoding size rather than the coded dimensions.
   if (!state.windowsWebKit) assert.deepEqual(size, { width: 720, height: 900 });
-  assert.equal(await root.locator('details').count(), 3);
-  await root.locator('summary').first().click();
-  assert.ok(await root.locator('li a').count() >= 2);
-  assert.match(await root.innerText(), /Hayal edilen sahne/);
+  if (ui === 'classic') {
+    if (ui === 'classic') {
+      assert.equal(await root.locator('details').count(), 3);
+      await root.locator('summary').first().click();
+      assert.ok(await root.locator('li a').count() >= 2);
+      assert.match(await root.innerText(), /Hayal edilen sahne/);
+    } else {
+      await page.locator('#workspaceButton').click();
+      const references = page.locator('#workspaceBody');
+      assert.ok(await references.locator('.podcast-citations li a').count() >= 2);
+      assert.equal(await references.locator('.reference-output details').count(), 2);
+      await references.locator('.reference-output summary').first().click();
+      assert.match(await references.innerText(), /Imagined scene/);
+      await page.locator('#workspace [data-action="workspace"]').click();
+    }
+  } else {
+    assert.equal(await root.locator('details').count(), 0);
+    assert.doesNotMatch(await root.innerText(), /Gazete ve Ülker ilanı yeniden tasarlanmıştır|Geçmişteki yüz görünümü yaratıcı bir canlandırmadır/);
+    await page.locator('#messages [data-action="sources"]').last().click();
+    const panel = page.locator('#workspace');
+    assert.equal(await panel.isVisible(), true);
+    assert.ok(await panel.locator('.podcast-citations a').count() >= 2);
+    assert.match(await panel.innerText(), /Citations/);
+    assert.match(await panel.innerText(), /Outputs/);
+    assert.match(await panel.innerText(), /Imagined scene/);
+    assert.match(await panel.innerText(), /Narration/);
+    await panel.locator('header [data-action="workspace"]').click();
+  }
   const download = page.waitForEvent('download');
   await root.locator('a[download]').click();
   assert.match((await download).suggestedFilename(), /^bir-isirikla-o-yila-don\.(mp4|webm)$/);
   const bytes = fs.readFileSync(await (await download).path());
   assert.ok(bytes.length > 1024);
-  if (!live) assert.equal(createHash('sha256').update(bytes).digest('hex'), createHash('sha256').update(fs.readFileSync(path.join(__dirname, 'samples', 'podcast', 'radio-memory.mp4'))).digest('hex'));
+  if (ui !== 'classic') {
+    const saved = await page.evaluate(async () => {
+      const record = (await OutputLibrary.list()).find(entry => entry.agentId === 'podcast');
+      return { live: record.live, type: record.video.type, size: record.video.size };
+    });
+    assert.equal(saved.live, live);
+    assert.match(saved.type, /^video\/(?:mp4|webm)$/);
+    assert.equal(saved.size, bytes.length);
+  }
+  if (!live) assert.equal(createHash('sha256').update(bytes).digest('hex'), createHash('sha256').update(fs.readFileSync(path.join(__dirname, 'samples', 'podcast', 'radio-theater.mp4'))).digest('hex'));
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
   if (!live) assert.equal(state.calls.length, 0);
-  for (const call of state.calls) assert.equal(call.key, key);
+  for (const call of state.calls) assert.equal(call.key, call.path === '/v3/search/web' ? 'webiq-test-placeholder' : key);
   if (live) {
-    assert.equal(state.calls.filter(call => call.path.endsWith('/responses')).length, 2);
+    assert.equal(state.calls.filter(call => call.path.endsWith('/responses')).length, 0);
+    assert.equal(state.calls.filter(call => call.path === '/v3/search/web').length, 1);
     assert.equal(state.calls.filter(call => call.path.endsWith('/tts/cognitiveservices/v1')).length, 3);
-    assert.equal(state.calls.filter(call => call.path.endsWith('/images/edits')).length, 2);
+    assert.equal(state.calls.filter(call => call.path.endsWith('/images/edits')).length, 3);
     const speech = state.calls.find(call => call.path.endsWith('/tts/cognitiveservices/v1'));
     assert.ok(speech.body.includes('en-US-Harper:MAI-Voice-2-Flash'));
     assert.equal(speech.contentType, 'application/ssml+xml');
-    for (const call of state.calls.filter(call => call.path.endsWith('/responses'))) {
+    for (const call of state.calls.filter(call => call.path === '/v3/search/web')) {
       assert.ok(!call.body.includes('arkadaşlarımla'));
       assert.ok(!call.body.includes('Yaz tatilinin ilk günü'));
     }
@@ -612,7 +841,7 @@ async function podcastResult(page, state, ui, live) {
 
 describe('nostalgia visual choices', { concurrency: 3 }, () => {
   for (const platform of platforms) for (const ui of ['classic', 'cowork', 'chat']) {
-    test(`${platform.name} / ${ui}: six large illustrated product choices are centered and fit the viewport`, () => withPage(platform, async (page, state) => {
+    test(`${platform.name} / ${ui}: product choices fit the viewport with compact Copilot buttons`, () => withPage(platform, async (page, state) => {
       await initialize(page, state, ui, false);
       if (ui === 'classic') {
         await screen(page, '[data-go="podcast.product"]').click();
@@ -631,9 +860,16 @@ describe('nostalgia visual choices', { concurrency: 3 }, () => {
         });
         return { centerOffset: Math.abs((Math.min(...boxes.map(b => b.top)) + Math.max(...boxes.map(b => b.bottom))) / 2 - (root.top + root.bottom) / 2), choices, viewport: innerWidth };
       }, ui === 'classic');
-      assert.ok(geometry.centerOffset < 40, `Question and choices center offset: ${geometry.centerOffset}`);
-      assert.ok(geometry.choices.every(button => button.height >= (ui === 'classic' ? 120 : 64) && button.left >= 0 && button.right <= geometry.viewport));
+      if (ui === 'classic') assert.ok(geometry.centerOffset < 40, `Question and choices center offset: ${geometry.centerOffset}`);
+      assert.ok(geometry.choices.every(button => (ui === 'classic' ? button.height >= 120 : button.height >= 36 && button.height <= 56) && button.left >= 0 && button.right <= geometry.viewport));
       if (process.env.KIOSK_TEST_ARTIFACTS) await page.screenshot({ path: path.join(process.env.KIOSK_TEST_ARTIFACTS, `nostalgia-choices-${ui}-${platform.browser}-${platform.viewport.width}.png`), fullPage: true });
+      if (ui !== 'classic') {
+        assert.equal(await buttons.locator('img').count(), 6);
+        await buttons.first().click();
+        const era = page.locator('#messages .choice-answer').last();
+        assert.equal(await era.locator('.choice-option img, .choice-option svg').count(), 0);
+        assert.equal(await era.locator('.choice-option').first().evaluate(node => getComputedStyle(node).fontSize === getComputedStyle(document.body).fontSize), true);
+      }
       assert.equal(state.calls.length, 0);
     }));
   }
@@ -660,7 +896,7 @@ async function podcastVideoHash(page) {
 
 describe('podcast errors, retry, cancellation and retained output', { concurrency: 3 }, () => {
   for (const platform of platforms.filter(platform => platform.name !== 'touch mobile Chromium')) for (const ui of ['classic', 'cowork', 'chat']) {
-    test(`${platform.name} / ${ui}: podcast research failure, Speech cancellation, retry and previous-result preservation`, { timeout: 60000 }, () => withPage(platform, async (page, state) => {
+    test(`${platform.name} / ${ui}: podcast research failure, Speech cancellation, retry and previous-result preservation`, { timeout: 120000 }, () => withPage(platform, async (page, state) => {
       state.failure = 'no-sources';
       await podcastFlow(page, state, ui, true, 5);
       if (state.windowsWebKit) { await podcastResult(page, state, ui, true); return; }
@@ -671,13 +907,13 @@ describe('podcast errors, retry, cancellation and retained output', { concurrenc
       const retry = async () => {
         if (ui === 'classic') await screen(page, '[data-act="gen-retry"]').click();
         else {
-          await option(page, 1).click();
+          await page.getByRole('button', { name: 'Yeniden dene', exact: true }).click();
           await page.locator('#messages [data-action="approve"]').click();
         }
       };
       await retry();
-      if (ui === 'classic') await screenIs(page, 'podcast.result');
-      await page.locator('.podcast-output video').waitFor();
+      if (ui === 'classic') await screenIs(page, 'podcast.result', 45000);
+      await page.locator('.podcast-output video').waitFor({ timeout: 45000 });
       await page.locator('.podcast-output video').evaluate(node => {
         window.previousPodcastAudio = node;
         if (document.querySelector('.screen[data-screen="podcast.result"]')) window.previousPodcastResult = STATE.podcast.result;
@@ -706,8 +942,8 @@ describe('podcast errors, retry, cancellation and retained output', { concurrenc
       if (ui !== 'classic') assert.equal(await page.locator('.artifact').count(), 1);
       state.failure = null;
       await retry();
-      if (ui === 'classic') await screenIs(page, 'podcast.result');
-      else await page.locator('.artifact').nth(1).waitFor();
+      if (ui === 'classic') await screenIs(page, 'podcast.result', 45000);
+      else await page.locator('.artifact').nth(1).waitFor({ timeout: 45000 });
     }));
   }
 });
@@ -876,10 +1112,13 @@ describe('podcast narrator settings across interfaces', { concurrency: 2 }, () =
       assert.equal(await page.evaluate(() => CONFIG.ai.speechVoice), 'en-US-AvaMultilingualNeural');
       assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('mai-kiosk-foundry')).key), key);
       await settingsButton(page);
-      assert.equal(await page.locator('#connection [name="voice"]').isVisible(), true);
+      await page.locator('#voiceTab').click();
+      assert.equal(await page.locator('#voiceModel').inputValue(), 'en-US-AvaMultilingualNeural');
+      await page.locator('#voiceModel').fill('en-US-Harper:MAI-Voice-2-Flash');
+      await page.locator('#voiceSettings [type="submit"]').click();
       await page.locator('[data-action="closeSettings"]').click();
       await initialize(page, state, 'chat', true);
-      assert.equal(await page.evaluate(() => CONFIG.ai.speechVoice), 'en-US-AvaMultilingualNeural');
+      assert.equal(await page.evaluate(() => CONFIG.ai.speechVoice), 'en-US-Harper:MAI-Voice-2-Flash');
       assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('mai-kiosk-foundry')).key), key);
     }));
   }
@@ -989,7 +1228,7 @@ describe('laboratory design revisions', { concurrency: 3 }, () => {
       assert.equal(hash(Buffer.from(nextOutgoing.images[0], 'base64')), hash(Buffer.from(latestReference, 'base64')));
       if (ui === 'cowork') {
         await option(page, 1).click();
-        assert.match(await page.locator('#messages .approval').last().innerText(), /Foundry önce ürün adını/);
+        assert.match(await agentText(page, '#messages .approval'), /Foundry önce ürün adını/);
         await page.locator('#messages [data-action="cancelPlan"]').click();
       }
     }));
@@ -997,7 +1236,13 @@ describe('laboratory design revisions', { concurrency: 3 }, () => {
       await labFlow(page, state, ui, false, 0);
       const button = ui === 'classic' ? screen(page, '[data-act="revise"]') : page.locator('#messages [data-action="revise"]');
       assert.equal(await button.isDisabled(), true);
-      assert.match(await (ui === 'classic' ? screen(page) : page.locator('#messages')).innerText(), /Revizyon için Demo Modunu kapat/);
+      assert.match(await (ui === 'classic' ? screen(page) : page.locator('#messages')).innerText(), ui === 'classic' ? /Revizyon için Demo Modunu kapat/ : /Turn off Demo Mode to request a revision/);
+      if (ui !== 'classic') {
+        const controls = page.locator('#messages .artifact .artifact-controls');
+        assert.equal(await controls.locator('[data-action="revise"]').count(), 1);
+        await controls.getByRole('button', { name: 'Change selections', exact: true }).click();
+        assert.match(await agentText(page), /Ürünün temeli ne olsun/);
+      }
       assert.equal(state.calls.length, 0);
     }));
   }
@@ -1020,7 +1265,7 @@ describe('laboratory design revisions', { concurrency: 3 }, () => {
       await useDifferentImage(page, state);
       if (ui === 'classic') await screen(page, '[data-act="gen-retry"]').click();
       else {
-        await option(page, 1).click();
+        await page.getByRole('button', { name: 'Yeniden dene', exact: true }).click();
         if (ui === 'cowork') await page.locator('#messages [data-action="approve"]').click();
       }
       await waitForRevision(page, ui);
@@ -1071,7 +1316,7 @@ describe('laboratory Ar-Ge note', { concurrency: 3 }, () => {
       } else {
         await startAgent(page, 'lab');
         for (let i = 0; i < 3; i++) await option(page, 0).click();
-        await option(page, 1).click();
+        await page.getByRole('button', { name: 'Yeniden dene', exact: true }).click();
         await page.locator('#message').fill('Bu taslağı kullanma.');
         await option(page, 0).click();
         await approve(page, ui, ui === 'cowork');
@@ -1285,6 +1530,7 @@ describe('camera, approval and failure regressions', { concurrency: 3 }, () => {
       await settingsButton(page);
       await page.waitForFunction(() => !document.getElementById('connection').inert);
       assert.equal(await page.locator('#connection [name="key"]').inputValue(), key);
+      await page.locator('#connectionsDemo').setChecked(false);
       await page.locator('#connection [name="key"]').fill('second-regression-placeholder');
       await page.locator('#connection [type="submit"]').click();
       await page.reload();
@@ -1309,7 +1555,7 @@ describe('camera, approval and failure regressions', { concurrency: 3 }, () => {
         await page.locator('[data-action="approve"]').click();
         await page.locator('#messages [data-choice="1"]').waitFor();
         assert.equal(await page.locator('.artifact').count(), 0);
-        assert.match(await page.locator('#messages .answer-text').last().innerText(), failure === 'network' ? /bağlantısı kurulamadı/ : failure === 'missing-image' ? /görsel yok/ : /401/);
+        assert.match(await agentText(page), failure === 'network' ? /bağlantısı kurulamadı/ : failure === 'missing-image' ? /görsel yok/ : /401/);
         state.failure = null;
         await option(page, 1).click();
         await page.locator('[data-action="approve"]').click();
@@ -1322,7 +1568,7 @@ describe('camera, approval and failure regressions', { concurrency: 3 }, () => {
       await startAgent(page, 'lab');
       await option(page, 0).click();
       await option(page, 0).click();
-      assert.match(await page.locator('#messages .answer-text').last().innerText(), /İkinci malzeme/);
+      assert.match(await agentText(page), /İkinci malzeme/);
       await option(page, 1).click();
       await option(page, 0).click();
       await option(page, 0).click();
@@ -1348,7 +1594,7 @@ describe('camera, approval and failure regressions', { concurrency: 3 }, () => {
       await page.locator('.artifact a[download]').click();
       assert.equal((await download).suggestedFilename(), 'copilot-photo.jpg');
       await option(page, 0).click();
-      assert.match(await page.locator('#messages .answer-text').last().innerText(), /nasıl bir yıldızsın/);
+      assert.match(await agentText(page), /nasıl bir yıldızsın/);
     }));
     test(`${platform.name}: stopping a generation restores composer without an output`, () => withPage(platform, async (page, state) => {
       await initialize(page, state, 'cowork', true);
@@ -1361,7 +1607,7 @@ describe('camera, approval and failure regressions', { concurrency: 3 }, () => {
       await page.waitForFunction(() => document.getElementById('stop').hidden === false);
       await page.locator('#stop').click();
       await page.locator('#messages [data-choice="1"]').waitFor();
-      assert.match(await page.locator('#messages .answer-text').last().innerText(), /İşlem durduruldu/);
+      assert.match(await agentText(page), /İşlem durduruldu/);
       assert.equal(await page.locator('.artifact').count(), 0);
       assert.equal(await page.locator('#message').getAttribute('readonly'), null);
     }));

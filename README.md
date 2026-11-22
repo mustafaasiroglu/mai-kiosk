@@ -13,25 +13,109 @@ adresini açın (GitHub Pages: `/mai-kiosk/copilot/`). Klasik kiosk `/` adresind
 
 Fotoğraf Stüdyosu, Lezzet Laboratuvarı ve **Bir Isırıkla O Yıla Dön (Podcast)**
 aynı sohbet arayüzündedir.
+Sol menü ekran referanslarındaki **Home / Code** düzenini kullanır:
+**Home** daima seçilidir, **Code** henüz kullanılamaz. Üç deneyim **Pinned** altında,
+sohbet geçmişi **Recent** altında görünür. **Library → Outputs**, ortak örnek
+listesindeki her senaryonun en güncel çıktısını sayfadan ayrılmadan gösterir.
+**Recents**, Chat ve Cowork'te bu özellik eklendikten sonra tamamlanan son 20
+üretimi ve revizyonu en yeniden eskiye sıralar; Demo çıktıları da saklanır ve
+önizlemede Demo olarak belirtilir. Fotoğraf, ambalaj ve video filtreleri,
+metin araması ve grid/liste görünümü kullanılabilir. Bir çıktıyı açıp
+görseli veya videoyu görüntüleyebilir, indirebilir ve ilgili agent'a geçebilirsiniz.
+Library kartlarında ilgili agent'ın ikonu ve birleştirilmiş çıktı başlığı
+üstte, 16:9 önizleme altta bulunur. **Create something new** Agents sayfasını açar;
+henüz yapılandırılmayan Shared ve bulut senkronizasyonu pasiftir.
+Agents kartları yatay, kompakt düzendedir:
+solda ikon, sağda agent adı, oluşturucu bilgisi ve tek satırlık açıklama bulunur.
+Library'ye girip önceki sohbeti Recent'ten açmak mesajları ve seçimleri korur.
+New, Search, Automations ve Plugins pasiftir.
+Copilot ve Cowork ortak menüleri, ayarlar ve kontroller İngilizcedir; agent adları,
+sohbetler, seçenekler ve üretilen içerik Türkçe kalır. Agents açılış metni
+**Bir agent seç ve hemen konuşmaya başla.** şeklindedir.
+Agent açılışında başlık, oluşturucu bilgisi, mesaj alanı ve başlangıç önerisi
+referanstaki merkez yerleşimi kullanır; mobilde aynı düzen dar ekrana uyarlanır.
+Mesaj alanının sağ altında referanstaki **Auto Medium** etiketi görünür;
+bu bir model seçici değildir, Foundry dağıtımları Ayarlar'dan yönetilir.
+Settings popup'ında solda **General**, **Connections** ve **Voice** sekmeleri bulunur.
+Agent kartları, sol menü, sohbet başlığı ve kütüphane aynı gradyan zeminli,
+katmanlı kamera, laboratuvar şişesi ve radyo ikonlarını kullanır.
+Fotoğraf Stüdyosu pembe, Lezzet Laboratuvarı mavi ve Zaman Yolculuğu yeşildir;
+ikon ve gradyan renkleri açık/koyu temaya uyarlanır.
+General'da **Demo Mode** ilk kullanımda açık, **Full screen** varsayılan kapalıdır;
+Demo Mode seçimi tarayıcıda saklanır ve refresh sonrası geri yüklenir.
+Kapalı seçimde kayıtlı geçerli bağlantı uygulanır; bağlantı yoksa alanlar
+düzenlenebilir kalır, ayarlar kaydedilene kadar canlı üretim başlamaz.
+fullscreen durumu tarayıcıyla senkron kalır. **Language → English** ve
+**Theme → System** sabittir, değiştirilemez.
+Connections'daki Demo Mode anahtarı General ile aynı durumu paylaşır:
+Demo Mode kapatılınca Connections otomatik açılır; bağlantı alanları ve **Save**
+yalnızca kapalıyken kullanılabilir. Kayıtlı bağlantı varsa uygulanır; yoksa
+alanlar düzenlemeye açılır, geçerli ayarlar kaydedilene kadar canlı üretim başlamaz.
+Save bağlantıyı kaydedip uygular, kendi başına üretim başlatmaz.
+Sağ üstteki **Demo Mode** etiketine tıklamak doğrudan Connections sekmesini açar.
+Voice sekmesinde model/ses kimliği seçilip ayrı kaydedilir; bu işlem API anahtarını,
+SAS'ı ve bağlantı alanlarını değiştirmez. Demo Mode açıkken bağlantı düzenleme
+kilitlidir; devam eden üretim yoksa Voice ayrı kaydedilebilir.
+`?ui=chat` ve `?ui=cowork` adresleri mevcut akış davranışlarını korur;
+Home / Code, bu iki akış arasında geçiş anahtarı değildir.
 Fotoğraf akışı hem **Chat** hem **Cowork** için klasik kiosk ile aynı sıradadır:
 **Ofiste nasıl bir yıldızsın? → lezzet ruhun → tema → kamera/fotoğraf → üretim**.
 Kamera ve dosya seçimi tema seçildikten sonra sunulur; fotoğrafı çekip
-**Gönder** düğmesine basınca son üretim onayı gelir. Kamera izni reddedilirse
+**Send** düğmesine basınca son üretim onayı gelir. Kamera izni reddedilirse
 yeniden deneme, dosya ve örnek fotoğraf seçenekleri kullanılabilir.
 Pencere veya sohbet kapatıldığında ve çekimden sonra kamera durdurulur.
 **Cowork** üretim planını onaya sunar; çalışma alanında adımları ve indirilebilir
 çıktıları gösterir. **Chat** akışı daha doğrudan ilerletir; canlı fotoğrafın
 Foundry’ye gönderilmesi için her iki görünümde de onay gerekir.
+Chat ve Cowork şıkları normal metin boyutunda, kompakt düğmelerdir;
+yalnızca ürün seçeneklerinde ambalaj görseli gösterilir.
+Diğer/Özel seçeneği bulunan adımlarda şıklara uymayan serbest metin doğrudan
+özel yolun girdisi olur: podcast'te tarih ve an adı, Laboratuvarda Ar-Ge notu.
+Seçenek veya ek metin sorusu tekrar sorulmaz; mevcut tarih, uzunluk ve içerik
+doğrulamaları korunur. Diğer/Özel düğmesini seçmek mevcut iki adımlı akışı korur.
+Chat ve Cowork üretim adımlarına tıklayınca adım çıktısı 11px metinle açılır.
+Yazı adımında üretilen metin, görsel adımında gönderilen prompt ve küçük
+çıktı önizlemesi gösterilir. Açılan adımlar ilerleme güncellemelerinde açık
+kalır; hata veya durdurma halinde önceki adım çıktıları korunur.
+Bu ayrıntılar yalnızca mevcut sohbetin belleğindedir; anahtarlar, SAS,
+orijinal selfie ve özel mevcut yaş tahmini gösterilmez veya geçmişe kaydedilmez.
+Çıktının altında **Change selections**, Laboratuvarda **Request revision**
+ile aynı düğme satırındadır. Üretim ve Azure paylaşım hataları,
+büyük uyarı panelleri yerine agent mesajı olarak sohbete eklenir.
+Chat ve Cowork yanıtları aynı animasyonla sırayla görünür: 1,5 saniyelik üç
+nokta beklemesinden sonra metin 80 ms aralıklarla 25 karakterlik parçalar halinde
+açılır. Her yeni kullanıcı mesajının üstüne otomatik kaydırılır; kısa mesaj için
+de yeterli alt boşluk bırakılır. Son kullanıcı girdisi üstte görünür kalırken
+agent cevapları altında açılır ve ekranı yeniden kaydırmaz.
+Henüz kullanıcı girdisi yoksa ilk agent cevabı esas alınır.
+Metin açılırken sohbet aşağıya sürüklenmez.
+Mesajların üzerinde agent adı ve ikonu tekrarlanmaz. Yanıt tamamlanmadan yeni
+seçim alınmaz. Bağlantı modu değişikliği
+yanıt zamanlayıcılarını temizler. Azaltılmış hareket tercihinde noktalar ve
+imleç animasyonsuz gösterilir. Sohbet kaydırma çubuğu ince ve düşük kontrastlıdır.
+Copilot podcast mesajı yalnızca oynatıcı, indirme ve sonuç aksiyonlarını içerir.
+**Sources** düğmesi sağ paneli açar: **Citations** altında WebIQ dönem kaynakları,
+**Outputs** altında çıktılar, hayal edilen sahne ve seslendirme metni bulunur.
+QR görseli genel ikon boyutundan bağımsızdır; 240 piksele kadar büyür ve dar
+ekranlarda mevcut alana sığar.
 
 Demo modunda yeni görsel üretilmez ve kamera açılmaz; kayıtlı örnekler kullanılır.
-Canlı üretimi Copilot **Ayarlar** menüsünden Foundry bağlantısıyla açabilirsiniz.
-Copilot sohbetleri, fotoğrafları ve sesli anıları yalnızca açık sayfada tutulur;
-yenileme veya Demo/Canlı bağlantı modu değişikliği sohbetleri temizler.
+Canlı üretimi Copilot **Settings** menüsünden Foundry bağlantısıyla açabilirsiniz.
+Sohbetler ve kaynak selfieler yalnızca açık sayfada tutulur; yenileme veya
+Demo/Canlı bağlantı modu değişikliği sohbetleri temizler.
+Tamamlanan çıktıların görsel/video Blob'ları ve sınırlı başlık/agent bilgileri
+aynı origin'deki `mai-kiosk-outputs` IndexedDB veritabanında saklanır.
+Recents yenilemeden ve mod değişikliğinden sonra da korunur; kaynak selfie,
+sohbet metni, API anahtarı, SAS ve paylaşım bağlantısı bu kayda eklenmez.
+Bu kayıt buluta yüklenmez. Üretilen medya kişisel içerik barındırabilir;
+güvenilir cihaz kullanın ve geçmişi kaldırmak için sitenin tarayıcı verilerini temizleyin.
+Depolama kullanılamazsa üretim sonucu korunur, kaydedilemediği agent mesajıyla bildirilir.
 Klasik kiosk, Chat ve Cowork aynı origin'deki `mai-kiosk-foundry`
 tarayıcı kaydını kullanır: bir arayüzde kaydedilen Foundry uç noktası,
 API anahtarı, model adları ve anlatıcı sesi diğer arayüzün Canlı ayarlarında da doldurulur.
 Ana açılış ekranında **Kiosk UI / Copilot Chat UI** seçilir.
-Alttaki **Demo Modu** anahtarı varsayılan açıktır. Kapatılınca Foundry bağlantısı,
+Alttaki **Demo Modu** anahtarı ilk kullanımda açıktır; sonraki açılışlarda
+tarayıcıda saklanan son seçim kullanılır. Kapatılınca Foundry bağlantısı,
 API anahtarı, model ve anlatıcı sesi alanları görünür; **İlerle** ayarları uygular.
 Sağ üstte yalnızca Demo etkin olduğunda **Demo Modu** etiketi görünür.
 Copilot'a bu ekrandan geçerken seçilen mod ve aynı kayıtlı bağlantı aktarılır;
@@ -72,18 +156,41 @@ Ambalaj görselleri yerel `assets/hanimeller.png` ve `assets/cokoprens.png`
 dosyalarından tüm arayüzlerde gösterilir; kaynakları Ülker'in resmi
 [Hanımeller](https://www.ulker.com.tr/tr/markalar/hanimeller) ve
 [Çokoprens](https://www.ulker.com.tr/tr/markalar/cokoprens) sayfalarıdır.
-60’lar, 70’ler, 80’ler, 90’lar ve 2000’ler seçilebilir. Özel tarih `2004`
-veya `23.04.2004` biçimindedir; 1944 ile bugün arasında doğrulanır.
+60’lar, 70’ler, 80’ler, 90’lar ve 2000’ler seçilebilir. Özel tarih doğal
+dille de yazılabilir: `90 lar` → `01.01.1995`, `70 ler` → `01.01.1975`,
+`Mayıs 1995` → `01.05.1995`, `23 Nisan 2004` → `23.04.2004`.
+Yalnızca yıl verilirse 1 Ocak kullanılır; ay belirtilirse ayın ilk günü,
+gün belirtilirse o gün korunur. Yıl eksikse tahmin edilmez.
+Standart ifadeler yerelde çözülür; diğer ifadeler Demo kapalıyken aynı
+Foundry metin modeli ve anahtarıyla JSON olarak ayrıştırılır (web araması yok).
+Çözümlenen tarih 1944 ile bugün arasında takvim doğrulamasından geçer.
+Chat/Cowork yazılan tarihi sonraki soruda gösterir; dönem düğmeleri aralık
+seçimi olarak korunur. Klasik özel tarih alanı aynı çözümleyiciyi kullanır.
 An seçenekleri okul çıkışı, aile ziyareti, ilk iş günü, yolculuk ve Diğer’dir.
 Diğer için 80, kişisel anı için 240 karakter sınırı vardır. Masaüstünde
 ekran klavyesi, mobilde cihaz klavyesi kullanılır. Diğer girişinde **Geri dön**
 düğmesi daima görünür; yazılan metin klasik kioskta korunur. Cowork üretim planını;
 Chat de canlı anının Foundry’ye gönderilmesini onaylatır.
 
-WebIQ önce gündelik kültür detaylarını araştırır, ardından ayrı bir kaynak
-doğrulama çağrısı yapar. En az iki olgu, seçilen döneme ait yıl, kısa kaynak
-alıntısı ve araştırmada gerçekten dönen kaynak URL’leriyle doğrulanmalıdır.
-Araştırma tamamlanmaz veya yeterli kaynak bulunamazsa görsel/ses üretilmez;
+Gerçek WebIQ servisine `POST https://api.microsoft.ai/v3/search/web` çağrısı
+yapılır; Foundry `web_search`/Responses araması kullanılmaz.
+İstek: `maxResults: 10`, `language: "tr"`, `region: "TR"`, `safeSearch: "off"`.
+`contentFormat` ve `maxLength` gönderilmez; servisin varsayılanları kullanılır.
+Sorgu seçilen tarihe göre örneğin `4 Nisan 1992 gazete manşetleri`,
+dönem aralığında `1990-1999 gazete manşetleri` olur.
+`x-apikey` yalnızca ayrı WebIQ anahtarını taşır; HTTP Host tarayıcı tarafından
+`api.microsoft.ai` olarak belirlenir. Anahtar Connections'taki WebIQ alanında
+veya yerel `.env` içinde `WEBIQ_API_KEY` ile yapılandırılır; Foundry anahtarı
+WebIQ'ya gönderilmez. Boş veya maskeli anahtarla arama yapılmaz.
+[WebIQ REST sözleşmesindeki](https://learn.microsoft.com/en-us/web-iq/reference/web-search)
+erişim hataları açıkça gösterilir; başka bir arama servisine sessizce geçilmez.
+Foundry metin modeli yalnızca dönen `webResults` içeriklerini kısa manşetlere
+özetler; kaynaklar modelin ürettiği URL'lerden değil gerçek sonuçlardan alınır.
+Ayrı ve katı bir kaynak doğrulama turu yapılmaz.
+Bir veya iki kaynaklı haber doğrudan kullanılır; tek haber yeterlidir.
+Eski dönemler için ansiklopedik kaynaklar da kabul edilir; birincil arşiv,
+birebir yıl alıntısı ve kesin olay günü kanıtı zorunlu değildir.
+Araştırma tamamlanmaz veya hiç kaynaklı haber bulunamazsa görsel/ses üretilmez;
 yeniden deneme ve dönem değiştirme gerekir. AI kaynak değerlendirmesi hatasız
 olma garantisi değildir; sonuçtaki bağlantılar bağımsız kontrol için açılabilir.
 
@@ -94,22 +201,50 @@ ve yaklaşık doğum yılı üzerinden geçmiş görünüm hesaplanır; imkâns�
 Bu gerçek tarihsel yaş iddiası değildir. Tek ve net bir yüz yoksa yeniden
 selfie istenir; başarısızlıkta sahte yaş tahmini verilmez.
 
-Çıktı **üç uzun cümle ve üç görselli, indirilebilir bir radyo tiyatrosudur**:
-önce doğrulanmış gündemi içeren **kurgusal gazete ve Ülker ilanı**, sonra
-kişinin o yaştaki halini kullanan anının gelişmesi, son olarak aynı sahnenin
-devamı ve sıcak kapanış. Gazete ve ilan gerçek arşiv malzemesi değildir.
-İlk anı karesi selfieyi, kapanış hem selfieyi hem önceki ham kareyi referans alır.
-Tüm karelerde sepya görünüm, hafif film greni ve titreme korunur; azaltılmış
-hareket tercihinde yakınlaşma/titreme kapatılır. Mikrofon açılışı yoktur.
+Çıktı **iki bölümlü, üç görselli, indirilebilir bir radyo tiyatrosudur**.
+İlk bölüm **gazete için 8–10 saniye**: “Takvimler ... gösterirken, güneşli
+bir yaz/kış gününde ülke gündemi oldukça hareketliydi.” benzeri kısa bir
+giriş okunur; kaynaklı dönem haberleri yalnızca gazete görselinde ve kaynak
+listesinde gösterilir, seslendirmeye eklenmez. İkinci bölüm **iki anı karesi
+için toplam 15–20 saniye**: “O gün kahramanımız...” ile başlayan anı ve
+duygusal kapanış için modele 14–18 kelimelik iki kısa cümle hedefi verilir;
+bu hedefin dışındaki kelime sayıları üretimi durdurmaz.
+Ses süreleri kayıt öncesinde ölçülür. Kısa seslerde görüntü/müzik bekletilir;
+üst sınırı aşan sesler hızlandırılmaz veya kesilmez, açık hatayla durdurulur.
+Gazete ve ilan gerçek arşiv malzemesi değildir.
+**Anılar Gazetesi** karesinin manşetlerini, ürün ilanını, yazılarını ve tüm
+yerleşimini MAI üretir; uygulama gazeteye yazı veya tasarım katmanı eklemez.
+Modele seçilen tarih (gün/ay/yıl verilmişse aynen), bir veya iki kaynaklı haber
+manşeti, özgün ürün reklam manşeti ve seçilen ürünün görseli iletilir.
+Ürün referansı gerçek tarihî ambalaj/reklam iddiası değildir; kurgu açıklaması
+da MAI tarafından gazetenin içine yazılır.
+Görsel promptlarında ürün adı yerine genel bir atıştırmalık tanımı kullanılır;
+anlatım ve görsel yönlendirmelerden taşınan seçili ürün adı da temizlenir.
+Anı ve kapanış karelerinin her biri orijinal selfieyi ve seçilen ürünün
+görselini referans alır; ürünün görünümü metinsel adından değil referanstan alınır.
+Kapanışta sahne devamlılığı önceki anının metinsel görsel yönlendirmesiyle
+istenir; önceki üretilmiş fotoğraf ikinci referans olarak gönderilmez.
+Görsel devamlılık talimatları yalnızca `memoryVisual` ve `endingVisual`
+alanlarına aittir; seslendirilen anı ve kapanış metinleri teknik eşleştirme
+ifadeleri yerine doğal olay ve duygu anlatımı içerir.
+Tüm karelerde sepya görünüm ve hafif film greni korunur; titreme yerine sahne
+boyunca belirgin pan ve sırayla yakınlaşma/uzaklaşma uygulanır; zoom %8’den
+%20’ye çıkar veya tersine döner, yatay pan kadraj genişliğinin %5,6’sıdır. Hareket her yeni
+fotoğrafta baştan başlar; azaltılmış hareket tercihinde pan ve zoom kapatılır.
+Mikrofon açılışı yoktur.
 **Kaynaklı dönem bilgileri**, **Hayal edilen sahne** ve seslendirme metni
 ayrıca gösterilir; hava, kişisel sahne ve yüz dönüşümü yaratıcı tahmindir.
 Video otomatik başlamaz. İptal veya hata önceki başarılı videoyu değiştirmez.
 Demo yalnızca `samples/podcast/` altındaki gerçek kayıtlı MP4’ü oynatır.
+Güncel `radio-theater` kaydı yaklaşık 27 saniyedir: kurgu gazete, okul çıkışı
+anı ve kapanış olmak üzere üç sepya kare, üç cümlelik yeni seslendirme ve
+2000’ler için hazırlanmış özgün müzik içerir. Demo selfie yaş tahmini bu
+kaydın metadata’sından okunur; model çağrısı yapılmaz. Kapanış karesi yalnızca
+kaynak selfie referansıyla üretilmiştir; önceki kare ikinci referans olarak
+gönderilmemiştir.
 Yeni Demo kaydı `radio-theater-v1` biçiminde hazırlanmış olmalıdır; eski
-mikrofonlu kayıt yeni deneyim gibi gösterilmez. Mevcut yeni örneğin kişisel
-gençleştirme karesi MAI tarafından `content_safety_violation` ile reddedildiği
-için üç sahneli Demo henüz hazır değildir; eski medya dosyaları korunmuştur.
-Bu servis hatası açıkça gösterilir ve başka bir görselle sessizce değiştirilmez.
+mikrofonlu kayıt yeni deneyim gibi gösterilmez. MAI politika reddi gibi servis
+hataları açıkça gösterilir ve başka bir görselle sessizce değiştirilmez.
 
 Canlı video, üç ayrı Speech kaydının zamanlaması korunarak cihazda Web Audio,
 Canvas ve MediaRecorder ile birleştirilir; ayrı bir video-modeli servisine
@@ -126,18 +261,19 @@ aynı besteleri yeniden üretir. Özel tarihte ilgili on yıl seçilir. Müzik v
 karıştırılır, konuşma sırasında kısılır ve başta/sonda yumuşakça girip çıkar.
 Kullanıcı başına yeni müzik servisi çağrısı veya müzik üretim ücreti yoktur.
 
-WebIQ yalnızca seçilen somut yılı, varsa tarih sınırını ve genel an türünü
-araştırır; kişisel anı, Diğer metni, selfie veya yaş web aramasına gönderilmez.
+Web araması dönem seçildiğinde yıl aralığının tamamını, özel tarihte ilgili
+yılı ve varsa tarih sınırını, ayrıca genel an türünü araştırır.
+Kişisel anı, Diğer metni, selfie veya yaş web aramasına gönderilmez.
 Selfie yaş tahmini ve geçmiş yüzün üretilmesi için, anı ise hikâye ve görsel
 üretimi için Foundry’ye; anlatım seslendirme için Speech’e gönderilir.
-Hassas kişisel bilgi yazmayın. Web araması Azure veri işleme sınırlarının
-dışında işlenebilir; [Foundry web search veri işleme koşullarını](https://learn.microsoft.com/azure/foundry/openai/how-to/web-search)
-kurulumunuz için değerlendirin.
+Hassas kişisel bilgi yazmayın. WebIQ, Foundry'den ayrı bir arama servisidir;
+[WebIQ belgelerini](https://learn.microsoft.com/en-us/web-iq/reference/web-search)
+ve kurumunuzun bu servis için veri işleme koşullarını değerlendirin.
 
 Repo kökündeki `.env` dosyası varsa Demo anahtarı kapatılınca bağlantı formu otomatik
 doldurulur. `FOUNDRY_ENDPOINT`, `FOUNDRY_API_KEY`,
 `FOUNDRY_IMAGE_DEPLOYMENT`, `FOUNDRY_LAB_DEPLOYMENT` ve isteğe bağlı
-`FOUNDRY_SPEECH_VOICE` alanlarını
+`FOUNDRY_SPEECH_VOICE` ve `WEBIQ_API_KEY` alanlarını
 `AD=değer` biçiminde yazın; değerler tek veya çift tırnak içine alınabilir.
 Değişken genişletme ve satır sonu yorumları desteklenmez.
 Dosyadaki bağlantı alanları tarayıcıda kayıtlı değerlerin önüne geçer; açılışta
@@ -222,9 +358,14 @@ gider; paylaşım sunucusu gerekmez.
 
 Klasik kiosk bağlantı formunda veya Copilot **Ayarlar** menüsünde tek bir
 **Azure Blob container SAS URL’si** girin. GitHub Pages’te backend gerekmez.
-Alan boş bırakılabilir; SAS tarayıcı depolamasına veya repoya yazılmaz,
-yalnızca açık sayfanın belleğinde tutulur. Yenileme ve arayüzler arası
-navigasyonda yeniden girilir. Demo moduna geçiş SAS’ı temizler.
+Alan boş bırakılabilir; SAS diğer bağlantı ayarlarıyla birlikte aynı origin'in
+`mai-kiosk-foundry` yerel tarayıcı kaydında saklanır, repoya yazılmaz.
+Yenileme ve Kiosk / Chat / Cowork geçişlerinde yeniden doldurulur.
+Demo modu kayıtlı SAS'ı silmez ve paylaşımı etkinleştirmez; canlı bağlantı
+onaylandığında SAS'ın süresi ve yetkileri yeniden doğrulanır.
+Kaydı kaldırmak için SAS alanını boş bırakıp bağlantı ayarlarını kaydedin.
+SAS bu cihazdaki tarayıcı verilerine erişebilenlerce okunabilir;
+yalnızca güvendiğiniz cihazda kullanın.
 
 Private, yalnızca bu etkinliğe ayrılmış bir container kullanın. HTTPS ile
 sınırlı, başlangıcı geçmiş ve bitişi belirli bir **container SAS** üretin:
@@ -290,14 +431,18 @@ Blob kullanımı ücretsiz depolama garantisi sağlamaz.
 
 ## Canlı test örnekleri
 
-`samples.html` her senaryonun en son eklenen örneğini gösteren ortak galeridir:
-altı fotoğraf teması, Podcast ve Lezzet Laboratuvarı için birer kart.
+`samples.html` her örnek kimliğinin en güncel çıktısını gösteren ortak galeridir:
+altı fotoğraf teması, bir Podcast ve dört Lezzet Laboratuvarı kartı.
+Laboratuvarda Vişkora, Fıstamel, Çivana (çilek ve Hindistan cevizi bisküvisi)
+ve Portahve (portakal ve Türk kahveli çikolata barı) yer alır.
 Galeri ana sayfayla aynı renkleri kullanır; ortak renkler `kiosk-theme.css`
 dosyasında tanımlıdır. Deneyim ve arama filtreleri vardır; sürüm ayrımı yoktur.
 Yeni denemeleri farklı dosya adlarıyla `samples/` altında saklayıp
 `samples.js` içindeki `SAMPLE_ATTEMPTS` listesine ekleyin. Aynı senaryonun `id`
 değerini koruyun; en sona eklenen kayıt öncekinin yerini galeride alır.
-Yeni testlerde her senaryo için tek örnek yeterlidir; eski çıktıları yalnızca
+Farklı Laboratuvar tarifleri için `lab-wafer`, `lab-biscuit` ve `lab-chocolate`
+gibi ayrı kimlikler kullanın; `lab` kimliği Demo'nun Vişkora çıktısını korur.
+Eski çıktıları yalnızca
 yeni çıktılar doğrulandıktan ve silme izni alındıktan sonra temizleyin.
 Bu liste galeri ve Demo sonuçları için ortaktır. `path` uzantısız JPEG yoludur;
 `raw` ve `prompt` alanları farklı konumdaki ham PNG ve JSON dosyalarını gösterebilir.

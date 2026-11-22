@@ -15,6 +15,247 @@ const sourceBetween = (start, end) => {
 };
 
 const podcastSource = fs.readFileSync(path.join(__dirname, 'podcast.js'), 'utf8');
+function customInputHarness(overrides = {}) {
+  const context = vm.createContext({
+    API: { live: false }, AbortController, AbortSignal, thread: null, view: 'chat',
+    add: () => {}, render: () => {},
+    PRODUCTS: [], trLow: value => value.toLocaleLowerCase('tr-TR'),
+    byId: (items, id) => items.find(item => item.id === id),
+    ask: (owner, phase, text) => { owner.phase = phase; owner.reply = text; },
+    promptPodcastSelfie: owner => { owner.phase = 'podcast-reference'; },
+    prepareLab: owner => { owner.phase = 'approval'; },
+    ...overrides,
+  });
+  const app = fs.readFileSync(path.join(__dirname, 'copilot', 'app.js'), 'utf8');
+  const inputStart = app.indexOf('  function readInput(');
+  vm.runInContext(
+    podcastSource.slice(0, podcastSource.indexOf('function validatePodcastInput')) +
+    sourceBetween('const LAB_NOTE_LIMIT', 'function validateLabRevision') +
+    app.slice(app.indexOf('  const normalize ='), app.indexOf('  const add =')) +
+    app.slice(inputStart, app.indexOf('  const characters =', inputStart)) +
+    app.slice(app.indexOf('  async function parsePodcastDate('), app.indexOf('  async function estimatePodcastAge(')) +
+    '\nglobalThis.input = readInput;', context);
+  return context.input;
+}
+
+test('unmatched free text follows the existing custom date, moment and note paths', () => {
+  const read = customInputHarness();
+  const era = { phase: 'podcast-era', values: {} };
+  read(era, '23.04.2004');
+  assert.equal(era.phase, 'podcast-moment');
+  assert.equal(era.values.era.id, 'custom');
+  assert.equal(era.values.era.name, '23.04.2004');
+  const moment = { phase: 'podcast-moment', values: {} };
+  read(moment, 'Üniversite mezuniyetim');
+  assert.equal(moment.phase, 'podcast-reference');
+  assert.equal(moment.values.moment.id, 'other');
+  assert.equal(moment.values.moment.name, 'Üniversite mezuniyetim');
+  const note = { phase: 'lab-note-choice', values: {} };
+  read(note, 'Şeker miktarı azaltılsın.');
+  assert.equal(note.phase, 'approval');
+  assert.equal(note.values.rdNote, 'Şeker miktarı azaltılsın.');
+});
+
+test('explicit custom selections and recognized choices retain their existing paths', () => {
+  const read = customInputHarness();
+  const other = { phase: 'podcast-moment', values: {} };
+  read(other, 'Diğer…', { id: 'other', name: 'Diğer…' });
+  assert.equal(other.phase, 'podcast-other');
+  assert.match(other.reply, /nasıl adlandıralım/);
+  const known = { phase: 'podcast-moment', values: {} };
+  read(known, 'Okul çıkışı');
+  assert.equal(known.phase, 'podcast-reference');
+  assert.equal(known.values.moment.id, 'school');
+  const product = { phase: 'podcast-product', values: {} };
+  read(product, 'Bambaşka bir ürün');
+  assert.equal(product.phase, 'podcast-product', 'No custom path when there is no custom option');
+});
+
+test('automatically selected custom paths keep their input validation', () => {
+  const read = customInputHarness();
+  const date = { phase: 'podcast-era', values: {} };
+  read(date, '31.02.2004');
+  assert.equal(date.phase, 'podcast-date');
+  assert.match(date.reply, /geçerli/);
+  const moment = { phase: 'podcast-moment', values: {} };
+  read(moment, 'x'.repeat(81));
+  assert.equal(moment.phase, 'podcast-other');
+  assert.match(moment.reply, /80 karakter/);
+  const note = { phase: 'lab-note-choice', values: {} };
+  read(note, 'x'.repeat(501));
+  assert.equal(note.phase, 'lab-note');
+  assert.match(note.reply, /500 karakter/);
+});
+
+for (const mode of ['chat', 'cowork']) test(`${mode} typed nostalgic dates preserve decade, month and day precision`, () => {
+  const read = customInputHarness();
+  for (const phase of ['podcast-era', 'podcast-date']) {
+    for (const [text, expected] of [
+      ['90 lar', '01.01.1995'], ['90’lar', '01.01.1995'], ['70 ler', '01.01.1975'],
+      ['1970’ler', '01.01.1975'], ['2000ler', '01.01.2005'],
+      ['Mayıs 1995', '01.05.1995'], ['Şubat 2004', '01.02.2004'],
+      ['23 Nisan 2004', '23.04.2004'], ['29 Şubat 2004', '29.02.2004'],
+      ['2004-05', '01.05.2004'], ['05/2004', '01.05.2004'], ['2004', '2004'],
+    ]) {
+      const owner = { mode, phase, values: {} };
+      read(owner, text);
+      assert.equal(owner.phase, 'podcast-moment', text);
+      assert.equal(owner.values.era.name, expected, text);
+      assert.match(owner.reply, new RegExp(expected.replace(/\./g, '\\.')));
+    }
+  }
+  const selected = { mode, phase: 'podcast-era', values: {} };
+  read(selected, '90’lar', { id: '1990', name: '90’lar', start: 1990, end: 1999 });
+  assert.equal(selected.values.era.end, 1999, 'Explicit decade buttons retain their range');
+});
+
+test('natural date resolver uses the shared model only for unfamiliar expressions and validates its output', async () => {
+  const calls = [];
+  let result = { year: 1995, month: 5, day: 23 };
+  const { context } = podcastHarness({ Chat: { json: async (...args) => { calls.push(args); return result; } } });
+  const controller = new AbortController();
+  assert.equal((await context.resolvePodcastDate('90 lar')).name, '01.01.1995');
+  assert.equal(calls.length, 0);
+  assert.equal((await context.resolvePodcastDate('1995 senesinde mayısın yirmi üçü', controller.signal)).name, '23.05.1995');
+  assert.equal(calls[0][3].json_schema.name, 'podcast_date');
+  assert.equal(JSON.parse(calls[0][1]).text, '1995 senesinde mayısın yirmi üçü');
+  for (const invalid of [
+    { year: null, month: 5, day: 1 }, { year: 2004, month: 2, day: 31 },
+    { year: 2999, month: 1, day: 1 }, { year: 1943, month: 1, day: 1 },
+    { year: '1995', month: 5, day: 23 }, {},
+  ]) {
+    result = invalid;
+    await assert.rejects(context.resolvePodcastDate('özel doğal ifade'));
+  }
+  context.Chat.json = async () => { throw new Error('Metin modeli isteği başarısız (503)'); };
+  await assert.rejects(context.resolvePodcastDate('özel doğal ifade'), /503/);
+  controller.abort();
+  result = { year: 1995, month: 5, day: 23 };
+  context.Chat.json = async () => result;
+  await assert.rejects(context.resolvePodcastDate('özel doğal ifade', controller.signal), { name: 'AbortError' });
+  context.API.live = false;
+  await assert.rejects(context.resolvePodcastDate('Mayıs'), /yıl ile birlikte/);
+  assert.equal((await context.resolvePodcastDate('70 ler')).name, '01.01.1975');
+  for (const text of ['31 Nisan 2004', '29 Şubat 2003', '13/2004', '00.01.2004', 'x'.repeat(161)]) {
+    await assert.rejects(context.resolvePodcastDate(text));
+  }
+});
+
+test('chat date parsing locks the pending step, advances once, and recovers visibly from errors', async () => {
+  let resolve;
+  const pending = new Promise(done => { resolve = done; });
+  const read = customInputHarness({ API: { live: true }, Chat: { json: () => pending } });
+  const owner = { mode: 'cowork', phase: 'podcast-era', values: {} };
+  const task = read(owner, '1995 senesinde mayısın yirmi üçü');
+  assert.equal(owner.phase, 'podcast-date-loading');
+  assert.equal(owner.job.status, 'running');
+  resolve({ year: 1995, month: 5, day: 23 });
+  await task;
+  assert.equal(owner.values.era.name, '23.05.1995');
+  assert.equal(owner.phase, 'podcast-moment');
+  assert.equal(owner.job, null);
+  const fail = customInputHarness({ API: { live: true }, Chat: { json: async () => { throw new Error('Model unavailable'); } } });
+  const failed = { phase: 'podcast-date', values: {} };
+  await fail(failed, 'özel doğal ifade');
+  assert.equal(failed.phase, 'podcast-date');
+  assert.match(failed.reply, /Model unavailable/);
+  assert.equal(failed.values.era, undefined);
+  assert.equal(failed.job, null);
+  fail(failed, '23 Nisan 2004');
+  assert.equal(failed.phase, 'podcast-moment');
+});
+
+function coworkReplyHarness(t, mode = 'cowork') {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const owner = { mode, messages: [] }, rendered = [], updates = [];
+  const context = vm.createContext({
+    setTimeout, clearTimeout, threads: [owner], thread: owner, view: 'chat',
+    render: () => rendered.push(context.thread),
+    updateReplyText: (_, entry) => updates.push(entry.displayText),
+  });
+  const source = fs.readFileSync(path.join(__dirname, 'copilot', 'app.js'), 'utf8');
+  vm.runInContext(source.slice(source.indexOf('  const add ='), source.indexOf('  function renderCards()')) +
+    '\nglobalThis.replies = { say, finishReplies, replying, turnStart };', context);
+  return { owner, rendered, updates, context, replies: context.replies };
+}
+
+for (const mode of ['chat', 'cowork']) test(`${mode} replies wait 1.5 seconds each and are revealed in order`, t => {
+  const { owner, rendered, replies } = coworkReplyHarness(t, mode);
+  replies.say(owner, 'First reply');
+  replies.say(owner, 'Second reply');
+  t.mock.timers.tick(1499);
+  assert.equal(owner.messages.every(entry => entry.pending), true);
+  assert.equal(rendered.length, 0);
+  t.mock.timers.tick(1);
+  assert.deepEqual(owner.messages.map(entry => entry.pending), [false, true]);
+  assert.equal(replies.replying(owner), true);
+  t.mock.timers.tick(1499);
+  assert.equal(owner.messages[1].pending, true);
+  t.mock.timers.tick(1);
+  assert.equal(replies.replying(owner), false);
+  assert.equal(rendered.length, 2);
+});
+
+test('scroll anchors stay on the latest user input while agent replies arrive', t => {
+  const { owner, replies } = coworkReplyHarness(t);
+  replies.say(owner, 'First reply');
+  owner.messages.push({ type: 'job' });
+  replies.say(owner, 'Second reply');
+  assert.equal(replies.turnStart(owner), owner.messages[0], 'Without user input, retain the first reply');
+  owner.messages.push({ type: 'user', text: 'Continue' });
+  assert.equal(replies.turnStart(owner), owner.messages[3], 'Anchor the user input before any reply arrives');
+  replies.say(owner, 'Next reply');
+  replies.say(owner, 'Next continuation');
+  assert.equal(replies.turnStart(owner), owner.messages[3]);
+  owner.messages.push({ type: 'user', text: 'Another input' });
+  assert.equal(replies.turnStart(owner), owner.messages[6]);
+  replies.finishReplies(owner);
+});
+
+test('reply text streams in Unicode-safe chunks without restarting when modes change', t => {
+  const { owner, rendered, updates, replies } = coworkReplyHarness(t);
+  const text = 'ş😀'.repeat(35);
+  replies.say(owner, text);
+  t.mock.timers.tick(1499);
+  assert.equal(owner.messages[0].displayText, undefined);
+  t.mock.timers.tick(1);
+  assert.equal(owner.messages[0].displayText, Array.from(text).slice(0, 25).join(''));
+  assert.equal(replies.replying(owner), true);
+  owner.mode = 'chat';
+  t.mock.timers.tick(80);
+  assert.equal(owner.messages[0].displayText, Array.from(text).slice(0, 50).join(''));
+  assert.equal(updates.length, 1);
+  t.mock.timers.tick(80);
+  assert.equal(replies.replying(owner), false);
+  assert.equal(owner.messages[0].text, text);
+  assert.equal(rendered.length, 2, 'Intermediate chunks do not rebuild the full transcript');
+  replies.say(owner, text);
+  t.mock.timers.tick(1500);
+  replies.finishReplies(owner);
+  assert.equal(replies.replying(owner), false);
+  assert.equal(owner.messages[1].displayText, undefined);
+  const count = rendered.length;
+  t.mock.timers.tick(5000);
+  assert.equal(rendered.length, count);
+});
+
+test('delayed replies update their own thread without rendering another conversation', t => {
+  const { owner, rendered, context, replies } = coworkReplyHarness(t);
+  replies.say(owner, 'Background reply');
+  const foreground = { mode: 'cowork', messages: [] };
+  context.threads.push(foreground);
+  context.thread = foreground;
+  replies.say(foreground, 'Foreground reply');
+  t.mock.timers.tick(1500);
+  assert.equal(owner.messages[0].pending, false);
+  assert.deepEqual(rendered, [foreground]);
+  replies.say(foreground, 'Discarded reply');
+  replies.finishReplies(foreground);
+  context.threads.length = 0;
+  t.mock.timers.tick(5000);
+  assert.equal(rendered.length, 1);
+});
+
 const podcastVoice = 'en-US-Harper:MAI-Voice-2-Flash';
 test('decade music validates selections and files, fades, resamples, ducks and clips the original bed', async () => {
   let response = new Response(fs.readFileSync(path.join(__dirname, 'assets', 'podcast-music', '2000.wav')));
@@ -48,24 +289,10 @@ test('decade music validates selections and files, fades, resamples, ducks and c
   music.mix(loud, { sampleRate: 100, getChannelData: () => new Float32Array([1]) });
   assert.ok(loud.getChannelData().every(value => Number.isFinite(value) && value <= 1 && value >= -1));
 });
-function groundedPodcastResponse() {
-  const lines = ['2003–2004 öğretim yılı 15 Haziran 2004 tarihinde sona erdi.', '2004–2005 öğretim yılı 13 Eylül 2004 tarihinde başladı.'];
-  const text = lines.map((line, index) => `- ${line} [${index + 1}]`).join('\n');
-  return { status: 'completed', output: [
-    { type: 'web_search_call', status: 'completed' },
-    { type: 'message', content: [{ type: 'output_text', text, annotations: lines.map((_, index) => ({
-      type: 'url_citation', start_index: text.indexOf(`[${index + 1}]`), end_index: text.indexOf(`[${index + 1}]`) + 3,
-      url: 'https://example.test/2004-school-calendar', title: 'Test archive',
-    })) }] },
-  ] };
-}
-function verifiedPodcastResponse() {
-  return { status: 'completed', output: [
-    { type: 'web_search_call', status: 'completed', action: { sources: [{ url: 'https://example.test/2004-school-calendar' }] } },
-    { type: 'message', content: [{ type: 'output_text', text: JSON.stringify({ verified: true, facts: [
-      { year: 2004, text: '2003–2004 öğretim yılı 15 Haziran 2004 tarihinde sona erdi.', url: 'https://example.test/2004-school-calendar', title: 'Test archive', evidence: 'Öğretim yılı 15 Haziran 2004 tarihinde sona erdi.' },
-      { year: 2004, text: '2004–2005 öğretim yılı 13 Eylül 2004 tarihinde başladı.', url: 'https://example.test/2004-school-calendar', title: 'Test archive', evidence: 'Öğretim yılı 13 Eylül 2004 tarihinde başladı.' },
-    ] }) }] },
+function webIQResponse() {
+  return { webResults: [
+    { title: 'Test archive', url: 'https://example.test/2004-school-calendar', content: '2003–2004 öğretim yılı 15 Haziran 2004 tarihinde sona erdi.', isAdult: false },
+    { title: 'Test archive', url: 'https://example.test/2004-school-calendar', content: '2004–2005 öğretim yılı 13 Eylül 2004 tarihinde başladı.', isAdult: false },
   ] };
 }
 function podcastHarness(overrides = {}) {
@@ -73,7 +300,7 @@ function podcastHarness(overrides = {}) {
   const input = { product: { id: 'gofret' }, era: { id: 'custom', name: '2004' }, moment: { id: 'school' }, memory: 'Arkadaşlarımla gofretimi paylaşırdım.', photo: 'test-selfie', currentAge: 80 };
   const sample = JSON.parse(fs.readFileSync(path.join(__dirname, 'samples', 'podcast', 'radio-memory.json'), 'utf8'));
   const mp3 = fs.readFileSync(path.join(__dirname, 'samples', 'podcast', 'radio-memory.mp3'));
-  const config = { ai: { endpoint: 'https://test.services.ai.azure.com', apiKey: 'test-placeholder', labDeployment: 'gpt-test', speechVoice: podcastVoice } };
+  const config = { ai: { endpoint: 'https://test.services.ai.azure.com', apiKey: 'test-placeholder', webIQApiKey: 'webiq-test-placeholder', labDeployment: 'gpt-test', speechVoice: podcastVoice } };
   const context = vm.createContext({
     URL: class extends URL {}, AbortController, AbortSignal, Blob, Uint8Array, atob,
     CONFIG: config, API: { live: true }, SCREENS: {}, STATE: { podcast: {} },
@@ -87,7 +314,10 @@ function podcastHarness(overrides = {}) {
     PRODUCTS: [{ id: 'gofret', name: 'Çikolatalı Gofret', ingredientEn: 'chocolate' }],
     byId: (items, id) => items.find(item => item.id === id),
     icon: () => '', keyboardHTML: () => '',
-    FoundrySettings: { voice: value => { if (!/^[a-z0-9:._-]{1,120}$/i.test(value)) throw new Error('Invalid voice'); return value; } },
+    FoundrySettings: {
+      voice: value => { if (!/^[a-z0-9:._-]{1,120}$/i.test(value)) throw new Error('Invalid voice'); return value; },
+      webIQKey: value => { if (value?.includes('*')) throw new Error('Masked WebIQ key'); return value || ''; },
+    },
     esc: value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]),
     FileReader: class {
       readAsDataURL(blob) {
@@ -95,26 +325,37 @@ function podcastHarness(overrides = {}) {
       }
     },
     MAI: {
-      request: async (...args) => { calls.push(['research', ...args]); return { ok: true, json: async () => args[1].text ? verifiedPodcastResponse() : groundedPodcastResponse() }; },
+      request: async () => assert.fail('WebIQ must not use Foundry responses'),
       generate: async (...args) => { calls.push(['image', ...args]); return 'generated-image'; },
       edit: async (...args) => { calls.push(['edit', ...args]); return 'generated-image'; },
     },
     Chat: { json: async (...args) => {
       if (args[3]?.json_schema?.name === 'podcast_age') { calls.push(['age', ...args]); return { hasSingleFace: true, estimatedAge: 80 }; }
-      calls.push(['story', ...args]); return { title: 'Paylaşılan mutluluk', contextLead: 'serin bir okul çıkışında gazeteler usulca hışırdıyor',
-        memorySentence: 'Kahramanımız okul kapısında en yakın arkadaşlarını beklerken çantasından gofretini çıkarmış, çıtır katmanları özenle bölerek herkese küçük bir pay uzatmış ve birlikte geçirilen bu sıradan molanın sıcaklığını yıllar sonra bile hatırlamıştı.',
-        endingSentence: 'Arkadaşlarıyla aynı okul kapısından ağır ağır uzaklaşırken avucunda kalan kırıntılara gülümseyen kahramanımız, paylaşmanın küçücük bir gofreti nasıl kocaman bir hatıraya dönüştürdüğünü o an anlamıştı.',
+      if (args[3]?.json_schema?.name === 'period_headlines') {
+        calls.push(['headlines', ...args]);
+        return { facts: JSON.parse(args[1]).sources.slice(0, 2).map((source, sourceIndex) => ({ text: source.content.slice(0, 240), sourceIndex })) };
+      }
+      calls.push(['story', ...args]); return { title: 'Paylaşılan mutluluk', advertisementHeadline: 'Çikolatalı Gofret ile paylaşmanın tadı', contextLead: 'güneşli bir yaz gününde',
+        memorySentence: 'O gün kahramanımız okul çıkışında gofretini arkadaşlarıyla bölüşmüş, eve giden yolu gülüşerek biraz uzatmıştı.',
+        endingSentence: 'Yıllar sonra o günü hatırladığında, aklında çikolatanın tadı ve birlikte paylaşılan küçük mutlulukların sıcaklığı kalmıştı.',
         memoryVisual: 'Schoolyard scene with the younger selfie person.', endingVisual: 'Same person, clothes and schoolyard, continuing the scene.' };
     } },
     createCameraScreen: () => ({}), resizeDataUrl: async () => 'prepared-selfie', dataUrlToBlob: data => new Blob([data], { type: 'image/jpeg' }), loadImage: async () => ({ width: 896, height: 1120 }),
     composePhoto: async image => { calls.push(['compose', image]); return 'composed-image'; },
-    fetch: async (...args) => { calls.push(['speech', ...args]); return new Response(mp3, { headers: { 'content-type': 'audio/mpeg' } }); },
+    fetch: async (...args) => {
+      if (args[0] === 'https://api.microsoft.ai/v3/search/web') {
+        calls.push(['research', ...args]); args[1].signal?.throwIfAborted();
+        return { ok: true, json: async () => webIQResponse() };
+      }
+      calls.push(['speech', ...args]); return new Response(mp3, { headers: { 'content-type': 'audio/mpeg' } });
+    },
     sampleFor: () => ({ prompt: 'sample.json', video: 'sample.mp4', poster: 'radio-poster.png' }),
     SavedSamples: { response: async (_path, signal) => { signal?.throwIfAborted(); return { json: async () => sample, blob: async () => new Blob([Buffer.alloc(128)], { type: _path.endsWith('.jpg') ? 'image/jpeg' : 'video/mp4' }) }; }, image: async () => 'saved-image' },
     ...overrides,
   });
   vm.runInContext(podcastSource, context);
   context.podcastComposeFrame = async raw => { calls.push(['compose', raw]); return 'composed-image'; };
+  context.podcastProductReference = async product => { calls.push(['product-reference', product]); return new Blob(['selected-product'], { type: 'image/png' }); };
   return { context, calls, stages, sessions, input, config, sample, mp3 };
 }
 
@@ -139,7 +380,7 @@ test('both new nostalgia products enter the shared story and illustration genera
     await context.API.podcast.generate({ ...input, product: { id } });
     const story = calls.find(call => call[0] === 'story');
     assert.equal(JSON.parse(story[2]).product.name, name);
-    assert.ok(calls.find(call => call[0] === 'image')[1].includes(name));
+    assert.ok(calls.find(call => call[0] === 'edit')[1].includes(name));
     assert.match(context.SCREENS['podcast.product'].render(), new RegExp(`data-product="${id}"`));
   }
 });
@@ -197,57 +438,84 @@ test('a late selfie estimate cannot repopulate a closed or retaken kiosk screen'
   assert.equal(context.STATE.podcast.photo, 'new-photo');
 });
 
-test('radio theater requires three long sentences, preserves the exact date and rejects short or multi-sentence copy', async () => {
+test('radio theater separates newspaper from two brief memory sentences without narrating the news', async () => {
   const { context, input } = podcastHarness();
   const copy = await context.Chat.json('', '');
   const facts = [{ text: '2004 yılında bir kültür etkinliği düzenlendi.' }, { text: '2004 yılında bir bilim etkinliği duyuruldu.' }];
   const values = context.validatePodcastInput({ ...input, era: { id: 'custom', name: '23.04.2004' } });
-  const theater = context.podcastTheater(copy, facts, values);
+  const theater = context.podcastTheater(copy, values);
   assert.equal(theater.scenes.length, 3);
   assert.match(theater.scenes[0].text, /23 Nisan 2004/);
   assert.equal(theater.narration, theater.scenes.map(scene => scene.text).join(' '));
-  assert.throws(() => context.podcastTheater({ ...copy, endingSentence: 'Kısa bir anıydı.' }, facts, values), /20 kelimelik/);
-  assert.throws(() => context.podcastTheater({ ...copy, memorySentence: copy.memorySentence + ' Sonra eve gitti.' }, facts, values), /tek uzun cümle/);
+  assert.match(theater.scenes[0].text, /güneşli bir yaz gününde ülke gündemi oldukça hareketliydi/);
+  for (const fact of facts) assert.ok(!theater.narration.includes(fact.text));
+  assert.match(theater.scenes[1].text, /^O gün kahramanımız/);
+  assert.throws(() => context.podcastTheater({ ...copy, contextLead: 'yaz' }, values), /3–6 kelimelik/);
+  assert.equal(context.podcastTheater({ ...copy, endingSentence: 'Kısa bir anıydı.' }, values).scenes[2].text, 'Kısa bir anıydı.');
+  assert.throws(() => context.podcastTheater({ ...copy, memorySentence: copy.memorySentence + ' Sonra eve gitti.' }, values), /tek cümle/);
+  const longerEnding = Array(23).fill('anı').join(' ');
+  assert.equal(context.podcastTheater({ ...copy, endingSentence: longerEnding }, values).scenes[2].text, longerEnding + '.');
 });
 
-test('verified agenda dates must be real calendar dates and not later than an exact memory date', () => {
+test('podcast accepts real WebIQ sources and maps headlines only to returned safe URLs', () => {
   const { context } = podcastHarness();
-  const response = verifiedPodcastResponse(), record = JSON.parse(response.output[1].content[0].text);
-  const verify = () => { response.output[1].content[0].text = JSON.stringify(record); return context.podcastVerifiedFacts(response, { start: 2004, end: 2004 }, '2004-02-29'); };
-  record.facts[0].date = '2004-01-23'; record.facts[1].date = '2004-02-29';
-  assert.equal(verify().length, 2);
-  record.facts[1].date = '2004-02-30'; assert.throws(verify, /tarihi geçersiz/);
-  record.facts[1].date = '2004-03-01'; assert.throws(verify, /anının tarihinden önce/);
-  record.facts[1].date = null; assert.throws(verify, /anının tarihinden önce/);
-});
-
-test('podcast requires completed research, two cited facts and safe, bounded citations', () => {
-  const { context } = podcastHarness();
-  assert.equal(context.podcastFacts(groundedPodcastResponse()).length, 2);
-  for (const broken of [{ status: 'incomplete' }, { status: 'completed', output: {} }, { status: 'completed', output: [] }]) assert.throws(() => context.podcastFacts(broken));
-  for (const mutation of [
-    part => { part.annotations.length = 1; },
-    part => { part.annotations[0].url = 'javascript:alert(1)'; },
-    part => { part.annotations[0].url = 'https://user:password@example.test'; },
-    part => { part.annotations[0].start_index = -1; },
-    part => { part.annotations[0].end_index = part.text.length + 1; },
-  ]) {
-    const response = groundedPodcastResponse();
-    mutation(response.output[1].content[0]);
-    assert.throws(() => context.podcastFacts(response));
+  const sources = context.podcastWebIQSources(webIQResponse());
+  assert.equal(sources.length, 2);
+  assert.equal(context.podcastWebIQFacts({ facts: [{ text: 'Kısa haber.', sourceIndex: 0 }] }, sources)[0].url, sources[0].url);
+  for (const broken of [{}, { webResults: [] }, { webResults: {} }, { webResults: [{ url: 'javascript:alert(1)', content: 'text' }] }, { webResults: [{ url: 'https://user:password@example.test', content: 'text' }] }, { webResults: [{ url: 'https://example.test' }] }]) {
+    assert.throws(() => context.podcastWebIQSources(broken));
   }
+  for (const sourceIndex of [-1, 2, '0']) assert.throws(() => context.podcastWebIQFacts({ facts: [{ text: 'Haber', sourceIndex }] }, sources));
+  assert.throws(() => context.podcastWebIQFacts({ facts: [] }, sources));
+  const adult = webIQResponse(); adult.webResults[0].isAdult = true;
+  assert.equal(context.podcastWebIQSources(adult).length, 1);
 });
 
-test('podcast verifies public sources before fiction, image and same-endpoint Speech with a snapshot voice', async () => {
+test('WebIQ uses the requested API parameters and handles missing keys, service errors and cancellation without fallback', async () => {
+  const { context, config, calls } = podcastHarness();
+  const era = context.podcastDate('04.04.1992');
+  const result = await context.podcastWebIQSearch(era);
+  assert.equal(result.query, '4 Nisan 1992 gazete manşetleri');
+  const request = calls[0][2];
+  assert.equal(request.method, 'POST');
+  assert.equal(request.headers['x-apikey'], config.ai.webIQApiKey);
+  assert.equal(request.headers['content-type'], 'application/json');
+  assert.equal(request.headers['api-key'], undefined);
+  assert.deepEqual(JSON.parse(request.body), { query: result.query, maxResults: 10, language: 'tr', region: 'TR', safeSearch: 'off' });
+  assert.equal(request.credentials, 'omit');
+  assert.equal(request.redirect, 'error');
+  config.ai.webIQApiKey = '';
+  await assert.rejects(context.podcastWebIQSearch(era), /WebIQ API anahtarını kaydet/);
+  await assert.rejects(context.API.podcast.generate(podcastHarness().input), /WebIQ API anahtarını kaydet/);
+  assert.equal(calls.length, 1);
+  config.ai.webIQApiKey = 'masked***key';
+  await assert.rejects(context.podcastWebIQSearch(era), /Masked/);
+  assert.equal(calls.length, 1);
+  config.ai.webIQApiKey = 'webiq-test-placeholder';
+  for (const status of [401, 403, 429, 503]) {
+    context.fetch = async () => ({ ok: false, status });
+    await assert.rejects(context.podcastWebIQSearch(era), new RegExp(`HTTP ${status}`));
+  }
+  context.fetch = async () => { throw new Error('Network failed'); };
+  await assert.rejects(context.podcastWebIQSearch(era), /WebIQ bağlantısı/);
+  context.fetch = async () => ({ ok: true, json: async () => { throw new SyntaxError('Bad JSON'); } });
+  await assert.rejects(context.podcastWebIQSearch(era), /WebIQ geçerli bir JSON/);
+  const controller = new AbortController(); controller.abort();
+  context.fetch = () => assert.fail('No WebIQ request after cancellation');
+  await assert.rejects(context.podcastWebIQSearch(era, controller.signal), { name: 'AbortError' });
+});
+
+test('podcast uses sourced headlines directly before fiction, image and same-endpoint Speech with a snapshot voice', async () => {
   const { context, input, calls, config } = podcastHarness();
   const stages = [];
   const result = await context.API.podcast.generate(input, { onStage: index => { stages.push(index); if (index === 2) config.ai.speechVoice = 'en-US-AvaMultilingualNeural'; } });
   assert.deepEqual(stages, [0, 1, 2, 3, 4, 5, 6]);
-  assert.deepEqual(calls.map(call => call[0]), ['research', 'research', 'story', 'image', 'compose', 'edit', 'compose', 'edit', 'compose', 'speech', 'speech', 'speech', 'video']);
+  assert.deepEqual(calls.map(call => call[0]), ['research', 'headlines', 'story', 'product-reference', 'edit', 'edit', 'compose', 'edit', 'compose', 'speech', 'speech', 'speech', 'video']);
   for (const call of calls.filter(call => call[0] === 'research')) {
-    assert.equal(call[1], 'responses');
-    assert.equal(call[2].store, false);
-    assert.equal(call[2].tools[0].type, 'web_search');
+    assert.equal(call[1], 'https://api.microsoft.ai/v3/search/web');
+    assert.equal(call[2].headers['x-apikey'], config.ai.webIQApiKey);
+    assert.ok(!Object.values(call[2].headers).includes(config.ai.apiKey));
+    assert.deepEqual(JSON.parse(call[2].body), { query: '2004 gazete manşetleri', maxResults: 10, language: 'tr', region: 'TR', safeSearch: 'off' });
     assert.ok(!JSON.stringify(call[2]).includes(input.memory), 'Personal memory must not be sent to public web research');
   }
   const speech = calls.find(call => call[0] === 'speech');
@@ -263,40 +531,221 @@ test('podcast verifies public sources before fiction, image and same-endpoint Sp
   assert.equal(result.narration, result.scenes.map(scene => scene.text).join(' '));
   const edits = calls.filter(call => call[0] === 'edit');
   assert.equal(edits[0][2].length, 1);
-  assert.equal(edits[1][2].length, 2);
-  assert.equal(await edits[1][2][1].text(), 'generated-image');
+  assert.equal(await edits[0][2][0].text(), 'selected-product');
+  assert.equal(result.scenes[0].image, 'generated-image', 'Newspaper must not receive app-drawn typography or composition');
+  for (const edit of edits.slice(1)) {
+    assert.equal(edit[2].length, 2);
+    assert.equal(await edit[2][0].text(), 'prepared-selfie');
+    assert.equal(await edit[2][1].text(), 'selected-product');
+    assert.match(edit[1], /Reference 2 is the selected snack image/);
+  }
+  const productName = context.validatePodcastInput(input).product.name;
+  for (const edit of edits) assert.ok(!edit[1].includes(productName));
+  assert.match(edits[0][1], /Anılar Gazetesi/);
+  assert.ok(edits[0][1].includes(result.advertisementHeadline.replace(productName, 'atıştırmalık')));
+  for (const fact of result.facts) {
+    assert.ok(edits[0][1].includes(fact.text));
+    assert.ok(!result.narration.includes(fact.text));
+  }
   assert.equal(result.video.type, 'video/mp4');
   assert.equal(calls.filter(call => call[0] === 'speech').every(call => call[2].body.includes(podcastVoice)), true);
 });
 
-test('podcast stops before fiction and images when research or source verification fails', async () => {
-  for (const failureAt of [0, 1]) {
+test('podcast reports step outputs as they are produced without exposing private inputs', async () => {
+  const { context, input, config } = podcastHarness(), outputs = [];
+  await context.API.podcast.generate(input, {
+    onOutput: (index, data) => { outputs[index] = { ...outputs[index], ...data }; },
+    onStage: index => {
+      if (index === 1) assert.match(outputs[0].text, /Test archive/);
+      if (index === 2) assert.match(outputs[1].text, /O gün kahramanımız/);
+      if (index === 3) assert.equal(outputs[2].image, 'generated-image');
+    },
+  });
+  assert.equal(JSON.parse(outputs[1].text).scenes.length, 3);
+  assert.match(outputs[2].text, /Anılar Gazetesi/);
+  assert.equal(outputs[3].image, 'composed-image');
+  assert.equal(outputs[4].image, 'composed-image');
+  assert.match(outputs[5].text, /Voice:/);
+  assert.match(outputs[6].text, /video\/mp4/);
+  const displayed = JSON.stringify(outputs);
+  for (const privateValue of [input.photo, config.ai.apiKey, config.ai.webIQApiKey, 'currentAge', 'birthYear']) assert.ok(!displayed.includes(privateValue));
+});
+
+test('failed podcast images retain the story, prior image and failed-step prompt without retries', async () => {
+  const { context, input } = podcastHarness(), outputs = [];
+  let edits = 0;
+  context.MAI.edit = async () => {
+    if (++edits === 2) throw new Error('Image service rejected the scene');
+    return 'first-generated-image';
+  };
+  await assert.rejects(context.API.podcast.generate(input, {
+    onOutput: (index, data) => { outputs[index] = { ...outputs[index], ...data }; },
+  }), /rejected/);
+  assert.equal(edits, 2);
+  assert.match(outputs[1].text, /O gün kahramanımız/);
+  assert.equal(outputs[2].image, 'first-generated-image');
+  assert.match(outputs[3].text, /Create the personal memory/);
+  assert.equal(outputs[3].image, undefined);
+  assert.equal(outputs[4], undefined);
+});
+
+test('step details escape outputs and remember their expansion independently of the parent job', () => {
+  const { context } = podcastHarness();
+  const source = fs.readFileSync(path.join(__dirname, 'copilot', 'app.js'), 'utf8');
+  context.svg = () => '<svg></svg>';
+  vm.runInContext(source.slice(source.indexOf('  function timeline('), source.indexOf('  const jobLabel')) +
+    source.slice(source.indexOf('  function rememberJobExpansion('), source.indexOf("  el('messages').addEventListener('toggle'")) +
+    '\nglobalThis.jobUI = { timeline, rememberJobExpansion };', context);
+  const job = { steps: ['Write the radio story', 'Create the newspaper frame'], step: 1, status: 'running', outputs: [{ text: '<script>unsafe</script>' }, { text: 'Prompt', image: 'output.png' }] };
+  context.thread = { messages: [{ job }] };
+  const html = context.jobUI.timeline(job, 0);
+  assert.ok(html.includes('&lt;script&gt;unsafe&lt;/script&gt;'));
+  assert.ok(!html.includes('<script>'));
+  assert.ok(html.includes('data-step="1"'));
+  assert.ok(html.includes('src="output.png"'));
+  const node = { isConnected: true, open: true, dataset: { jobIndex: '0', step: '1' }, matches: selector => selector === 'details[data-step]' };
+  context.jobUI.rememberJobExpansion({ target: node });
+  assert.equal(job.stepExpanded[1], true);
+  assert.equal(job.expanded, undefined);
+  assert.match(context.jobUI.timeline(job, 0), /data-step="1" open/);
+  node.isConnected = false; node.open = false;
+  context.jobUI.rememberJobExpansion({ target: node });
+  assert.equal(job.stepExpanded[1], true, 'Detached re-render events must not collapse the step');
+  node.isConnected = true; node.open = false;
+  context.jobUI.rememberJobExpansion({ type: 'click', target: { closest: () => ({ parentElement: node }) } });
+  assert.equal(job.stepExpanded[1], true, 'Record the native click before a progress update can replace the node');
+});
+
+test('podcast stops before fiction and images when WebIQ fails or returns no sources', async () => {
+  for (const response of [{}, { webResults: [] }]) {
     const harness = podcastHarness();
-    let count = 0;
-    harness.context.MAI.request = async (_path, body) => ({ ok: true, json: async () => count++ === failureAt ? { status: 'completed', output: [] } : body.text ? verifiedPodcastResponse() : groundedPodcastResponse() });
-    await assert.rejects(harness.context.API.podcast.generate(harness.input), /WebIQ/);
+    harness.context.fetch = async () => ({ ok: true, json: async () => response });
+    await assert.rejects(harness.context.API.podcast.generate(harness.input), /WebIQ|kaynaklı/);
     assert.equal(harness.calls.length, 0);
   }
   const harness = podcastHarness();
-  harness.context.Chat.json = async () => ({ title: 'a'.repeat(81), scene: 'Anı', visualDirection: 'Art' });
+  harness.context.Chat.json = async (...args) => args[3]?.json_schema?.name === 'period_headlines'
+    ? { facts: [{ text: 'Haber', sourceIndex: 0 }] } : { title: 'a'.repeat(81), scene: 'Anı', visualDirection: 'Art' };
   await assert.rejects(harness.context.API.podcast.generate(harness.input), /Başlık/);
-  assert.deepEqual(harness.calls.map(call => call[0]), ['research', 'research']);
+  assert.deepEqual(harness.calls.map(call => call[0]), ['research']);
 });
 
-test('podcast rejects unverified findings, out-of-period dates and URLs absent from actual search sources', () => {
-  const { context } = podcastHarness();
-  for (const mutation of [
-    record => { record.verified = false; },
-    record => { record.facts[0].year = 1927; },
-    record => { record.facts[0].url = 'https://invented.test/archive'; },
-    record => { record.facts[0].evidence = ''; },
-  ]) {
-    const response = verifiedPodcastResponse(), part = response.output[1].content[0];
-    const record = JSON.parse(part.text);
-    mutation(record);
-    part.text = JSON.stringify(record);
-    assert.throws(() => context.podcastVerifiedFacts(response, { start: 2004, end: 2004 }));
+test('newspaper prompt preserves the chosen date and supplies only two news headlines and the product advertisement', () => {
+  const { context, input } = podcastHarness();
+  const values = context.validatePodcastInput({ ...input, era: { id: 'custom', name: '23.04.2004' } });
+  const facts = [{ text: 'İlk doğrulanmış haber.' }, { text: 'İkinci doğrulanmış haber.' }, { text: 'Üçüncü haber gönderilmemeli.' }];
+  const prompt = context.podcastFramePrompt(0, { visualDirection: 'A period newspaper.' }, values, facts, 'Paylaşılan gofret, büyüyen mutluluk');
+  assert.ok(prompt.includes('"23.04.2004"'));
+  assert.ok(prompt.includes('"Anılar Gazetesi"'));
+  assert.ok(prompt.includes(facts[0].text) && prompt.includes(facts[1].text));
+  assert.ok(!prompt.includes(facts[2].text));
+  assert.ok(prompt.includes('Paylaşılan gofret, büyüyen mutluluk'));
+  assert.ok(!prompt.includes('added separately') && !prompt.includes('empty headline'));
+  assert.match(prompt, /COMPLETE finished fictional newspaper/);
+});
+
+test('radio theater image prompts remove product names from generated copy and use snack references', () => {
+  const { context, input } = podcastHarness();
+  const values = context.validatePodcastInput(input);
+  const name = values.product.name;
+  const entry = { text: `O gün kahramanımız ${name} paylaştı.`, visualDirection: `Friends sharing ${name}.` };
+  for (const index of [0, 1, 2]) {
+    const prompt = context.podcastFramePrompt(index, entry, { ...values, memoryVisual: `Holding ${name}.` }, [], `${name} ile mutluluk`);
+    assert.ok(!prompt.includes(name));
+    assert.ok(prompt.includes('atıştırmalık'));
+    assert.match(prompt, index ? /Reference 2 is the selected snack image/ : /Reference 1 is the selected snack image/);
+    assert.ok(!prompt.includes(values.product.ingredientEn));
   }
+});
+
+test('missing advertisement or unavailable product reference stops before image generation and disposes recording', async () => {
+  const missingCopy = podcastHarness();
+  const copy = await missingCopy.context.Chat.json('', '');
+  delete copy.advertisementHeadline;
+  missingCopy.calls.length = 0;
+  missingCopy.context.Chat.json = async (...args) => args[3]?.json_schema?.name === 'period_headlines' ? { facts: [{ text: 'Haber', sourceIndex: 0 }] } : copy;
+  await assert.rejects(missingCopy.context.API.podcast.generate(missingCopy.input), /Reklam manşeti/);
+  assert.equal(missingCopy.calls.some(call => call[0] === 'edit'), false);
+  assert.equal(missingCopy.sessions.every(session => session.disposed), true);
+  const missingImage = podcastHarness();
+  missingImage.context.podcastProductReference = async () => { throw new Error('Ürün görseli yüklenemedi'); };
+  await assert.rejects(missingImage.context.API.podcast.generate(missingImage.input), /Ürün görseli/);
+  assert.equal(missingImage.calls.some(call => call[0] === 'edit'), false);
+  assert.equal(missingImage.sessions.every(session => session.disposed), true);
+});
+
+test('podcast photos have visible pan and alternating zoom without jitter, uncovered edges or reduced-motion movement', () => {
+  let reduced = false, rectangle;
+  const video = vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'podcast-video.js'), 'utf8') + '\nPodcastVideo;', {
+    window: { matchMedia: () => ({ matches: reduced }) },
+  });
+  const canvas = { width: 720, height: 900, getContext: () => ({
+    save() {}, restore() {}, drawImage(_picture, ...rect) { rectangle = rect; },
+  }) };
+  for (const index of [0, 1, 2]) {
+    const positions = [];
+    for (let frame = 0; frame <= 9 * 24; frame++) {
+      video.drawFrame(canvas, {}, frame / 24, undefined, 9, index);
+      positions.push(rectangle);
+      const [x, y, width, height] = rectangle;
+      assert.ok(x <= 0 && y <= 0 && x + width >= 720 && y + height >= 900);
+      if (frame) assert.ok(rectangle.every((value, axis) => Math.abs(value - positions[frame - 1][axis]) < 1), 'Adjacent frames must move smoothly, not shake');
+    }
+    const widths = positions.map(rect => rect[2]);
+    assert.ok(index % 2 ? widths.at(-1) < widths[0] : widths.at(-1) > widths[0]);
+    assert.ok(widths.every((value, frame) => frame === 0 || (index % 2 ? value <= widths[frame - 1] : value >= widths[frame - 1])));
+    assert.ok(Math.abs(widths.at(-1) - widths[0]) >= canvas.width * .1, 'Zoom must change image size by at least 10%');
+    const center = rect => rect[0] + rect[2] / 2;
+    assert.ok(Math.abs(center(positions.at(-1)) - center(positions[0])) >= canvas.width * .05, 'Pan must move image center by at least 5% of frame width');
+  }
+  reduced = true;
+  for (const time of [0, 9, 18]) {
+    video.drawFrame(canvas, {}, time, undefined, 18, 1);
+    assert.deepEqual(rectangle, [0, 0, 720, 900]);
+  }
+});
+
+test('podcast timeline holds the newspaper for 8–10 seconds and two memory frames for 15–20 seconds without cutting speech', () => {
+  const video = vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'podcast-video.js'), 'utf8') + '\nPodcastVideo;');
+  for (const durations of [[2, 2, 2], [8, 7, 8], [9.5, 9.2, 9.4], [10, 10, 9.84]]) {
+    const timeline = video.timeline(durations), newspaper = timeline.starts[1], memory = timeline.duration - newspaper;
+    assert.ok(newspaper >= 8 && newspaper <= 10);
+    assert.ok(memory >= 15 && memory <= 20);
+    assert.ok(durations[0] <= newspaper);
+    assert.ok(timeline.starts[1] + durations[1] <= timeline.starts[2]);
+    assert.ok(timeline.starts[2] + durations[2] <= timeline.duration + 1e-9);
+  }
+  for (const durations of [[], [0, 1, 1], [NaN, 1, 1]]) assert.throws(() => video.timeline(durations), /geçerli/);
+  assert.throws(() => video.timeline([10.1, 7, 8]), /10 saniyeyi/);
+  assert.throws(() => video.timeline([8, 10, 10]), /20 saniyeyi/);
+});
+
+test('podcast accepts one encyclopedic headline without a strict verification pass and searches the whole decade', async () => {
+  const response = { webResults: [{ title: 'Dönem özeti', url: 'https://tr.wikipedia.org/wiki/Test', content: 'Önemli bir kültür etkinliği düzenlendi.' }] };
+  const { context, input, calls } = podcastHarness();
+  const original = context.fetch;
+  context.fetch = async (...args) => args[0] === 'https://api.microsoft.ai/v3/search/web'
+    ? (calls.push(['research', ...args]), { ok: true, json: async () => response }) : original(...args);
+  const result = await context.API.podcast.generate({ ...input, era: { id: '1990' } });
+  const searches = calls.filter(call => call[0] === 'research');
+  assert.equal(searches.length, 1);
+  assert.match(JSON.parse(searches[0][2].body).query, /1990-1999/);
+  assert.equal(calls.filter(call => call[0] === 'headlines').length, 1);
+  assert.equal(result.facts.length, 1);
+  assert.equal(result.facts[0].url, response.webResults[0].url);
+  assert.equal(result.facts[0].text, 'Önemli bir kültür etkinliği düzenlendi.');
+  assert.ok(calls.find(call => call[0] === 'edit')[1].includes(result.facts[0].text));
+  assert.equal(result.scenes.length, 3);
+  assert.equal(result.video.type, 'video/mp4');
+});
+
+test('podcast custom dates keep the selected year and cutoff in the single research request', async () => {
+  const { context, input, calls } = podcastHarness();
+  await context.API.podcast.generate({ ...input, era: { id: 'custom', name: '23.04.2004' } });
+  const searches = calls.filter(call => call[0] === 'research');
+  assert.equal(searches.length, 1);
+  assert.equal(JSON.parse(searches[0][2].body).query, '23 Nisan 2004 gazete manşetleri');
+  assert.equal(JSON.parse(calls.find(call => call[0] === 'headlines')[2]).before, '2004-04-23');
 });
 
 test('podcast Speech escapes SSML and surfaces service and malformed-audio errors', async () => {
@@ -325,7 +774,7 @@ test('podcast cancellation at every stage prevents later requests and successful
 test('podcast Demo reads the saved video, rejects malformed metadata and honors cancellation', async () => {
   const { context, input, calls, sample } = podcastHarness();
   const copy = await context.Chat.json('', '');
-  const theater = context.podcastTheater(copy, sample.facts, context.validatePodcastInput(input));
+  const theater = context.podcastTheater(copy, context.validatePodcastInput(input));
   Object.assign(sample, { format: 'radio-theater-v1', narration: theater.narration, scene: theater.scenes.slice(1).map(scene => scene.text).join(' '),
     scenes: theater.scenes.map((scene, index) => ({ ...scene, image: `samples/podcast/${['radio-context', 'radio-memory', 'radio-ending'][index]}.jpg` })) });
   calls.length = 0;
@@ -349,6 +798,28 @@ test('legacy Demo is explicitly unavailable rather than passed off as a new self
   await assert.rejects(context.API.podcast.sample(), /üç sahne/);
 });
 
+test('current registered Demo loads matching narration without spoken visual continuity directions', async () => {
+  const selected = vm.runInNewContext(sampleSource + '\nsampleFor("podcast");');
+  const { context } = podcastHarness({
+    sampleFor: () => selected,
+    SavedSamples: {
+      response: async file => {
+        const bytes = fs.readFileSync(path.join(__dirname, ...file.split('/')));
+        return { json: async () => JSON.parse(bytes.toString('utf8')), blob: async () => new Blob([bytes], { type: file.endsWith('.jpg') ? 'image/jpeg' : 'video/mp4' }) };
+      },
+      image: async () => 'saved-image',
+    },
+  });
+  const result = await context.API.podcast.sample();
+  assert.equal(result.narration, result.scenes.map(scene => scene.text).join(' '));
+  assert.equal(result.scene, result.scenes.slice(1).map(scene => scene.text).join(' '));
+  assert.doesNotMatch(result.narration, /aynı (?:arkadaşlar|montlar|kıyafetler|merdiven boşluğunda)/iu);
+  assert.match(result.scenes[2].text, /küçük mutlulukların sıcaklığı/);
+  assert.ok(result.sceneStartTimes[1] >= 8 && result.sceneStartTimes[1] <= 10);
+  assert.ok(result.videoDuration - result.sceneStartTimes[1] >= 15 && result.videoDuration - result.sceneStartTimes[1] <= 20);
+  for (const fact of result.facts) assert.ok(!result.narration.includes(fact.text));
+});
+
 test('image policy refusal remains an explicit failure, not a replacement image', async () => {
   const response = new Response(JSON.stringify({ error: { code: 'content_safety_violation', message: 'Output content violated safety policies.' } }), { status: 400, headers: { 'content-type': 'application/json' } });
   const context = vm.createContext({ response });
@@ -357,7 +828,7 @@ test('image policy refusal remains an explicit failure, not a replacement image'
 });
 
 test('saving narrator voice preserves shared credentials and rejects invalid names and storage failures', () => {
-  const saved = { endpoint: 'https://test.services.ai.azure.com', key: 'test-placeholder', imageModel: 'image', labModel: 'text' };
+  const saved = { endpoint: 'https://test.services.ai.azure.com', key: 'test-placeholder', webIQKey: 'webiq-test-placeholder', imageModel: 'image', labModel: 'text' };
   let record = JSON.stringify(saved);
   const config = { ai: { speechVoice: podcastVoice } };
   const storage = { getItem: () => record, setItem: (_key, value) => { record = value; } };
@@ -370,6 +841,30 @@ test('saving narrator voice preserves shared credentials and rejects invalid nam
   storage.setItem = () => { throw new Error('Storage full'); };
   assert.throws(() => context.foundry.saveVoice(podcastVoice));
   assert.equal(config.ai.speechVoice, 'en-US-AvaMultilingualNeural');
+});
+
+test('Demo Mode preference survives reloads independently of saved credentials', () => {
+  const stored = new Map(), storage = {
+    getItem: key => stored.get(key) ?? null,
+    setItem: (key, value) => stored.set(key, value),
+  };
+  const load = () => {
+    const context = vm.createContext({ localStorage: storage });
+    vm.runInContext(sourceBetween('const FoundrySettings =', 'function chooseConnection(') + '\nglobalThis.settings = FoundrySettings;', context);
+    return context.settings;
+  };
+  const settings = load();
+  assert.equal(settings.loadMode(), null);
+  settings.saveMode('live');
+  assert.equal(load().loadMode(), 'live');
+  stored.set(settings.storageKey, '{"key":"test-placeholder"}');
+  settings.saveMode('mock');
+  assert.equal(load().loadMode(), 'mock');
+  assert.equal(stored.get(settings.storageKey), '{"key":"test-placeholder"}');
+  assert.throws(() => settings.saveMode('invalid'), /geçersiz/);
+  storage.setItem = () => { throw new Error('Storage blocked'); };
+  assert.throws(() => settings.saveMode('live'), /Storage blocked/);
+  assert.equal(load().loadMode(), 'mock');
 });
 
 test('podcast video players use managed media URLs and release them exactly once when the view closes', () => {
@@ -422,7 +917,7 @@ test('connection selection can repeatedly switch Demo and Live and cancel withou
     return nodes.get(selector);
   };
   const form = element('#connection-form');
-  form.elements = Object.fromEntries(['endpoint', 'key', 'imageModel', 'labModel', 'voice'].map(name => [name, element(name)]));
+  form.elements = Object.fromEntries(['endpoint', 'key', 'webIQKey', 'imageModel', 'labModel', 'voice', 'blobSas'].map(name => [name, element(name)]));
   form.reset = () => Object.values(form.elements).forEach(field => { field.value = ''; });
   const config = { ai: { mode: 'mock', speechVoice: podcastVoice } }, stored = new Map(), transitions = [], launches = [], session = new Map();
   let blockSession = false;
@@ -533,7 +1028,7 @@ test('settings reflect sound and busy state and report fullscreen failures expli
 test('photo prompts preserve the holding-and-pointing pose across styles and variations', () => {
   const context = vm.createContext({ CONFIG: { event: { productBrand: 'Brand' } } });
   vm.runInContext(sourceBetween('function buildPhotoPrompt(', 'async function packagingLogoReference('), context);
-  const product = { name: 'Snack', image: 'reference', ingredientEn: 'coconut and chocolate' };
+  const product = { name: 'Cocostar', image: 'reference', ingredientEn: 'coconut and chocolate' };
   for (const id of ['snowglobe', 'adface', 'blocky', 'factory', 'space', 'popart']) {
     const prompt = context.buildPhotoPrompt(product, { id, prompt: 'Scene: {product} with {ingredient}.' }, 1);
     assert.match(prompt, /exactly one hand holds a single product package/);
@@ -544,7 +1039,8 @@ test('photo prompts preserve the holding-and-pointing pose across styles and var
       assert.match(prompt, /No photographic wrapper/);
       assert.doesNotMatch(prompt, /preserve its exact silhouette/);
     } else assert.match(prompt, /preserve its exact silhouette/);
-    assert.match(prompt, /Brand Snack with coconut and chocolate/);
+    assert.match(prompt, /Scene: snack with snack/);
+    assert.doesNotMatch(prompt, /Brand|Cocostar|coconut and chocolate/);
     assert.match(prompt, /keeping the same one-hand-holds, other-hand-points pose/);
     assert.doesNotMatch(prompt, /\{product\}|\{ingredient\}/);
     if (id === 'blocky') assert.match(prompt, /blocky voxel character/);
@@ -721,25 +1217,39 @@ test('failed live capture shows an error without silently substituting the demo 
 });
 
 test('kiosk and Cowork reuse saved Foundry credentials and local settings override saved values', async () => {
-  const stored = new Map(), form = { elements: Object.fromEntries(['endpoint', 'key', 'imageModel', 'labModel'].map(name => [name, { value: '' }])) };
+  const stored = new Map(), form = { elements: Object.fromEntries(['endpoint', 'key', 'webIQKey', 'imageModel', 'labModel', 'blobSas'].map(name => [name, { value: '' }])) };
   const context = vm.createContext({
     CONFIG: { ai: {} }, AbortSignal,
     localStorage: { getItem: key => stored.get(key), setItem: (key, value) => stored.set(key, value) },
     location: { hostname: 'localhost', protocol: 'http:' },
-    fetch: async () => ({ ok: true, json: async () => ({ key: 'local-test-key', labModel: '' }) }),
+    fetch: async () => ({ ok: true, json: async () => ({ key: 'local-test-key', webIQKey: 'local-webiq-test-key', labModel: '' }) }),
   });
   vm.runInContext(sourceBetween('const FoundrySettings =', 'function chooseConnection(') + '\nglobalThis.settings = FoundrySettings;', context);
-  const settings = { endpoint: 'https://test.services.ai.azure.com', apiKey: 'shared-test-key', imageDeployment: 'test-image', labDeployment: 'test-text' };
-  context.settings.save(settings);
+  const settings = { endpoint: 'https://test.services.ai.azure.com', apiKey: 'shared-test-key', webIQApiKey: 'webiq-test-placeholder', imageDeployment: 'test-image', labDeployment: 'test-text' };
+  const { sas } = blobShareHarness();
+  context.settings.save(settings, { sas });
   context.settings.loadSaved(form);
   assert.equal(form.elements.key.value, 'shared-test-key');
+  assert.equal(form.elements.webIQKey.value, 'webiq-test-placeholder');
   assert.equal(form.elements.imageModel.value, 'test-image');
+  assert.equal(form.elements.blobSas.value, sas);
+  context.settings.saveVoice('en-US-Harper:MAI-Voice-2-Flash');
+  assert.equal(JSON.parse(stored.get(context.settings.storageKey)).blobSas, sas);
   await context.settings.loadLocal(form);
   assert.equal(form.elements.key.value, 'local-test-key');
+  assert.equal(form.elements.webIQKey.value, 'local-webiq-test-key');
   assert.equal(form.elements.labModel.value, '');
   assert.equal(form.elements.endpoint.value, settings.endpoint);
+  assert.equal(form.elements.blobSas.value, sas);
+  context.settings.save(settings, null);
+  context.settings.loadSaved(form);
+  assert.equal(form.elements.blobSas.value, '');
   context.settings.apply(settings);
   assert.equal(context.CONFIG.ai.modelLabel, 'test-image');
+  assert.equal(context.CONFIG.ai.webIQApiKey, 'webiq-test-placeholder');
+  const beforeInvalid = stored.get(context.settings.storageKey);
+  assert.throws(() => context.settings.save({ ...settings, webIQApiKey: 'masked***key' }), /maskelenmemiş/);
+  assert.equal(stored.get(context.settings.storageKey), beforeInvalid);
   context.fetch = async () => ({ ok: false, status: 500 });
   await assert.rejects(context.settings.loadLocal(form), /HTTP 500/);
   context.localStorage.setItem = () => { throw new Error('Storage blocked'); };
@@ -823,6 +1333,9 @@ test('Azure single SAS upload uses GUID names, correct image bytes and the same 
   form.elements.blobSas.value = 'must not persist';
   context.share.fill(form);
   assert.equal(form.elements.blobSas.value, sas);
+  context.share.settings = null;
+  context.share.fill(form);
+  assert.equal(form.elements.blobSas.value, sas, 'Inactive sharing must not erase the restored form value');
 });
 
 test('Azure rejects invalid or expired SAS and surfaces HTTP and network upload failures without leaking the token', async () => {
@@ -872,7 +1385,7 @@ test('Demo sharing uses static repository files and Live without SAS never fabri
     assert.equal(result.demo, true);
   }
   assert.equal((await context.api.share.publish('lab', '')).url, 'https://example.test/mai-kiosk/samples/reference-photo/pack-cake.jpg');
-  assert.equal((await context.api.share.publish('podcast', '')).url, 'https://example.test/mai-kiosk/samples/podcast/radio-memory.mp4');
+  assert.equal((await context.api.share.publish('podcast', '')).url, 'https://example.test/mai-kiosk/samples/podcast/radio-theater.mp4');
   context.CONFIG.ai.mode = 'live';
   await assert.rejects(context.api.share.publish('photo', ''), /Azure SAS/);
 });
@@ -1205,22 +1718,24 @@ test('gallery shows only the latest attempt per scenario, then applies experienc
   } });
   vm.runInContext(sampleSource, context);
   vm.runInContext(scripts.at(-1)[1], context);
-  assert.equal(nodes['#gallery'].children.length, 8);
-  assert.equal(nodes['#count'].textContent, '8 / 8 örnek');
+  assert.equal(nodes['#gallery'].children.length, 11);
+  assert.equal(nodes['#count'].textContent, '11 / 11 örnek');
   const paths = () => nodes['#gallery'].children.map(card => card.children[0].href);
   assert.equal(paths().filter(url => /^samples\/photo-/.test(url)).length, 6);
   assert.ok(paths().includes('samples/reference-photo/pack-cake.jpg'));
-  assert.ok(!paths().includes('samples/reference-photo/pack-wafer.jpg'));
+  assert.ok(paths().includes('samples/reference-photo/pack-wafer.jpg'));
+  assert.ok(paths().includes('samples/reference-photo/pack-biscuit.jpg'));
+  assert.ok(paths().includes('samples/reference-photo/pack-chocolate.jpg'));
   nodes['#kind'].value = 'photo';
   context.render();
   assert.equal(nodes['#gallery'].children.length, 6);
   nodes['#kind'].value = 'pack';
   context.render();
-  assert.equal(nodes['#gallery'].children.length, 1);
+  assert.equal(nodes['#gallery'].children.length, 4);
   nodes['#search'].value = 'Antep';
   context.render();
-  assert.equal(nodes['#gallery'].children.length, 0);
-  assert.equal(nodes['#empty'].hidden, false);
+  assert.equal(nodes['#gallery'].children.length, 1);
+  assert.equal(nodes['#empty'].hidden, true);
   nodes['#kind'].value = 'all';
   nodes['#search'].value = 'Reklam';
   context.render();
@@ -1237,7 +1752,7 @@ test('gallery shows only the latest attempt per scenario, then applies experienc
   const attemptCount = vm.runInContext('SAMPLE_ATTEMPTS.length', context);
   vm.runInContext("SAMPLE_ATTEMPTS.push({ id: 'lab', title: 'Lezzet Laboratuvarı', product: 'Newest test', kind: 'pack', path: 'samples/new-lab', prompt: 'samples/new-lab.json' });", context);
   context.render();
-  assert.equal(nodes['#gallery'].children.length, 8);
+  assert.equal(nodes['#gallery'].children.length, 11);
   assert.ok(paths().includes('samples/new-lab.jpg'));
   assert.ok(!paths().includes('samples/reference-photo/pack-cake.jpg'));
   assert.equal(vm.runInContext('SAMPLE_ATTEMPTS.length', context), attemptCount + 1);
