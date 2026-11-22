@@ -1,4 +1,4 @@
-const SAMPLE_PHOTO_SOURCE = 'sample_photo.jpeg';
+const SAMPLE_PHOTO_SOURCE = 'samples/reference.jpg';
 const PHOTO_SAMPLE_CASES = [
   { id: 'photo-snowglobe', title: 'Yılbaşı Kar Küresi', product: 'Cocostar', productId: 'cocostar' },
   { id: 'photo-adface', title: 'Reklam Yüzü', product: 'Çikolatalı Gofret', productId: 'gofret' },
@@ -10,19 +10,14 @@ const PHOTO_SAMPLE_CASES = [
 
 // Yeni denemeler sona eklenir; id aynı senaryoda değişmez.
 const SAMPLE_ATTEMPTS = [
-  ...PHOTO_SAMPLE_CASES.map(sample => ({ ...sample, kind: 'photo', path: `samples/baseline/${sample.id}` })),
-  { id: 'lab', title: 'Lezzet Laboratuvarı', product: 'Fıstık & Tuzlu Karamel Gofret', kind: 'pack', path: 'samples/baseline/pack' },
-  { id: 'career', title: 'Kariyer Yıldız Haritası', product: 'Temsili veri analisti profili', kind: 'career', path: 'samples/baseline/career' },
-  ...PHOTO_SAMPLE_CASES.map(sample => ({ ...sample, kind: 'photo', path: `samples/promotional/${sample.id}`, prompt: `samples/promotional/${sample.id}.json` })),
-  ...PHOTO_SAMPLE_CASES.map(sample => ({ ...sample, kind: 'photo', path: `samples/reference-photo/${sample.id}`, prompt: `samples/reference-photo/${sample.id}.json` })),
-  { id: 'lab', title: 'Lezzet Laboratuvarı', product: 'Antep Fıstığı & Tuzlu Karamel · Gofret', kind: 'pack', path: 'samples/reference-photo/pack-wafer', prompt: 'samples/reference-photo/pack-wafer.json' },
-  { id: 'lab', title: 'Lezzet Laboratuvarı', product: 'Vişne & Bitter Kakao · Kek', kind: 'pack', path: 'samples/reference-photo/pack-cake', prompt: 'samples/reference-photo/pack-cake.json' },
   ...PHOTO_SAMPLE_CASES.map(sample => ({
     ...sample, kind: 'photo', path: `samples/${sample.id}`,
     raw: `samples/reference-photo/${sample.id}-raw.png`,
     prompt: `samples/reference-photo/${sample.id}.json`,
   })),
-  { id: 'career', title: 'Kariyer Yıldız Haritası', product: 'Temsili veri analisti profili', kind: 'career', path: 'samples/career-styles/constellation', prompt: 'samples/career-styles/constellation.json' },
+  { id: 'lab', title: 'Lezzet Laboratuvarı', product: 'Fıstamel · Antep Fıstığı & Tuzlu Karamel', kind: 'pack', path: 'samples/reference-photo/pack-wafer', prompt: 'samples/reference-photo/pack-wafer.json' },
+  { id: 'lab', title: 'Lezzet Laboratuvarı', product: 'Vişkora · Vişne & Bitter Kakao', kind: 'pack', path: 'samples/reference-photo/pack-cake', prompt: 'samples/reference-photo/pack-cake.json' },
+  { id: 'podcast', title: 'Bir Isırıkla O Yıla Dön', product: '2004 · Okul çıkışı · Çikolatalı Gofret', kind: 'podcast', path: 'samples/podcast/radio-memory', raw: 'samples/podcast/radio-memory-raw.png', prompt: 'samples/podcast/radio-memory.json', video: 'samples/podcast/radio-memory.mp4', poster: 'samples/podcast/radio-poster.png' },
 ];
 
 function latestSamples() {

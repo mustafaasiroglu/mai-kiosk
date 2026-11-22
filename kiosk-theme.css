@@ -79,9 +79,6 @@ html[data-theme="dark"] {
   --cp-chocolate-dark: #3b1d10;
   --cp-chocolate-face: #6f3b23;
   --cp-chocolate-highlight: #ad7651;
-  --cp-career-accent: #38bdf8;
-  --cp-career-secondary: #8b7bff;
-  --cp-career-soft: rgba(56, 189, 248, .14);
   --cp-accent-gradient: linear-gradient(100deg, #4f8cff 0%, #8b5cf6 35%, #ec4899 68%, #ff9a3c 100%);
   --cp-background-art: radial-gradient(ellipse at 15% 5%, rgba(79, 140, 255, .18), transparent 55%), radial-gradient(ellipse at 85% 20%, rgba(139, 92, 246, .18), transparent 55%), radial-gradient(ellipse at 70% 95%, rgba(34, 211, 160, .10), transparent 50%);
 }

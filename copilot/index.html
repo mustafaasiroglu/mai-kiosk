@@ -14,6 +14,7 @@
   </script>
   <base href="../">
   <link rel="stylesheet" href="copilot/style.css">
+  <link rel="stylesheet" href="podcast.css?v=20261122-3">
 </head>
 <body>
   <div class="shell">
@@ -54,6 +55,7 @@
             <div class="composer-actions">
               <button type="button" id="attachButton" class="icon-btn" data-action="attach" data-icon="plus" aria-label="Fotoğraf ekle" hidden></button>
               <span id="composerMode"></span>
+              <button type="button" class="pill" id="podcastBack" data-action="podcastBack" hidden>Geri dön</button>
               <button type="submit" id="send" class="icon-btn send" aria-label="Gönder" data-icon="arrowUp" disabled></button>
               <button type="button" id="stop" class="icon-btn send" data-action="stop" aria-label="İşlemi durdur" data-icon="stop" hidden></button>
             </div>
@@ -76,11 +78,12 @@
     </div>
     <form id="connection">
       <h3>Microsoft Foundry</h3>
-      <p class="muted">Klasik kiosk, Chat ve Cowork aynı Foundry bağlantısını kullanır. Ayarlar ve anahtar bu tarayıcıda saklanır; yalnızca güvendiğin cihazda kullan. Kariyer profilleri temsili kalır.</p>
+      <p class="muted">Klasik kiosk, Chat ve Cowork aynı Foundry bağlantısını kullanır. Ayarlar ve anahtar bu tarayıcıda saklanır; yalnızca güvendiğin cihazda kullan.</p>
       <label>Foundry uç noktası<input name="endpoint" required placeholder="https://kaynak.services.ai.azure.com"></label>
       <label>API anahtarı<input name="key" type="password" autocomplete="off" required></label>
       <label>Görsel modeli dağıtımı<input name="imageModel" value="MAI-Image-2.7-Flash" required></label>
-      <label>Metin modeli dağıtımı<input name="labModel" value="gpt-5.4-mini"></label>
+      <label>Metin ve WebIQ modeli dağıtımı<input name="labModel" value="gpt-5.4-mini"></label>
+      <input name="voice" type="hidden" value="en-US-Harper:MAI-Voice-2-Flash">
       <p id="settingsStatus" role="status"></p>
       <button type="submit" class="primary">Canlı modu aç</button>
     </form>
@@ -103,8 +106,10 @@
   </dialog>
   <input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
   <div id="notice" role="status" class="notice" hidden></div>
-  <script src="samples.js"></script>
-  <script src="kiosk-engine.js"></script>
-  <script src="copilot/app.js"></script>
+  <script src="samples.js?v=20261122-11"></script>
+  <script src="kiosk-engine.js?v=20261122-11"></script>
+  <script src="podcast-video.js?v=20261122-2"></script>
+  <script src="podcast.js?v=20261122-3"></script>
+  <script src="copilot/app.js?v=20261122-9"></script>
 </body>
 </html>

@@ -14,6 +14,239 @@ const sourceBetween = (start, end) => {
   return engine.slice(offset, finish);
 };
 
+const podcastSource = fs.readFileSync(path.join(__dirname, 'podcast.js'), 'utf8');
+const podcastVoice = 'en-US-Harper:MAI-Voice-2-Flash';
+function groundedPodcastResponse() {
+  const lines = ['2003–2004 öğretim yılı 15 Haziran 2004 tarihinde sona erdi.', '2004–2005 öğretim yılı 13 Eylül 2004 tarihinde başladı.'];
+  const text = lines.map((line, index) => `- ${line} [${index + 1}]`).join('\n');
+  return { status: 'completed', output: [
+    { type: 'web_search_call', status: 'completed' },
+    { type: 'message', content: [{ type: 'output_text', text, annotations: lines.map((_, index) => ({
+      type: 'url_citation', start_index: text.indexOf(`[${index + 1}]`), end_index: text.indexOf(`[${index + 1}]`) + 3,
+      url: 'https://example.test/2004-school-calendar', title: 'Test archive',
+    })) }] },
+  ] };
+}
+function verifiedPodcastResponse() {
+  return { status: 'completed', output: [
+    { type: 'web_search_call', status: 'completed', action: { sources: [{ url: 'https://example.test/2004-school-calendar' }] } },
+    { type: 'message', content: [{ type: 'output_text', text: JSON.stringify({ verified: true, facts: [
+      { year: 2004, text: '2003–2004 öğretim yılı 15 Haziran 2004 tarihinde sona erdi.', url: 'https://example.test/2004-school-calendar', title: 'Test archive', evidence: 'Öğretim yılı 15 Haziran 2004 tarihinde sona erdi.' },
+      { year: 2004, text: '2004–2005 öğretim yılı 13 Eylül 2004 tarihinde başladı.', url: 'https://example.test/2004-school-calendar', title: 'Test archive', evidence: 'Öğretim yılı 13 Eylül 2004 tarihinde başladı.' },
+    ] }) }] },
+  ] };
+}
+function podcastHarness(overrides = {}) {
+  const calls = [], stages = [], sessions = [];
+  const input = { product: { id: 'gofret' }, era: { id: 'custom', name: '2004' }, moment: { id: 'school' }, memory: 'Arkadaşlarımla gofretimi paylaşırdım.' };
+  const sample = JSON.parse(fs.readFileSync(path.join(__dirname, 'samples', 'podcast', 'radio-memory.json'), 'utf8'));
+  const mp3 = fs.readFileSync(path.join(__dirname, 'samples', 'podcast', 'radio-memory.mp3'));
+  const config = { ai: { endpoint: 'https://test.services.ai.azure.com', apiKey: 'test-placeholder', labDeployment: 'gpt-test', speechVoice: podcastVoice } };
+  const context = vm.createContext({
+    URL: class extends URL {}, AbortSignal, Blob, Uint8Array, atob,
+    CONFIG: config, API: { live: true }, SCREENS: {}, STATE: { podcast: {} },
+    PodcastVideo: {
+      prepare() { const session = { ready: Promise.resolve(), disposed: false, async dispose() { this.disposed = true; } }; sessions.push(session); return session; },
+      async render(options) { calls.push(['video', options]); options.signal?.throwIfAborted(); return { video: new Blob(['test movie'], { type: 'video/mp4' }), videoPoster: 'radio-poster', introDuration: 1, videoDuration: 2 }; },
+      async validate(blob) { return blob; },
+    },
+    PRODUCTS: [{ id: 'gofret', name: 'Çikolatalı Gofret', ingredientEn: 'chocolate' }],
+    byId: (items, id) => items.find(item => item.id === id),
+    icon: () => '', keyboardHTML: () => '',
+    FoundrySettings: { voice: value => { if (!/^[a-z0-9:._-]{1,120}$/i.test(value)) throw new Error('Invalid voice'); return value; } },
+    esc: value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]),
+    FileReader: class {
+      readAsDataURL(blob) {
+        blob.arrayBuffer().then(bytes => { this.result = `data:${blob.type};base64,${Buffer.from(bytes).toString('base64')}`; this.onload(); }).catch(error => { this.error = error; this.onerror(); });
+      }
+    },
+    MAI: {
+      request: async (...args) => { calls.push(['research', ...args]); return { ok: true, json: async () => args[1].text ? verifiedPodcastResponse() : groundedPodcastResponse() }; },
+      generate: async (...args) => { calls.push(['image', ...args]); return 'generated-image'; },
+    },
+    Chat: { json: async (...args) => { calls.push(['story', ...args]); return { title: 'Paylaşılan mutluluk', scene: 'Okul çıkışında gofretini arkadaşlarınla paylaşıyorsun.', visualDirection: 'Warm schoolyard illustration.' }; } },
+    composePhoto: async image => { calls.push(['compose', image]); return 'composed-image'; },
+    fetch: async (...args) => { calls.push(['speech', ...args]); return new Response(mp3, { headers: { 'content-type': 'audio/mpeg' } }); },
+    sampleFor: () => ({ prompt: 'sample.json', video: 'sample.mp4', poster: 'radio-poster.png' }),
+    SavedSamples: { response: async (_path, signal) => { signal?.throwIfAborted(); return { json: async () => sample, blob: async () => new Blob(['test movie'], { type: 'video/mp4' }) }; }, image: async () => 'saved-image' },
+    ...overrides,
+  });
+  vm.runInContext(podcastSource, context);
+  return { context, calls, stages, sessions, input, config, sample, mp3 };
+}
+
+test('podcast validates all periods, calendar dates, Other and a single bounded memory', () => {
+  const { context, input } = podcastHarness();
+  assert.match(context.SCREENS['podcast.product'].render(), /data-product="gofret"/);
+  assert.match(context.SCREENS['podcast.other'].render(), /data-go="podcast.moment"/);
+  for (const id of ['1960', '1970', '1980', '1990', '2000']) assert.equal(context.validatePodcastInput({ ...input, era: { id } }).era.start, Number(id));
+  assert.equal(context.podcastDate('29.02.2004').start, 2004);
+  assert.equal(context.podcastDate('23/04/2004').name, '23/04/2004');
+  for (const date of ['1943', '2999', '29.02.2003', '31.04.2004', '1.1.2004', '2004-04-23']) assert.throws(() => context.podcastDate(date));
+  for (const id of ['school', 'family', 'work', 'travel']) assert.equal(context.validatePodcastInput({ ...input, moment: { id } }).moment.id, id);
+  assert.equal(context.validatePodcastInput({ ...input, moment: { id: 'other', name: 'Yaz tatili' } }).moment.name, 'Yaz tatili');
+  for (const memory of ['', 'a'.repeat(241), 'Bir anı. İkinci anı.', 'İlk satır\nİkinci satır']) assert.throws(() => context.validatePodcastInput({ ...input, memory }));
+  assert.throws(() => context.validatePodcastInput({ ...input, moment: { id: 'other', name: 'a'.repeat(81) } }));
+  assert.throws(() => context.validatePodcastInput({ ...input, product: { id: 'unknown' } }));
+});
+
+test('podcast requires completed research, two cited facts and safe, bounded citations', () => {
+  const { context } = podcastHarness();
+  assert.equal(context.podcastFacts(groundedPodcastResponse()).length, 2);
+  for (const broken of [{ status: 'incomplete' }, { status: 'completed', output: {} }, { status: 'completed', output: [] }]) assert.throws(() => context.podcastFacts(broken));
+  for (const mutation of [
+    part => { part.annotations.length = 1; },
+    part => { part.annotations[0].url = 'javascript:alert(1)'; },
+    part => { part.annotations[0].url = 'https://user:password@example.test'; },
+    part => { part.annotations[0].start_index = -1; },
+    part => { part.annotations[0].end_index = part.text.length + 1; },
+  ]) {
+    const response = groundedPodcastResponse();
+    mutation(response.output[1].content[0]);
+    assert.throws(() => context.podcastFacts(response));
+  }
+});
+
+test('podcast verifies public sources before fiction, image and same-endpoint Speech with a snapshot voice', async () => {
+  const { context, input, calls, config } = podcastHarness();
+  const stages = [];
+  const result = await context.API.podcast.generate(input, { onStage: index => { stages.push(index); if (index === 2) config.ai.speechVoice = 'en-US-AvaMultilingualNeural'; } });
+  assert.deepEqual(stages, [0, 1, 2, 3, 4]);
+  assert.deepEqual(calls.map(call => call[0]), ['research', 'research', 'story', 'image', 'compose', 'speech', 'speech', 'video']);
+  for (const call of calls.filter(call => call[0] === 'research')) {
+    assert.equal(call[1], 'responses');
+    assert.equal(call[2].store, false);
+    assert.equal(call[2].tools[0].type, 'web_search');
+    assert.ok(!JSON.stringify(call[2]).includes(input.memory), 'Personal memory must not be sent to public web research');
+  }
+  const speech = calls.find(call => call[0] === 'speech');
+  assert.equal(speech[1], `${config.ai.endpoint}/tts/cognitiveservices/v1`);
+  assert.equal(speech[2].headers['Ocp-Apim-Subscription-Key'], config.ai.apiKey);
+  assert.match(speech[2].body, /xml:lang="tr-TR"/);
+  assert.ok(speech[2].body.includes(podcastVoice));
+  assert.equal(result.voice, podcastVoice);
+  assert.equal(result.image, 'composed-image');
+  assert.match(result.intro, /^Sayın dinleyicilerimiz, 2004/);
+  assert.ok(result.narration.indexOf('Şimdi hayal edilen') < result.narration.indexOf('Kaynaklı dönem notları'));
+  assert.equal(result.video.type, 'video/mp4');
+  assert.equal(calls.filter(call => call[0] === 'speech').every(call => call[2].body.includes(podcastVoice)), true);
+});
+
+test('podcast stops before fiction and images when research or source verification fails', async () => {
+  for (const failureAt of [0, 1]) {
+    const harness = podcastHarness();
+    let count = 0;
+    harness.context.MAI.request = async (_path, body) => ({ ok: true, json: async () => count++ === failureAt ? { status: 'completed', output: [] } : body.text ? verifiedPodcastResponse() : groundedPodcastResponse() });
+    await assert.rejects(harness.context.API.podcast.generate(harness.input), /WebIQ/);
+    assert.equal(harness.calls.length, 0);
+  }
+  const harness = podcastHarness();
+  harness.context.Chat.json = async () => ({ title: 'a'.repeat(81), scene: 'Anı', visualDirection: 'Art' });
+  await assert.rejects(harness.context.API.podcast.generate(harness.input), /Başlık/);
+  assert.deepEqual(harness.calls.map(call => call[0]), ['research', 'research']);
+});
+
+test('podcast rejects unverified findings, out-of-period dates and URLs absent from actual search sources', () => {
+  const { context } = podcastHarness();
+  for (const mutation of [
+    record => { record.verified = false; },
+    record => { record.facts[0].year = 1927; },
+    record => { record.facts[0].url = 'https://invented.test/archive'; },
+    record => { record.facts[0].evidence = ''; },
+  ]) {
+    const response = verifiedPodcastResponse(), part = response.output[1].content[0];
+    const record = JSON.parse(part.text);
+    mutation(record);
+    part.text = JSON.stringify(record);
+    assert.throws(() => context.podcastVerifiedFacts(response, { start: 2004, end: 2004 }));
+  }
+});
+
+test('podcast Speech escapes SSML and surfaces service and malformed-audio errors', async () => {
+  const { context, calls } = podcastHarness();
+  await context.podcastAudio('<anı & "dün">');
+  assert.match(calls[0][2].body, /&lt;anı &amp; &quot;dün&quot;&gt;/);
+  context.fetch = async () => new Response('Denied', { status: 403 });
+  await assert.rejects(context.podcastAudio('Anı'), /HTTP 403/);
+  context.fetch = async () => new Response('Not audio', { headers: { 'content-type': 'audio/mpeg' } });
+  await assert.rejects(context.podcastAudio('Anı'), /MP3/);
+  context.fetch = async () => { throw new Error('Network failure'); };
+  await assert.rejects(context.podcastAudio('Anı'), /Ses servisine bağlanılamadı/);
+  assert.throws(() => context.podcastNarration([{ text: 'kelime '.repeat(181) }], 'Anı'), /çok uzun/);
+});
+
+test('podcast cancellation at every stage prevents later requests and successful results', async () => {
+  for (const cancelAt of [0, 1, 2, 3, 4]) {
+    const { context, input, calls, sessions } = podcastHarness();
+    const controller = new AbortController();
+    await assert.rejects(context.API.podcast.generate(input, { signal: controller.signal, onStage: index => { if (index === cancelAt) controller.abort(); } }), /abort/i);
+    assert.equal(calls.filter(call => call[0] === 'speech').length, cancelAt === 4 ? 2 : 0);
+    if (cancelAt <= 2) assert.equal(calls.filter(call => call[0] === 'image').length, 0);
+    assert.equal(sessions.every(session => session.disposed), true);
+  }
+});
+
+test('podcast Demo reads the saved video, rejects malformed metadata and honors cancellation', async () => {
+  const { context, input, calls, sample } = podcastHarness();
+  context.API.live = false;
+  const result = await context.API.podcast.generate(input);
+  assert.equal(result.demo, true);
+  assert.equal(result.image, 'saved-image');
+  assert.equal(result.narration, sample.narration);
+  assert.equal(calls.length, 0);
+  sample.facts[0].url = 'javascript:bad';
+  await assert.rejects(context.API.podcast.generate(input), /kaynak/);
+  const controller = new AbortController();
+  controller.abort();
+  await assert.rejects(context.API.podcast.generate(input, { signal: controller.signal }), /abort/i);
+});
+
+test('saving narrator voice preserves shared credentials and rejects invalid names and storage failures', () => {
+  const saved = { endpoint: 'https://test.services.ai.azure.com', key: 'test-placeholder', imageModel: 'image', labModel: 'text' };
+  let record = JSON.stringify(saved);
+  const config = { ai: { speechVoice: podcastVoice } };
+  const storage = { getItem: () => record, setItem: (_key, value) => { record = value; } };
+  const context = vm.createContext({ CONFIG: config, localStorage: storage });
+  vm.runInContext(sourceBetween('const FoundrySettings =', 'function boot()') + '\nglobalThis.foundry = FoundrySettings;', context);
+  context.foundry.saveVoice('en-US-AvaMultilingualNeural');
+  assert.deepEqual(JSON.parse(record), { ...saved, voice: 'en-US-AvaMultilingualNeural' });
+  assert.equal(config.ai.speechVoice, 'en-US-AvaMultilingualNeural');
+  assert.throws(() => context.foundry.saveVoice('<voice>'), /Speech/);
+  storage.setItem = () => { throw new Error('Storage full'); };
+  assert.throws(() => context.foundry.saveVoice(podcastVoice));
+  assert.equal(config.ai.speechVoice, 'en-US-AvaMultilingualNeural');
+});
+
+test('podcast video players use managed media URLs and release them exactly once when the view closes', () => {
+  const { context } = podcastHarness();
+  let paused = 0, loaded = 0, removed = 0, disposed;
+  const revoked = [];
+  context.URL.createObjectURL = blob => { assert.equal(blob.type, 'video/mp4'); return 'blob:test-podcast'; };
+  context.URL.revokeObjectURL = url => revoked.push(url);
+  const audio = { addEventListener() {}, removeEventListener() {}, pause() { paused++; }, load() { loaded++; }, removeAttribute() { removed++; } };
+  const root = { querySelector: selector => selector === 'video' ? audio : null };
+  context.mountPodcastMedia(root, { cleanup: fn => { disposed = fn; } }, { video: new Blob(['movie'], { type: 'video/mp4' }) });
+  assert.equal(audio.src, 'blob:test-podcast');
+  disposed(); disposed();
+  assert.deepEqual(revoked, ['blob:test-podcast']);
+  assert.deepEqual([paused, loaded, removed], [1, 1, 1]);
+});
+
+test('classic Laboratory still renders selected ingredients, moments and generation after replacing the third experience', () => {
+  const context = vm.createContext({
+    SCREENS: {}, API: { live: false }, tipsFor: () => [],
+    STATE: { lab: { baseId: 'base', flavorIds: ['flavor'], momentId: 'moment' } },
+    LAB_BASES: [{ id: 'base', name: 'Selected base' }], LAB_FLAVORS: [{ id: 'flavor', name: 'Selected flavor' }], LAB_MOMENTS: [{ id: 'moment', name: 'Moment', story: 'Story', icon: 'flask' }],
+    byId: (items, id) => items.find(item => item.id === id), esc: value => value, icon: () => '',
+    genViewHTML: ({ stages }) => { assert.ok(stages.length > 0); return 'generation-screen'; },
+  });
+  vm.runInContext(sourceBetween('const labStages =', "SCREENS['lab.result']"), context);
+  assert.match(context.SCREENS['lab.moment'].render(), /Selected base/);
+  assert.match(context.SCREENS['lab.moment'].render(), /Selected flavor/);
+  assert.match(context.SCREENS['lab.moment'].render(), /data-moment="moment"/);
+  assert.equal(context.SCREENS['lab.gen'].render({}), 'generation-screen');
+});
+
 test('connection selection can repeatedly switch Demo and Live and cancel without changing mode', async () => {
   const nodes = new Map();
   const element = (selector) => {
@@ -28,17 +261,21 @@ test('connection selection can repeatedly switch Demo and Live and cancel withou
         for (const handler of this.listeners.get(type) || []) await handler(event);
         return event;
       },
+      setAttribute(name, value) { this[name] = value; },
       focus() {}, showModal() { this.open = true; }, close() { this.open = false; },
     });
     return nodes.get(selector);
   };
   const form = element('#connection-form');
-  form.elements = Object.fromEntries(['endpoint', 'key', 'imageModel', 'labModel'].map(name => [name, element(name)]));
+  form.elements = Object.fromEntries(['endpoint', 'key', 'imageModel', 'labModel', 'voice'].map(name => [name, element(name)]));
   form.reset = () => Object.values(form.elements).forEach(field => { field.value = ''; });
-  const config = { ai: { mode: 'mock' } }, stored = new Map(), transitions = [];
+  const config = { ai: { mode: 'mock', speechVoice: podcastVoice } }, stored = new Map(), transitions = [], launches = [], session = new Map();
+  let blockSession = false;
   const context = vm.createContext({
     CONFIG: config, $: element, icon: () => '',
-    location: { protocol: 'https:', hostname: 'example.test' },
+    document: { documentElement: { setAttribute() {} } },
+    location: { protocol: 'https:', hostname: 'example.test', assign: url => launches.push(url) },
+    sessionStorage: { setItem(key, value) { if (blockSession) throw new Error('Storage blocked'); session.set(key, value); } },
     localStorage: { getItem: key => stored.get(key), setItem: (key, value) => stored.set(key, value) },
     FormData: class { constructor(form) { this.form = form; } get(name) { return this.form.elements[name].value; } },
   });
@@ -46,12 +283,17 @@ test('connection selection can repeatedly switch Demo and Live and cancel withou
   const reopen = context.chooseConnection(() => transitions.push(config.ai.mode));
   assert.equal((await element('#connection-dialog').dispatch('cancel')).prevented, true);
   await element('#connection-demo').dispatch('click');
+  assert.equal(element('#connection-dialog').open, true);
+  await element('#connection-continue').dispatch('click');
   for (let i = 0; i < 2; i++) {
     reopen();
     await element('#connection-live').dispatch('click');
+    assert.equal(form.hidden, true);
+    assert.equal(config.ai.mode, 'mock');
+    await element('#connection-continue').dispatch('click');
     Object.entries({
       endpoint: 'https://test-resource.services.ai.azure.com',
-      key: 'test-placeholder', imageModel: 'test-image', labModel: 'test-text',
+      key: 'test-placeholder', imageModel: 'test-image', labModel: 'test-text', voice: 'en-US-Harper:MAI-Voice-2-Flash',
     }).forEach(([name, value]) => { form.elements[name].value = value; });
     await form.dispatch('submit');
     assert.equal(config.ai.mode, 'live');
@@ -61,12 +303,26 @@ test('connection selection can repeatedly switch Demo and Live and cancel withou
     assert.equal(config.ai.mode, 'live');
     reopen();
     await element('#connection-demo').dispatch('click');
+    assert.equal(config.ai.mode, 'live');
+    await element('#connection-continue').dispatch('click');
     assert.equal(config.ai.mode, 'mock');
     assert.equal(element('#connection-dialog').open, false);
   }
   assert.deepEqual(transitions, ['mock', 'live', 'mock', 'live', 'mock']);
   assert.equal(form.listeners.get('submit').length, 1);
   assert.equal(element('#connection-demo').listeners.get('click').length, 1);
+  reopen();
+  await element('#connection-chat').dispatch('click');
+  blockSession = true;
+  await element('#connection-continue').dispatch('click');
+  assert.equal(element('#connection-dialog').open, true);
+  assert.equal(element('#connection-error').hidden, false);
+  assert.equal(launches.length, 0);
+  blockSession = false;
+  await element('#connection-continue').dispatch('click');
+  assert.deepEqual(launches, ['copilot/?ui=chat']);
+  assert.deepEqual(JSON.parse(session.get('mai-kiosk-launch')), { mode: 'mock' });
+  assert.deepEqual(transitions, ['mock', 'live', 'mock', 'live', 'mock'], 'Copilot navigation does not also start the classic kiosk');
 });
 
 test('settings reflect sound and busy state and report fullscreen failures explicitly', async () => {
@@ -116,151 +372,9 @@ test('settings reflect sound and busy state and report fullscreen failures expli
   assert.equal(element('[data-settings="mode"]').disabled, false);
 });
 
-test('career native name input and virtual keyboard stay synchronized without double typing', () => {
-  const nodes = new Map(), transitions = [];
-  const node = selector => {
-    if (!nodes.has(selector)) nodes.set(selector, {
-      value: '', listeners: {}, classList: { add() {}, remove() {}, toggle() {} },
-      attributes: {}, setAttribute(k, v) { this.attributes[k] = v; },
-      addEventListener(type, fn) { this.listeners[type] = fn; },
-    });
-    return nodes.get(selector);
-  };
-  let onKey;
-  const context = vm.createContext({
-    SCREENS: {}, STATE: { career: {} }, CONFIG: { ai: {} }, API: { live: false },
-    $: node, Modal: { cur: null }, Sound: { key() {}, tap() {} },
-    App: { go: id => transitions.push(id) }, setTimeout: fn => fn(),
-    window: { addEventListener: (_type, fn) => { onKey = fn; }, removeEventListener() {} },
-  });
-  vm.runInContext(sourceBetween('const trUp =', 'function slugTR('), context);
-  vm.runInContext(sourceBetween('const KB_ROWS =', 'const displayName ='), context);
-  vm.runInContext(sourceBetween('const nameValid =', 'function avatarHTML('), context);
-  vm.runInContext(sourceBetween("SCREENS['career.name'] =", "SCREENS['career.search'] ="), context);
-  const el = node('screen');
-  context.SCREENS['career.name'].mount(el, { cleanup() {} });
-  const input = node('.career-name-entry'), keyboard = node('.kbd');
-  input.value = 'Ayşe'; input.listeners.input();
-  assert.equal(node('[data-act="search"]').disabled, true);
-  input.value = 'ayşe yılmaz'; input.listeners.input();
-  assert.equal(node('.key.go').disabled, false);
-  onKey({ key: 'z', target: { closest: () => input } });
-  assert.equal(context.STATE.career.name, 'ayşe yılmaz');
-  const key = node('key'); key.dataset = { key: 'back' };
-  keyboard.listeners.pointerdown({ target: { closest: () => key }, preventDefault() {} });
-  assert.equal(input.value, 'ayşe yılma');
-  key.dataset.key = 'z';
-  keyboard.listeners.click({ detail: 0, target: { closest: () => key } });
-  keyboard.listeners.click({ detail: 1, target: { closest: () => key } });
-  assert.equal(input.value, 'ayşe yılmaz');
-  node('.career-name-form').listeners.submit({ preventDefault() {} });
-  assert.equal(context.STATE.career.name, 'Ayşe Yılmaz');
-  assert.deepEqual(transitions, ['career.search']);
-  assert.equal(context.STATE.career.picked, null);
-  onKey({ key: 'Enter', target: { closest: () => node('family') } });
-  assert.deepEqual(transitions, ['career.search']);
-});
-
-test('career choices restore the selected profile and expose the selected style accessibly', () => {
-  const nodes = new Map(), cards = [];
-  const node = selector => {
-    if (!nodes.has(selector)) nodes.set(selector, {
-      attributes: {}, classList: { add() {}, toggle() {} },
-      setAttribute(k, v) { this.attributes[k] = v; },
-    });
-    return nodes.get(selector);
-  };
-  const people = [{ id: 'p0', name: 'Deniz Yıldız', headline: 'Analist' }, { id: 'p1', name: 'Deniz Yıldız', headline: 'Tasarımcı' }];
-  const context = vm.createContext({
-    SCREENS: {}, STATE: { career: { results: people, picked: people[1], profile: people[1], styleId: 'metro' } },
-    API: { live: false },
-    $: node, $$: selector => selector === '[data-person]' ? cards : [], icon: () => '', esc: String, avatarHTML: () => '',
-    careerSearchIsLive: () => false, Sound: { select() {} },
-    CAREER_STYLES: [{ id: 'metro', name: 'Metro', desc: 'Duraklar', thumbnail: 'metro.jpg' }],
-  });
-  vm.runInContext(sourceBetween("SCREENS['career.pick'] =", "SCREENS['career.analyze'] ="), context);
-  vm.runInContext(sourceBetween("SCREENS['career.style'] =", "SCREENS['career.gen'] ="), context);
-  const markup = context.SCREENS['career.pick'].render();
-  assert.match(markup, /data-person="p1" aria-pressed="true"/);
-  assert.doesNotMatch(markup, /data-act="confirm" disabled/);
-  assert.match(context.SCREENS['career.style'].render(), /data-style="metro" aria-pressed="true"/);
-  cards.push(node('p0'), node('p1'));
-  cards[0].dataset = { person: 'p0' }; cards[1].dataset = { person: 'p1' };
-  let click;
-  context.SCREENS['career.pick'].mount({ addEventListener: (_type, fn) => { click = fn; } });
-  click({ target: { closest: selector => selector === '[data-person]' ? cards[0] : null } });
-  assert.equal(context.STATE.career.picked, people[0]);
-  assert.equal(cards[0].attributes['aria-pressed'], 'true');
-  assert.equal(cards[1].attributes['aria-pressed'], 'false');
-  assert.equal(node('[data-selected-copy]').textContent, 'Analist');
-});
-
-test('career analysis reports failures without automatic profile substitution and handles empty categories', async () => {
-  const nodes = new Map(), transitions = [], errors = [];
-  const node = selector => {
-    if (!nodes.has(selector)) nodes.set(selector, {
-      disabled: true, children: [], attributes: {}, classList: { add() {} },
-      setAttribute(k, v) { this.attributes[k] = v; },
-      replaceChildren() { this.children = []; }, appendChild(child) { this.children.push(child); },
-    });
-    return nodes.get(selector);
-  };
-  const picked = { id: 'p0', name: 'Example' };
-  let calls = 0, click;
-  const context = vm.createContext({
-    SCREENS: {}, STATE: { career: { picked } }, $: node, $$: () => [],
-    Sound: { tap() {}, key() {}, success() {} }, icon: () => '', esc: String,
-    document: { createElement: () => ({}) }, console: { error: e => errors.push(e) },
-    App: { go: id => transitions.push(id) },
-    mockPeople: () => assert.fail('Do not silently replace the selected profile'),
-    API: { career: {
-      profile: async () => { calls++; throw new Error('Offline'); },
-      summarize: async () => ({ summary: 'Summary', power: 'Power' }),
-    } },
-    typeText: async (el, text) => { el.textContent = text; },
-  });
-  vm.runInContext(sourceBetween("SCREENS['career.analyze'] =", "SCREENS['career.style'] ="), context);
-  const el = { addEventListener: (_type, fn) => { click = fn; } };
-  const ctx = { alive: true, sleep: async () => {} };
-  context.SCREENS['career.analyze'].mount(el, ctx);
-  await new Promise(setImmediate);
-  assert.equal(calls, 1); assert.equal(errors.length, 1);
-  assert.equal(context.STATE.career.picked, picked);
-  assert.equal(node('.career-analysis-error').hidden, false);
-  assert.equal(node('[data-act="next"]').disabled, true);
-  click({ target: { closest: s => s === '[data-act="retry-analysis"]' } });
-  assert.deepEqual(transitions, ['career.analyze']);
-  nodes.clear();
-  context.API.career.profile = async () => ({ ...picked, experience: [], education: [], skills: [], certifications: [] });
-  context.SCREENS['career.analyze'].mount(el, ctx);
-  await new Promise(setImmediate);
-  for (const cat of ['experience', 'education', 'skills', 'certs']) {
-    assert.equal(node(`[data-items="${cat}"]`).children[0].textContent, 'Bu başlıkta bilgi yok.');
-  }
-  assert.equal(node('[data-act="next"]').disabled, false);
-  assert.equal(node('.ai-summary').attributes['aria-busy'], 'false');
-});
-
-test('four career thumbnails retain matching generation prompts and the same example profile', () => {
-  const context = vm.createContext({});
-  vm.runInContext(sourceBetween('const CAREER_STYLES =', 'const LAB_BASES =') + '\nglobalThis.styles = CAREER_STYLES;', context);
-  vm.runInContext(sourceBetween('function buildInfographicPrompt(', 'async function packagingLogoReference('), context);
-  assert.equal(new Set(Array.from(context.styles, s => s.thumbnail)).size, 4);
-  let profile;
-  for (const style of context.styles) {
-    const base = style.thumbnail.replace(/\.jpg$/, '');
-    fs.accessSync(path.join(__dirname, style.thumbnail));
-    fs.accessSync(path.join(__dirname, base + '-raw.png'));
-    const record = JSON.parse(fs.readFileSync(path.join(__dirname, base + '.json'), 'utf8'));
-    assert.equal(record.prompt, context.buildInfographicPrompt(record.profile, style));
-    if (profile) assert.deepEqual(record.profile, profile);
-    profile = record.profile;
-  }
-});
-
 test('photo prompts preserve the holding-and-pointing pose across styles and variations', () => {
   const context = vm.createContext({ CONFIG: { event: { productBrand: 'Brand' } } });
-  vm.runInContext(sourceBetween('function buildPhotoPrompt(', 'function buildInfographicPrompt('), context);
+  vm.runInContext(sourceBetween('function buildPhotoPrompt(', 'async function packagingLogoReference('), context);
   const product = { name: 'Snack', image: 'reference', ingredientEn: 'coconut and chocolate' };
   for (const id of ['snowglobe', 'adface', 'blocky', 'factory', 'space', 'popart']) {
     const prompt = context.buildPhotoPrompt(product, { id, prompt: 'Scene: {product} with {ingredient}.' }, 1);
@@ -295,7 +409,7 @@ test('photo compositors omit left-hand captions and product thumbnails but retai
     coverDraw() {},
     drawBrandBand: (_g, _w, _h, options = {}) => bands.push(options),
   });
-  vm.runInContext(sourceBetween('async function renderPhotoMock(', '/* ---------- Kariyer infografi'), context);
+  vm.runInContext(sourceBetween('async function renderPhotoMock(', '/* ---------- Lezzet laboratuvarı ambalajı'), context);
   await context.renderPhotoMock({ photo: 'reference', product: { id: 'snack' }, theme: { id: 'snowglobe' } });
   await context.composePhoto('generated');
   assert.equal(bands.length, 2);
@@ -306,7 +420,7 @@ test('photo compositors omit left-hand captions and product thumbnails but retai
   }
 });
 
-test('Demo camera uses sample_photo.jpeg without requesting webcam access, including retakes', () => {
+test('Demo camera uses samples/reference.jpg without requesting webcam access, including retakes', () => {
   const elements = Object.fromEntries(['video', '.cam-shot', '.cam-count', '.cam-flash'].map(selector => [selector, {}]));
   let click;
   const el = { dataset: {}, classList: { add() {} }, addEventListener: (_type, handler) => { click = handler; } };
@@ -320,11 +434,11 @@ test('Demo camera uses sample_photo.jpeg without requesting webcam access, inclu
   vm.runInContext(sourceBetween('function demoPortrait()', '/* ---------- Fotoğraf temaları'), context);
   vm.runInContext(sourceBetween("SCREENS['photo.camera'] =", "SCREENS['photo.gen'] ="), context);
   context.SCREENS['photo.camera'].mount(el, { alive: true, cleanup() {} });
-  assert.equal(context.STATE.photo.photo, 'sample_photo.jpeg');
-  assert.equal(elements['.cam-shot'].src, 'sample_photo.jpeg');
+  assert.equal(context.STATE.photo.photo, 'samples/reference.jpg');
+  assert.equal(elements['.cam-shot'].src, 'samples/reference.jpg');
   assert.equal(el.dataset.state, 'review');
   click({ target: { closest: () => ({ dataset: { act: 'retake' } }) } });
-  assert.equal(context.STATE.photo.photo, 'sample_photo.jpeg');
+  assert.equal(context.STATE.photo.photo, 'samples/reference.jpg');
   assert.equal(el.dataset.state, 'review');
 });
 
@@ -488,7 +602,6 @@ test('Demo returns saved gallery outputs and matching Lab copy without generatin
     Chat: { json: () => assert.fail('No text model call in Demo') },
     mockConcept: () => assert.fail('Demo must use the copy belonging to its saved output'),
     renderPhotoMock: () => assert.fail('Demo must not draw a synthetic photo'),
-    renderInfographic: () => assert.fail('Demo must not draw a synthetic career output'),
     renderPackaging: () => assert.fail('Demo must not draw a synthetic package'),
   });
   vm.runInContext(sampleSource, context);
@@ -497,7 +610,6 @@ test('Demo returns saved gallery outputs and matching Lab copy without generatin
   for (const id of ['snowglobe', 'adface', 'blocky', 'factory', 'space', 'popart']) {
     assert.equal(await context.api.photo.generate({ photo: 'other input', product: {}, theme: { id }, variation: 3 }, { fast: true }), `saved:samples/photo-${id}.jpg`);
   }
-  assert.equal(await context.api.career.infographic({ profile: {}, style: {} }, { fast: true }), 'saved:samples/career-styles/constellation.jpg');
   const concept = await context.api.lab.concept({ base: {}, flavors: [], moment: {} });
   assert.equal(concept.name, record.concept.name);
   assert.equal(concept.slogan, record.concept.slogan);
@@ -509,7 +621,6 @@ test('Demo returns saved gallery outputs and matching Lab copy without generatin
   await assert.rejects(context.api.photo.generate({ theme: { id: 'snowglobe' } }, { fast: true }), /bir görsel değil/);
   context.CONFIG.ai.mode = 'live';
   await assert.rejects(context.api.lab.packaging(concept), /Foundry endpoint/);
-  await assert.rejects(context.api.career.infographic({ profile: {}, style: {} }), /Foundry endpoint/);
 });
 
 test('Minecraft package references become low-resolution pixel images while other themes retain the source', async () => {
@@ -550,6 +661,8 @@ test('GPT Lab requests use the OpenAI v1 endpoint and strict structured output; 
       assert.equal(request.body.response_format.json_schema.strict, true);
       assert.deepEqual(Array.from(request.body.response_format.json_schema.schema.required), ['name', 'slogan', 'story', 'visualDirection']);
       assert.match(request.body.response_format.json_schema.schema.properties.visualDirection.description, /360 characters/);
+      assert.match(request.body.response_format.json_schema.schema.properties.name.description, /one short word/);
+      assert.match(request.body.response_format.json_schema.schema.properties.slogan.description, /never more than three/);
     } else {
       assert.equal(request.api, 'mai/v1');
       assert.equal(request.body.response_format, undefined);
@@ -557,12 +670,12 @@ test('GPT Lab requests use the OpenAI v1 endpoint and strict structured output; 
   }
 });
 
-test('Lab copy validates empty and overlong fields instead of truncating or using mock text', async () => {
-  const good = { name: 'Fıstık Işığı', slogan: 'Molana çıtır bir ışıltı.', story: 'Fıstık ve karamel, çıtır gofrette buluşur.', visualDirection: 'Green and gold packaging on a warm neutral podium.' };
-  let response = good, calls = 0;
+test('Lab copy validates character and word limits instead of truncating or using mock text', async () => {
+  const good = { name: 'Fıstıra', slogan: 'Molana çıtır ışıltı.', story: 'Fıstık ve karamel, çıtır gofrette buluşur.', visualDirection: 'Green and gold packaging on a warm neutral podium.' };
+  let response = good, calls = 0, instructions, choices;
   const context = vm.createContext({
     CONFIG: { ai: { labDeployment: 'gpt-5.4-mini' }, event: { productBrand: 'Brand' } },
-    Chat: { json: async () => { calls++; return response; } },
+    Chat: { json: async (system, input) => { calls++; instructions = system; choices = JSON.parse(input); return response; } },
     mockConcept: () => ({ name: 'mock-name', slogan: 'mock-slogan', baseEn: 'wafer', flavorEn: 'pistachio' }),
   });
   vm.runInContext(sourceBetween('const LAB_COPY_LIMITS =', '/* ---------- Mock üreticiler'), context);
@@ -570,9 +683,29 @@ test('Lab copy validates empty and overlong fields instead of truncating or usin
   vm.runInContext(`globalThis.API = { get live() { return true; }, ${lab} };`, context);
   const picks = { base: { name: 'Gofret' }, flavors: [{ name: 'Antep Fıstığı' }], moment: { name: 'Mola' } };
   assert.equal((await context.API.lab.concept(picks)).name, good.name);
-  assert.equal(context.validateLabCopy({ ...good, name: 'x'.repeat(24) }).name.length, 24);
-  response = { ...good, name: 'x'.repeat(25) };
+  assert.equal(choices.rdNote, '');
+  const note = 'Ambalajda "sade" bir görünüm olsun.\nFıstık tadı öne çıksın.';
+  await context.API.lab.concept({ ...picks, rdNote: `  ${note}  ` });
+  assert.equal(choices.rdNote, note);
+  assert.equal(choices.base, picks.base.name);
+  assert.deepEqual(choices.flavors, picks.flavors.map(flavor => flavor.name));
+  assert.equal(choices.moment, picks.moment.name);
+  assert.match(instructions, /Ar-Ge notunu ek tasarım tercihi/);
+  await context.API.lab.concept({ ...picks, rdNote: 'x'.repeat(500) });
+  assert.equal(choices.rdNote.length, 500);
+  const beforeInvalidNote = calls;
+  await assert.rejects(context.API.lab.concept({ ...picks, rdNote: 'x'.repeat(501) }), /en fazla 500 karakter/);
+  await assert.rejects(context.API.lab.concept({ ...picks, rdNote: null }), /metin olmalıdır/);
+  assert.equal(calls, beforeInvalidNote);
+  assert.equal(context.validateLabCopy({ ...good, name: 'x'.repeat(16) }).name.length, 16);
+  assert.equal(context.validateLabCopy({ ...good, slogan: 'Çıtır mola' }).slogan, 'Çıtır mola');
+  assert.equal(context.validateLabCopy({ ...good, slogan: '  Molana\tçıtır\nışıltı.  ' }).slogan, 'Molana\tçıtır\nışıltı.');
+  response = { ...good, name: 'x'.repeat(17) };
   await assert.rejects(context.API.lab.concept(picks), /karakter sınırını aştı/);
+  response = { ...good, name: 'Fıstık Işığı' };
+  await assert.rejects(context.API.lab.concept(picks), /name alanı için kelime sınırını aştı/);
+  response = { ...good, slogan: 'Molana çıtır bir ışıltı.' };
+  await assert.rejects(context.API.lab.concept(picks), /slogan alanı için kelime sınırını aştı/);
   response = { ...good, story: ' ' };
   await assert.rejects(context.API.lab.concept(picks), /eksik bir konsept/);
   const before = calls;
@@ -658,6 +791,7 @@ test('live Laboratory packaging passes the official logo to image edits and fail
   assert.equal(edits[0].refs[0], ref);
   assert.match(edits[0].prompt, /Reference image 1 contains only the official Ülker logo/);
   assert.match(edits[0].prompt, /Do not recreate the brand as typed text/);
+  assert.match(edits[0].prompt, /12-15% of the package front width/);
   assert.match(edits[0].prompt, /"Test snack"/);
   assert.match(edits[0].prompt, /"Test slogan"/);
   assert.equal(draws[0][0], logo);
@@ -694,12 +828,88 @@ test('canvas packaging renderer draws the real logo instead of a typeset imitati
   assert.equal(images.length, 1);
   assert.equal(images[0][0], logo);
   assert.ok(Math.abs(images[0][3] / images[0][4] - 1200 / 384) < 0.0001);
+  assert.ok(images[0][3] / 880 >= 0.12 && images[0][3] / 880 <= 0.15, 'Logo remains subordinate to the product name');
   assert.ok(!text.includes('ülker'));
+});
+
+test('Laboratory revisions send the existing design and logo without replacing the old concept on failures', async () => {
+  const previous = JSON.parse(fs.readFileSync(path.join(__dirname, 'samples', 'reference-photo', 'pack-wafer.json'), 'utf8')).concept;
+  const original = JSON.stringify(previous), previousBlob = new Blob(['previous']), logoBlob = new Blob(['logo']);
+  const edits = [], textCalls = [];
+  let response = { ...previous, visualDirection: 'Use a calmer background; preserve the package and ingredients.' };
+  const context = vm.createContext({
+    CONFIG: { ai: { endpoint: 'https://test.example' }, event: { productBrand: 'Ülker' } },
+    Chat: { json: async (system, user, signal) => { textCalls.push({ system, input: JSON.parse(user), signal }); return response; } },
+    resizeDataUrl: async (image, width, height) => { assert.equal(image, 'previous-image'); assert.deepEqual([width, height], [896, 1120]); return 'previous-blob'; },
+    dataUrlToBlob: image => { assert.equal(image, 'previous-blob'); return previousBlob; },
+    packagingLogoReference: async () => logoBlob,
+    MAI: { edit: async (prompt, refs, signal) => { edits.push({ prompt, refs, signal }); return 'revised-raw'; } },
+    composePack: async (image, concept) => { assert.equal(image, 'revised-raw'); assert.equal(concept.name, previous.name); return 'revised-image'; },
+  });
+  vm.runInContext(sourceBetween('function packLogoPrompt(', '/* ---------- Mock üreticiler'), context);
+  vm.runInContext(`globalThis.API = { live: true, ${sourceBetween('  lab: {\n    async concept', '  share: {')} };`, context);
+  const request = { image: 'previous-image', concept: previous, instruction: '  Arka planı sadeleştir.  ' };
+  const controller = new AbortController();
+  const result = await context.API.lab.revise(request, { signal: controller.signal });
+  assert.equal(result.img, 'revised-image');
+  assert.equal(result.concept.name, previous.name);
+  assert.equal(JSON.stringify(previous), original);
+  assert.deepEqual(textCalls[0].input.previousCopy, Object.fromEntries(['name', 'slogan', 'story', 'visualDirection'].map(key => [key, previous[key]])));
+  assert.equal(textCalls[0].input.instruction, 'Arka planı sadeleştir.');
+  assert.deepEqual(Array.from(edits[0].refs), [previousBlob, logoBlob]);
+  assert.equal(edits[0].signal, controller.signal);
+  assert.match(edits[0].prompt, /Reference image 1 is the user's existing snack design/);
+  assert.match(edits[0].prompt, /Reference image 2 contains only the official Ülker logo/);
+  assert.match(edits[0].prompt, /12-15% of the package front width/);
+  for (const instruction of ['', '   ', null, 'x'.repeat(501)]) {
+    await assert.rejects(context.API.lab.revise({ ...request, instruction }), /değişikliği yaz|en fazla 500/);
+  }
+  assert.equal(textCalls.length, 1);
+  response = { ...previous, slogan: 'Bu slogan dört kelime' };
+  await assert.rejects(context.API.lab.revise(request), /kelime sınırını aştı/);
+  assert.equal(edits.length, 1);
+  response = previous;
+  await assert.rejects(context.API.lab.revise(request, { signal: controller.signal, onCopy: () => controller.abort() }), { name: 'AbortError' });
+  assert.equal(edits.length, 1);
+  context.API.live = false;
+  await assert.rejects(context.API.lab.revise(request), /Canlı Mod gerekir/);
+  assert.equal(textCalls.length, 3);
+  assert.equal(JSON.stringify(previous), original);
+});
+
+test('podcast recording setup rejects blocked audio or cancellation and closes its context', async () => {
+  let timeout, closed = 0;
+  class AudioContextStub {
+    state = 'suspended';
+    resume() { return new Promise(() => {}); }
+    async close() { this.state = 'closed'; closed++; }
+  }
+  const context = vm.createContext({
+    window: { AudioContext: AudioContextStub },
+    HTMLCanvasElement: { prototype: { captureStream() {} } },
+    MediaRecorder: { isTypeSupported: () => true },
+    setTimeout(callback) { timeout = callback; return 1; },
+    clearTimeout() {},
+  });
+  new vm.Script(fs.readFileSync(path.join(__dirname, 'podcast-video.js'), 'utf8') + '\nthis.Video = PodcastVideo;').runInContext(context);
+  for (const mode of ['timeout', 'cancel']) {
+    const controller = new AbortController();
+    const session = context.Video.prepare(controller.signal);
+    const rejected = assert.rejects(session.ready, mode === 'timeout' ? /Video sesi başlatılamadı/ : /cancelled/);
+    if (mode === 'timeout') timeout();
+    else controller.abort(new Error('Test setup cancelled'));
+    await rejected;
+    await session.dispose();
+    assert.equal(session.context.state, 'closed');
+  }
+  assert.equal(closed, 2);
 });
 
 test('kiosk, gallery and Copilot application scripts parse', () => {
   new vm.Script(engine);
   new vm.Script(sampleSource);
+  new vm.Script(fs.readFileSync(path.join(__dirname, 'podcast.js'), 'utf8'));
+  new vm.Script(fs.readFileSync(path.join(__dirname, 'podcast-video.js'), 'utf8'));
   new vm.Script(fs.readFileSync(path.join(__dirname, 'copilot', 'app.js'), 'utf8'));
   for (const name of ['index.html', 'samples.html', path.join('copilot', 'index.html')]) {
     const content = fs.readFileSync(path.join(__dirname, name), 'utf8');
@@ -729,6 +939,7 @@ test('gallery shows only the latest attempt per scenario, then applies experienc
     append(...nodes) { this.children.push(...nodes); }
     replaceChildren(...nodes) { this.children = nodes; }
     addEventListener() {}
+    setAttribute() {}
   }
   const content = fs.readFileSync(path.join(__dirname, 'samples.html'), 'utf8');
   const nodes = Object.fromEntries(['kind', 'search', 'gallery', 'count', 'empty']
@@ -760,7 +971,7 @@ test('gallery shows only the latest attempt per scenario, then applies experienc
   nodes['#search'].value = 'Reklam';
   context.render();
   assert.equal(nodes['#gallery'].children.length, 1);
-  nodes['#kind'].value = 'career';
+  nodes['#kind'].value = 'podcast';
   context.render();
   assert.equal(nodes['#gallery'].children.length, 0);
   assert.equal(nodes['#empty'].hidden, false);

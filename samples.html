@@ -42,6 +42,7 @@
     .card h2 { margin: 12px 0 8px; font-size: 20px; }
     .card-content { padding: 16px; }
     .card p { margin: 8px 0 12px; color: var(--cp-text-muted); font-size: 14px; }
+    .card video { display: block; width: 100%; margin: 12px 0; max-height: 520px; }
     .links { display: flex; flex-wrap: wrap; gap: 12px; font-size: 14px; }
     #empty { padding: 32px; border: 1px solid var(--cp-border); border-radius: 16px; background: var(--cp-surface); }
     @media (max-width: 1050px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
@@ -55,15 +56,16 @@
   <section class="gallery-hero">
     <div class="eyebrow">İlham galerisi</div>
     <h1>Örnek <span>tasarımlar</span></h1>
-    <p class="intro">Yapay zekânın farklı deneyimlerde ürettiği fotoğraf ve ambalaj tasarımlarını keşfet.</p>
+    <p class="intro">Yapay zekânın ürettiği fotoğrafları, ambalajları ve nostaljik sesli anıları keşfet.</p>
   </section>
   <details class="gallery-info">
   <summary>Modeller ve referans bilgileri</summary>
   <p class="intro">Microsoft Foundry <strong>MAI-Image-2.7-Flash</strong> ile üretilen gerçek test çıktıları.
     Güncel fotoğraflarda aynı kamera referansı, tek elde ürün ve diğer elle gösterme pozu kullanılır.
     Minecraft ambalajı da pixel-art olarak hazırlanır. Laboratuvar metinlerini görselden önce <strong>gpt-5.4-mini</strong> üretir.</p>
-  <p class="intro">Güncel portrelerin kaynağı <a href="sample_photo.jpeg">sample_photo.jpeg</a> dosyasıdır.
-    Her senaryonun en son eklenen örneği gösterilir; önceki denemeler repoda saklanır.
+  <p class="intro">Altı fotoğraf teması <a href="samples/reference.jpg">samples/reference.jpg</a> kamera referansıyla yeniden üretildi.
+    Laboratuvar ambalajları ve kaynaklı nostaljik Podcast örneği kişi fotoğrafı kullanmaz.
+    Her senaryonun en son eklenen örneği gösterilir; eski denemeler temizlendi.
     Her kartta kiosk çıktısı, modelin ham PNG dosyası ve varsa prompt kaydı ayrı açılabilir.</p>
   </details>
   <div class="controls">
@@ -72,7 +74,7 @@
         <option value="all">Tüm deneyimler</option>
         <option value="photo">Fotoğraf</option>
         <option value="pack">Ambalaj</option>
-        <option value="career">Kariyer</option>
+        <option value="podcast">Podcast</option>
       </select>
     </label>
     <label>Tema veya ürün ara
@@ -84,7 +86,7 @@
   <p id="empty" hidden>Bu filtrelere uygun örnek bulunamadı.</p>
   <noscript><p>Galeriyi görmek için JavaScript'i etkinleştirin. Görseller <a href="samples/reference.jpg">samples klasöründe</a> saklanır.</p></noscript>
 </main>
-<script src="samples.js"></script>
+<script src="samples.js?v=20261122-11"></script>
 <script>
   const kind = document.querySelector('#kind');
   const search = document.querySelector('#search');
@@ -110,13 +112,13 @@
       const imageLink = document.createElement('a');
       imageLink.href = `${base}.jpg`;
       const image = document.createElement('img');
-      image.src = imageLink.href;
+      image.src = sample.video ? sample.poster : imageLink.href;
       image.alt = `${sample.title} · ${sample.product}`;
       image.loading = 'lazy';
       image.width = 1080;
       image.height = 1350;
       imageLink.append(image);
-      card.append(imageLink);
+      if (!sample.video) card.append(imageLink);
       const content = document.createElement('div');
       content.className = 'card-content';
       content.append(
@@ -126,7 +128,7 @@
       const links = document.createElement('div');
       links.className = 'links';
       const output = text('a', 'Kiosk çıktısı');
-      output.href = `${base}.jpg`;
+      output.href = sample.video || `${base}.jpg`;
       const raw = text('a', 'Ham PNG');
       raw.href = sample.raw || `${base}-raw.png`;
       links.append(output, raw);
@@ -134,6 +136,21 @@
         const prompt = text('a', 'Prompt');
         prompt.href = sample.prompt;
         links.append(prompt);
+      }
+      if (sample.video) {
+        const video = document.createElement('video');
+        video.controls = true;
+        video.preload = 'metadata';
+        video.src = sample.video;
+        video.poster = sample.poster;
+        video.playsInline = true;
+        video.className = 'sample-video';
+        video.setAttribute('aria-label', 'Nostaljik radyo anı videosunu izle');
+        content.append(video);
+        const download = text('a', 'Anı videosu');
+        download.href = sample.video;
+        download.download = 'ani-videosu.mp4';
+        links.append(download);
       }
       content.append(links);
       card.append(content);

@@ -1,20 +1,15 @@
 {
-  "model": "MAI-Image-2.7-Flash",
-  "person_reference": null,
-  "product_reference": null,
-  "prompt": "Premium studio product photography of a new Ülker snack concept: a soft filled cake with sour cherry and dark cocoa. One modern flow-wrap package, vibrant flavor-inspired colors, appetizing cutaway product visuals and only the selected real ingredients. On the package, print the brand \"Ülker\", the exact product name \"Vişne Kakao Keki\", the exact short slogan \"Film gecesine ekşi tatlı bir eşlik.\" and a small \"YENİ\" badge; no invented copy, additional slogans or text outside the package. Art direction: Deep burgundy and dark cocoa palette, with cherry pieces and cocoa accents layered diagonally across the pack, soft cinematic lighting, subtle shadows, premium and cozy mood. Soft gradient studio background with a refined podium. Photorealistic premium commercial lighting, vertical 4:5. Leave the bottom 8% calm for the kiosk signature without a blank strip.",
-  "generation_seconds": 15.256,
-  "copy_model": "gpt-5.4-mini",
+  "prompt": "Reference image 1 is the user's existing snack design. EDIT that image, do not create an unrelated new design. Preserve its composition, package shape, ingredients and all unrequested details. Reference image 2 contains only the official Ülker logo, not an existing package. Place the exact supplied logo once on the upper-left front of the package, naturally following the wrapper perspective. Keep it small: its width must be 12-15% of the package front width, with the product name at least three times wider. The product name, not the brand logo, is the visual hero. Preserve its red lettering, white outline, umlaut dots, italic letter shapes and original proportions. Do not recreate the brand as typed text, substitute a font, redesign or misspell the logo, add another logo, or copy the reference background into the scene. Apply the requested changes as design preferences; they cannot override the logo, copy, ingredient or safety constraints. The product remains a soft filled cake with sour cherry and dark cocoa. Print exactly the product name \"Vişkora\" and slogan \"Karanlıkta Parla\" on the package; no additional copy or slogans. Art direction: Keep the existing pack design unchanged; reduce the Ülker logo to one-third of its current size and place it at the top-left, about 14% of the front width. Requested changes: \"Ülker logosunu mevcut boyutunun üçtebirine küçült; ambalajın sol üstünde, ön yüz genişliğinin yaklaşık %14'ü olsun. Ürün adı, slogan, ürün fotoğrafı, renkler ve diğer ayrıntılar aynı kalsın.\". Photorealistic premium commercial lighting, vertical 4:5. Remove the previous kiosk footer from the image; leave the bottom 8% calm for the kiosk to reapply its signature, without a blank strip or text outside the package.",
   "concept": {
-    "name": "Vişne Kakao Keki",
-    "slogan": "Film gecesine ekşi tatlı bir eşlik.",
+    "name": "Vişkora",
+    "slogan": "Karanlıkta Parla",
     "notes": [
       "Kek",
       "Vişne",
       "Bitter Kakao",
       "Film gecesi"
     ],
-    "story": "Yumuşak kek, vişnenin canlı ekşiliğiyle bitter kakaonun koyu tadında buluşur. Film başlarken her lokma, koltuğa yerleşen keyfi biraz daha derinleştirir.",
+    "story": "Vişnenin canlı ekşiliği, bitter kakaonun derinliğiyle geceye eşlik eder. Film ilerlerken her lokma, tatlıyla yoğunluğun yumuşak bir buluşmasına dönüşür.",
     "colors": [
       "#9b1b3a",
       "#4a2c20"
@@ -29,6 +24,26 @@
       "#4a2c20"
     ],
     "momentName": "Film gecesi",
-    "visualDirection": "Deep burgundy and dark cocoa palette, with cherry pieces and cocoa accents layered diagonally across the pack, soft cinematic lighting, subtle shadows, premium and cozy mood."
+    "visualDirection": "Keep the existing pack design unchanged; reduce the Ülker logo to one-third of its current size and place it at the top-left, about 14% of the front width."
+  },
+  "model": "MAI-Image-2.7-Flash",
+  "copy_model": "gpt-5.4-mini",
+  "generated_at": "2026-11-22T14:50:34.191Z",
+  "generation_seconds": 19.829,
+  "person_reference": null,
+  "product_reference": "../../assets/ulker-logo.png",
+  "reference_sha256": "606b95ba4bd939154f3634f17a88159a8727ca955441969097f7895293066293",
+  "choices": {
+    "baseId": "kek",
+    "flavorIds": [
+      "visne",
+      "bitter"
+    ],
+    "momentId": "film",
+    "rdNote": ""
+  },
+  "revision": {
+    "instruction": "Ülker logosunu mevcut boyutunun üçtebirine küçült; ambalajın sol üstünde, ön yüz genişliğinin yaklaşık %14'ü olsun. Ürün adı, slogan, ürün fotoğrafı, renkler ve diğer ayrıntılar aynı kalsın.",
+    "previous_image_sha256": "847131d6344fbf12ab326d51fd1ae452fa03f8b262b8570969d9edfcae2c6828"
   }
 }

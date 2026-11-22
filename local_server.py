@@ -14,6 +14,7 @@ ENV_FIELDS = {
     "FOUNDRY_API_KEY": "key",
     "FOUNDRY_IMAGE_DEPLOYMENT": "imageModel",
     "FOUNDRY_LAB_DEPLOYMENT": "labModel",
+    "FOUNDRY_SPEECH_VOICE": "voice",
 }
 
 
@@ -38,6 +39,10 @@ def read_settings(path):
             value = value[1:-1]
         settings[field] = value
     return settings
+
+
+class LocalServer(ThreadingHTTPServer):
+    request_queue_size = 64
 
 
 class LocalHandler(SimpleHTTPRequestHandler):
@@ -92,6 +97,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     root = Path(__file__).resolve().parent
     handler = partial(LocalHandler, directory=str(root))
-    with ThreadingHTTPServer(("127.0.0.1", args.port), handler) as server:
+    with LocalServer(("127.0.0.1", args.port), handler) as server:
         print(f"Kiosk: http://localhost:{args.port}/", flush=True)
         server.serve_forever()

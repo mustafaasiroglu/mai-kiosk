@@ -13,7 +13,7 @@
     settings: '<circle cx="12" cy="12" r="3"/><path d="m9 3-.7 2.3L6 6l-2.2-.4L2.5 8l1.6 1.8v2.5L2.5 14l1.3 2.5 2.3-.5 2.2 1.3L9 20h3l.7-2.7 2.3-1.3 2.5.5 1.5-2.5-1.8-1.7V9.8L19 8l-1.5-2.4-2.5.4-2.3-.7L12 3z" transform="translate(1 1)"/>',
     edit: '<path d="M11 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-5M10 14l1-4 8-8 3 3-8 8z"/>',
     photo: '<path d="M3 8a2 2 0 0 1 2-2h3l2-3h4l2 3h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.5"/>',
-    career: '<rect x="3" y="7" width="18" height="13" rx="3"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12a17 17 0 0 0 18 0m-9 1v3"/>',
+    podcast: '<rect x="3" y="7" width="18" height="14" rx="3"/><circle cx="8" cy="14" r="2"/><path d="m16 7 4-5M13 11h5m-5 4h5"/>',
     lab: '<path d="M9 3h6M10 3v7L4 19a1.3 1.3 0 0 0 1 2h14a1.3 1.3 0 0 0 1-2l-6-9V3M7 15h10"/><path d="M10 18h.01m4-1h.01"/>',
     sparkle: '<path d="M12 2c0 6 4 10 10 10-6 0-10 4-10 10 0-6-4-10-10-10 6 0 10-4 10-10Z"/>',
     arrow: '<path d="M4 12h15m-6-6 6 6-6 6"/>',
@@ -32,12 +32,12 @@
 
   const agents = [
     { id: 'photo', name: 'Fotoğraf Stüdyosu', description: 'Nasıl bir yıldız olduğunu keşfet, temanı seç ve poz ver.', prompt: 'Bir Ülker portresi hazırlayalım' },
-    { id: 'career', name: 'Kariyer Koçu', description: 'Örnek bir kariyer profilini görsel bir yol haritasına dönüştür.', prompt: 'Kariyer haritamı hazırla' },
     { id: 'lab', name: 'Lezzet Laboratuvarı', description: 'Yeni bir Ülker lezzeti tasarla; adını, sloganını ve ambalajını oluştur.', prompt: 'Yeni bir atıştırmalık tasarlayalım' },
+    { id: 'podcast', name: EXPS.podcast.name, description: EXPS.podcast.desc, prompt: 'Bir ısırıkla o yıla dönelim' },
   ];
   const compact = matchMedia('(max-width: 780px)');
   const threads = [];
-  let thread = null, mode = 'cowork', view = 'catalog', sideOpen = !compact.matches, panelOpen = false;
+  let thread = null, mode = new URLSearchParams(location.search).get('ui') === 'chat' ? 'chat' : 'cowork', view = 'catalog', sideOpen = !compact.matches, panelOpen = false;
   let draftPhoto = null, photoRead = 0, cameraRequest = 0, noticeTimer;
   const modeName = value => value === 'cowork' ? 'Cowork' : 'Chat';
   const badge = (agent, small = false) => `<span class="agent-badge${small ? ' small' : ''}">${svg(agent.id)}</span>`;
@@ -57,6 +57,7 @@
   function renderCards() {
     const filter = normalize(el('catalogInput').value);
     const found = agents.filter(a => normalize(`${a.name} ${a.description}`).includes(filter));
+    el('catalogCount').textContent = found.length;
     el('cards').innerHTML = found.length ? found.map(a =>
       `<button type="button" class="agent-card" data-agent="${a.id}">${badge(a)}<strong>${a.name}</strong><p>${a.description}</p><span class="card-action">Sohbeti başlat ${svg('arrow')}</span></button>`
     ).join('') : '<p class="muted">Eşleşen agent bulunamadı.</p>';
@@ -66,7 +67,7 @@
     <p class="eyebrow">${svg('sparkle')}<span id="catalogMode"></span></p>
     <h1>Agent’lar</h1><p class="intro">Bir agent seç ve Yıldız Holding deneyimine Copilot ile başla.</p>
     <label class="catalog-search">${svg('search')}<input type="search" id="catalogInput" aria-label="Agent ara" placeholder="Agent ara"></label>
-    <h2 class="section-title">Kullanılabilir (3)</h2><div class="cards" id="cards"></div>
+    <h2 class="section-title">Kullanılabilir (<span id="catalogCount"></span>)</h2><div class="cards" id="cards"></div>
   </div>`;
   el('catalogInput').addEventListener('input', renderCards);
   renderCards();
@@ -95,11 +96,12 @@
     el('recent').innerHTML = threadRows(threads.filter(t => t.messages.length).slice(0, 12)) || '<p class="side-empty">Henüz sohbet yok</p>';
   }
 
-  function artifactHTML(result) {
+  function artifactHTML(result, revision = false) {
     return `<figure class="artifact">
-      <img src="${esc(result.image)}" alt="${esc(result.title)}">
-      <figcaption><strong>${esc(result.title)}</strong>${result.slogan ? `<p>${esc(result.slogan)}</p>` : ''}${result.story ? `<p class="muted">${esc(result.story)}</p>` : ''}</figcaption>
-      <a class="artifact-action" href="${esc(result.image)}" download="${result.file}">${svg('download')} Görseli indir</a>
+      ${result.podcast ? '' : `<img src="${esc(result.image)}" alt="${esc(result.title)}">`}
+      <figcaption>${result.podcast ? podcastOutputHTML(result.podcast) : `<strong>${esc(result.title)}</strong>${result.slogan ? `<p>${esc(result.slogan)}</p>` : ''}${result.story ? `<p class="muted">${esc(result.story)}</p>` : ''}`}</figcaption>
+      ${result.podcast ? '' : `<a class="artifact-action" href="${esc(result.image)}" download="${result.file}">${svg('download')} Görseli indir</a>`}
+      ${revision ? `<div class="pills"><button type="button" class="pill" data-action="revise"${result.canRevise ? '' : ' disabled'}>${svg('edit')} Revizyon İste</button></div>${result.canRevise ? '' : '<p class="muted">Revizyon için Canlı Mod gerekir.</p>'}` : ''}
     </figure>`;
   }
 
@@ -131,7 +133,7 @@
     return `<div class="answer">
       <div class="answer-header">${badge(t.agent, true)}${t.agent.name}</div>
       <p class="answer-text">${esc(entry.text)}</p>
-      ${approval}${options ? `<div class="pills">${options}</div>` : ''}${entry.result ? artifactHTML(entry.result) : ''}
+      ${approval}${options ? `<div class="pills">${options}</div>` : ''}${entry.result ? artifactHTML(entry.result, t.agent.id === 'lab' && entry.result === t.result && t.phase === 'finished' && !t.job) : ''}
     </div>`;
   }
 
@@ -139,19 +141,22 @@
     const jobs = t.messages.filter(entry => entry.type === 'job');
     const job = jobs.at(-1)?.job;
     const outputs = t.messages.filter(entry => entry.result).map(entry => entry.result).reverse();
+    const players = [...el('messages').querySelectorAll('.podcast-output video')];
+    const videoSources = new Map(t.messages.filter(entry => entry.result?.podcast).map((entry, index) => [entry.result.podcast, players[index]?.src]));
     el('workspaceBody').innerHTML = `<section><h3>Agent</h3><p class="answer-header">${badge(t.agent, true)}${t.agent.name}</p><p class="muted">${t.agent.description}</p></section>
       <section><h3>Etkinlik</h3>${job ? `<p>${jobLabel(job)}</p>${timeline(job)}` : '<p class="muted">Üretim başladığında adımlar burada görünür.</p>'}</section>
-      <section><h3>Çıktılar</h3>${outputs.length ? outputs.map(r => `<p><a class="artifact-action" href="${esc(r.image)}" download="${r.file}">${svg('download')} ${esc(r.title)}</a></p>`).join('') : '<p class="muted">Henüz çıktı yok.</p>'}</section>`;
+      <section><h3>Çıktılar</h3>${outputs.length ? outputs.map(r => `<p><a class="artifact-action" href="${esc(r.podcast ? videoSources.get(r.podcast) : r.image)}" download="${r.podcast ? `ani-videosu.${r.podcast.video.type.startsWith('video/mp4') ? 'mp4' : 'webm'}` : r.file}">${svg('download')} ${esc(r.title)}${r.podcast ? ' · Video' : ''}</a></p>`).join('') : '<p class="muted">Henüz çıktı yok.</p>'}</section>`;
   }
 
   function syncComposer() {
     if (!thread || view !== 'chat') return;
     const working = !!thread.job;
-    el('message').placeholder = working ? 'Agent çalışıyor…' : `${thread.agent.name} ile sohbet et`;
+    el('message').placeholder = working ? 'Agent çalışıyor…' : thread.phase === 'lab-revision' ? 'Ambalajda neyi değiştirelim?' : `${thread.agent.name} ile sohbet et`;
     el('message').readOnly = working;
     el('send').hidden = working;
     el('send').disabled = !el('message').value.trim() && !draftPhoto;
     el('stop').hidden = !working;
+    el('podcastBack').hidden = working || thread.phase !== 'podcast-other';
     el('attachButton').hidden = !(API.live && thread.phase === 'reference' && !working);
     el('composerMode').textContent = modeName(mode);
     el('attachment').innerHTML = draftPhoto ? `<span class="pill">${svg('file')}${esc(draftPhoto.name)} ${action('removeAttachment', svg('close'), 'icon-btn')}</span>` : '';
@@ -162,9 +167,12 @@
     renderChrome();
     if (view !== 'chat') return;
     const t = thread, log = el('messages'), previousBottom = el('scroll').scrollTop;
+    disposePodcastMedia(log);
     log.innerHTML = t.messages.length ? t.messages.map((entry, i) => renderMessage(t, entry, i)).join('') : `<div class="welcome">
       ${badge(t.agent)}<h1>${t.agent.name}</h1><p class="intro">${t.agent.description}</p>
       <div class="pills">${action('start', `${svg('sparkle')} ${t.agent.prompt}`)}</div></div>`;
+    const podcasts = t.messages.filter(entry => entry.result?.podcast).map(entry => entry.result.podcast);
+    log.querySelectorAll('.podcast-output').forEach((root, index) => mountPodcastMedia(root, null, podcasts[index]));
     syncComposer();
     renderWorkspace(t);
     const pane = el('scroll');
@@ -173,6 +181,8 @@
   }
 
   function clearDraft() {
+    disposePodcastMedia(el('messages'));
+    document.querySelectorAll('video').forEach(video => video.pause());
     photoRead++;
     if (el('photoDialog').open) el('photoDialog').close();
     closeCamera();
@@ -212,8 +222,8 @@
       case 'start':
         if (t.agent.id === 'photo') {
           ask(t, 'character', 'Ofiste nasıl bir yıldızsın? Sana en çok benzeyeni seç; lezzet ruhunu birlikte bulalım.', characters);
-        } else if (t.agent.id === 'career') {
-          ask(t, 'name', 'Haritada hangi isim görünsün? Profil bilgileri temsili olacak; LinkedIn’de arama yapmayacağım.', [{ id: 'sample', name: 'Örnek profille devam et' }]);
+        } else if (t.agent.id === 'podcast') {
+          ask(t, 'podcast-product', 'Bu ürün sana hangi yılı hatırlatıyor? Bir Ülker ürünü seç.', PRODUCTS);
         } else {
           const bases = matchOptions(LAB_BASES, text);
           if (bases.length === 1) {
@@ -263,27 +273,47 @@
           prepare(t, `${v.theme.name} · ${sample.product}`, `Seçtiğin lezzet ruhu ${v.product.name}. Demo kişiselleştirme yapmaz: bu temanın ${sample.product} ile kayıtlı portresini getireceğim. Kamera açılmayacak ve yeni görsel üretilmeyecek.`);
         }
         break;
-      case 'name':
-        if (choice?.id !== 'sample' && (text.length > 50 || !/^[\p{L}\p{M} .'-]+$/u.test(text))) {
-          return ask(t, 'name', 'Lütfen en fazla 50 karakterlik bir isim yaz veya örnek profili seç.', [{ id: 'sample', name: 'Örnek profille devam et' }]);
-        }
-        v.name = choice?.id === 'sample' || normalize(text) === 'ornek profille devam et' ? 'Deniz Yıldız' : text;
-        ask(t, 'profile', 'Haritada hangi temsili kariyer profili yer alsın?', profiles);
-        break;
-      case 'profile': {
-        const profile = choice || matchOptions(profiles, text)[0];
-        if (!profile) return ask(t, 'profile', 'Aşağıdaki temsili profillerden birini seç.', profiles);
-        v.profile = profile;
-        ask(t, 'style', 'Kariyer haritası için bir görsel stil seç.', CAREER_STYLES);
+      case 'podcast-product': {
+        const product = choice || matchOptions(PRODUCTS, text)[0];
+        if (!product) return ask(t, 'podcast-product', 'Bir Ülker ürünü seç.', PRODUCTS);
+        v.product = product;
+        ask(t, 'podcast-era', 'Hangi yıla dönelim? Bir dönem veya özel bir tarih seç.', PODCAST_ERAS);
         break;
       }
-      case 'style': {
-        const style = choice || matchOptions(CAREER_STYLES, text)[0];
-        if (!style) return ask(t, 'style', 'Aşağıdaki stillerden birini seçebilir veya adını yazabilirsin.', CAREER_STYLES);
-        v.style = style;
-        prepare(t, `${v.name} · ${v.profile.name} · ${style.name}`, API.live ? 'Seçtiğin temsili profili kullanıp Foundry’de oluşturulan arka planla bir kariyer haritası hazırlayacağım.' : 'Bu seçimleri aldım. Demo modunda kişiselleştirme yapmadan galerideki kayıtlı haritayı göstereceğim.');
+      case 'podcast-era': {
+        const era = choice || matchOptions(PODCAST_ERAS, text)[0];
+        if (!era) return ask(t, 'podcast-era', 'Bir dönem seç. Belirli bir yıl için Özel bir tarih seçeneğini kullan.', PODCAST_ERAS);
+        v.era = era;
+        if (era.id === 'custom') ask(t, 'podcast-date', 'Yıl veya özel tarihi 2004 veya 23.04.2004 biçiminde yaz.');
+        else ask(t, 'podcast-moment', 'O an neredeydin?', PODCAST_MOMENTS);
         break;
       }
+      case 'podcast-date':
+        try { v.era = podcastDate(text); }
+        catch (error) { return ask(t, 'podcast-date', error.message); }
+        ask(t, 'podcast-moment', 'O an neredeydin?', PODCAST_MOMENTS);
+        break;
+      case 'podcast-moment': {
+        const moment = choice || matchOptions(PODCAST_MOMENTS, text)[0];
+        if (!moment) return ask(t, 'podcast-moment', 'Bir an seç.', PODCAST_MOMENTS);
+        v.moment = moment;
+        if (moment.id === 'other') ask(t, 'podcast-other', 'O anı kısaca nasıl adlandıralım?');
+        else ask(t, 'podcast-memory', 'Anını tek cümleyle anlat. Hassas kişisel bilgi yazma.');
+        break;
+      }
+      case 'podcast-other':
+        try { v.moment = { id: 'other', name: podcastText(text, 'Anın', 80) }; }
+        catch (error) { return ask(t, 'podcast-other', error.message); }
+        ask(t, 'podcast-memory', 'Anını tek cümleyle anlat. Hassas kişisel bilgi yazma.');
+        break;
+      case 'podcast-memory':
+        v.memory = text;
+        try { validatePodcastInput(v); }
+        catch (error) { return ask(t, 'podcast-memory', error.message); }
+        prepare(t, `${v.product.name} · ${v.era.name} · ${v.moment.name}`, API.live
+          ? 'WebIQ yalnızca dönemi ve genel an türünü araştıracak. Anın Foundry’de özgün bir radyo hikâyesi ve illüstrasyona dönüşecek; kaynaklı bilgilerle hayal edilen sahne ayrı gösterilip ayrı okunacak.'
+          : 'Demo, yeni araştırma veya üretim yapmadan kayıtlı örnek illüstrasyonu ve sesli anıyı gösterecek.', API.live);
+        break;
       case 'base': {
         const base = choice || matchOptions(LAB_BASES, text)[0];
         if (!base) return promptLab(t);
@@ -303,22 +333,49 @@
         const moment = choice || matchOptions(LAB_MOMENTS, text)[0];
         if (!moment) return ask(t, 'moment', 'Aşağıdaki tüketim anlarından birini seç.', LAB_MOMENTS);
         v.moment = moment;
-        prepare(t, `${v.base.name} · ${v.flavors.map(f => f.name).join(' ve ')} · ${moment.name}`, API.live
-          ? 'Foundry önce ürün adını, sloganı ve hikâyeyi yazacak, ardından Ülker logosunu referans alarak ambalajı tasarlayacak.'
-          : 'Seçimlerini aldım. Demo modunda yeni bir ürün üretmeyeceğim; galerideki kayıtlı ambalajı ve ona ait adı, sloganı ve hikâyeyi göstereceğim.');
+        ask(t, 'lab-note-choice', LAB_NOTE_QUESTION, LAB_NOTE_OPTIONS);
+        break;
+      }
+      case 'lab-note-choice': {
+        const option = choice || matchOptions(LAB_NOTE_OPTIONS, text)[0];
+        if (!option) return ask(t, 'lab-note-choice', LAB_NOTE_QUESTION, LAB_NOTE_OPTIONS);
+        if (option.id === 'custom') ask(t, 'lab-note', 'Ar-Ge ekibine iletmek istediğin özel notu yaz.', [LAB_NOTE_OPTIONS[0]]);
+        else { v.rdNote = ''; prepareLab(t); }
+        break;
+      }
+      case 'lab-note': {
+        if (choice?.id === 'trust' || normalize(text) === normalize(LAB_NOTE_OPTIONS[0].name)) v.rdNote = '';
+        else {
+          try { v.rdNote = validateLabNote(text); }
+          catch (error) { return ask(t, 'lab-note', error.message, [LAB_NOTE_OPTIONS[0]]); }
+          if (!v.rdNote) return ask(t, 'lab-note', 'Özel notunu yaz veya Onlara Güveniyorum seçeneğiyle devam et.', [LAB_NOTE_OPTIONS[0]]);
+        }
+        prepareLab(t);
         break;
       }
       case 'approval':
         say(t, 'Üretim için aşağıdaki onay kartını kullan.', { approval: t.plan });
         break;
+      case 'lab-revision':
+        if (choice?.id === 'cancel-revision') {
+          t.revision = null;
+          ask(t, 'finished', 'Revizyon iptal edildi; önceki tasarımın korunuyor.', followups);
+        } else prepareRevision(t, text);
+        break;
       case 'finished':
         if (choice?.id === 'retry' || ['yeniden dene', 'yeniden uret'].includes(normalize(text))) {
-          t.variation++;
-          prepare(t, t.planTitle, t.plan, t.agent.id === 'photo' && API.live);
+          if (t.revision) prepare(t, t.planTitle, t.plan);
+          else {
+            t.variation++;
+            if (t.agent.id === 'lab') prepareLab(t);
+            else prepare(t, t.planTitle, t.plan, ['photo', 'podcast'].includes(t.agent.id) && API.live);
+          }
         } else if (choice?.id === 'change' || normalize(text) === 'secimleri degistir') {
-          t.values = {};
+          t.values = {}; t.revision = null; t.result = null;
           t.phase = 'start';
           readInput(t, t.agent.prompt);
+        } else if (t.agent.id === 'lab' && t.result?.canRevise && text.trim()) {
+          prepareRevision(t, text);
         } else say(t, 'İstersen seçimlerini değiştirebilir veya aynı adımlarla tekrar deneyebilirsin.', { options: followups });
         break;
     }
@@ -329,10 +386,24 @@
     ...(API.live ? [{ id: 'camera', name: 'Kamerayı aç' }, { id: 'upload', name: 'Fotoğraf yükle' }] : []),
     { id: 'sample', name: 'Örnek fotoğrafı kullan' },
   ];
-  const profiles = CAREER_ARCHETYPES.map((p, i) => ({ id: `profile-${i}`, name: p.headline, arch: i }));
   const followups = [{ id: 'change', name: 'Seçimleri değiştir' }, { id: 'retry', name: 'Yeniden dene' }];
   function promptLab(t) {
     ask(t, 'base', 'Ürünün temeli ne olsun?', LAB_BASES);
+  }
+  function prepareLab(t) {
+    const v = t.values;
+    const description = API.live
+      ? 'Foundry önce ürün adını, sloganı ve hikâyeyi yazacak, ardından Ülker logosunu referans alarak ambalajı tasarlayacak.'
+      : 'Seçimlerini aldım. Demo modunda yeni bir ürün üretmeyeceğim; galerideki kayıtlı ambalajı ve ona ait adı, sloganı ve hikâyeyi göstereceğim.';
+    prepare(t, `${v.base.name} · ${v.flavors.map(f => f.name).join(' ve ')} · ${v.moment.name}`, description + (v.rdNote ? ` Ar-Ge notun: ${v.rdNote}` : ''));
+  }
+  function prepareRevision(t, text) {
+    if (!API.live || !t.result?.canRevise) return say(t, 'Revizyon için Canlı Modda bir tasarım oluşturmalısın.');
+    let instruction;
+    try { instruction = validateLabRevision(text); }
+    catch (error) { return ask(t, 'lab-revision', error.message, [{ id: 'cancel-revision', name: 'Vazgeç' }]); }
+    t.revision = { image: t.result.image, concept: t.result.concept, instruction };
+    prepare(t, 'Ambalaj revizyonu', `Mevcut tasarımını referans alıp şu değişikliği uygulayacağım: ${instruction}`);
   }
 
   function prepare(t, title, description, consent = false) {
@@ -356,11 +427,12 @@
     if (t.job) return;
     const controller = new AbortController(), { signal } = controller, v = t.values;
     const live = API.live, opts = { fast: true, signal };
-    const steps = live ? ({
+    const revision = t.revision;
+    const steps = revision ? ['Revizyon isteğini değerlendir', 'Mevcut ambalajı düzenle', 'Revizyonu sohbete ekle'] : live ? ({
       photo: ['Referansları hazırla ve portreyi üret', 'Portreyi sohbete ekle'],
-      career: ['Temsili profili hazırla', 'Arka planı oluştur ve haritayı düzenle', 'Haritayı sohbete ekle'],
+      podcast: [...PODCAST_STAGES, 'Anı videosunu sohbete ekle'],
       lab: ['Ürün adı, sloganı ve hikâyeyi yaz', 'Ambalajı oluştur', 'Konsepti sohbete ekle'],
-    })[t.agent.id] : ['Kayıtlı demo çıktısını getir', 'Çıktıyı sohbete ekle'];
+    })[t.agent.id] : t.agent.id === 'podcast' ? ['Kayıtlı illüstrasyonu getir', 'Kayıtlı sesli anıyı getir', 'Çıktıyı sohbete ekle'] : ['Kayıtlı demo çıktısını getir', 'Çıktıyı sohbete ekle'];
     const job = { steps, status: 'running', step: 0, controller };
     t.phase = 'running';
     t.job = job;
@@ -373,28 +445,31 @@
       // Yield a frame so Cowork can show that output retrieval has started.
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       signal.throwIfAborted();
-      let image, title, story, slogan;
+      let image, title, story, slogan, concept, podcast;
       const variation = t.variation;
       if (t.agent.id === 'photo') {
         image = await API.photo.generate({ photo: v.photo, product: v.product, theme: v.theme, variation }, opts);
         title = v.theme.name;
-      } else if (t.agent.id === 'career') {
-        const template = CAREER_ARCHETYPES[v.profile.arch];
-        const profile = mockProfile({ ...template, name: v.name, arch: v.profile.arch });
-        if (live) advance();
-        image = await API.career.infographic({ profile, style: v.style, variation }, opts);
-        title = live ? `${v.name} · Kariyer haritası` : 'Örnek kariyer haritası';
+      } else if (t.agent.id === 'podcast') {
+        podcast = await API.podcast.generate(v, { ...opts, onStage: index => { signal.throwIfAborted(); job.step = index; update(); } });
+        ({ image, title } = podcast);
       } else {
-        const concept = await API.lab.concept({ ...v, variation }, opts);
-        if (live) advance();
-        image = await API.lab.packaging(concept, opts);
+        if (revision) {
+          ({ concept, img: image } = await API.lab.revise(revision, { ...opts, onCopy: advance }));
+        } else {
+          concept = await API.lab.concept({ ...v, variation }, opts);
+          if (live) advance();
+          image = await API.lab.packaging(concept, opts);
+        }
         ({ name: title, story, slogan } = concept);
       }
       advance();
       job.step++;
       job.status = 'complete';
-      say(t, live ? 'Çıktın hazır. Görseli buradan indirebilirsin.' : 'Kayıtlı demo çıktısı hazır. Bu işlemde yeni bir görsel üretilmedi.', {
-        result: { image, title, story, slogan, file: `copilot-${t.agent.id}.jpg` },
+      t.result = { image, title, story, slogan, concept, podcast, canRevise: t.agent.id === 'lab' && live, file: `copilot-${t.agent.id}.jpg` };
+      t.revision = null;
+      say(t, revision ? 'Revizyonun hazır. Önceki tasarımın da sohbette duruyor.' : podcast ? (live ? 'Radyo anı videon hazır. Buradan izleyebilir ve indirebilirsin.' : 'Kayıtlı demo videosu hazır. Bu işlemde yeni bir video üretilmedi.') : live ? 'Çıktın hazır. Görseli buradan indirebilirsin.' : 'Kayıtlı demo çıktısı hazır. Bu işlemde yeni bir görsel üretilmedi.', {
+        result: t.result,
         options: live ? followups : [followups[0]],
       });
     } catch (error) {
@@ -428,7 +503,9 @@
     status.textContent = 'Ortak bağlantı ayarları okunuyor…';
     try {
       FoundrySettings.loadSaved(form);
+      const selectedVoice = form.elements.voice.value;
       await FoundrySettings.loadLocal(form);
+      form.elements.voice.value = selectedVoice;
       status.textContent = '';
     } catch (error) {
       console.error('Yerel ayarlar okunamadı:', error);
@@ -447,6 +524,7 @@
       }
     }
     FoundrySettings.apply(settings);
+    renderCards();
     for (const t of threads) t.values.photo = null;
     threads.length = 0;
     thread = null;
@@ -482,15 +560,26 @@
       case 'sidebar': sideOpen = !sideOpen; return renderChrome();
       case 'workspace': panelOpen = !panelOpen; return renderChrome();
       case 'start': return submit(thread.agent.prompt);
+      case 'revise':
+        if (thread.job || thread.phase !== 'finished' || !thread.result?.canRevise) return;
+        thread.revision = null;
+        ask(thread, 'lab-revision', 'Mevcut tasarımında neyi değiştirelim? İsteğini yaz; önceki görseli referans alacağım.', [{ id: 'cancel-revision', name: 'Vazgeç' }]);
+        return render({ scroll: true, focus: true });
       case 'approve':
       case 'cancelPlan':
         if (thread.phase !== 'approval') return;
         add(thread, { type: 'user', text: command === 'approve' ? 'Onayla ve başlat' : 'İptal' });
         if (command === 'approve') return run(thread);
-        thread.phase = 'finished';
+        thread.phase = 'finished'; thread.revision = null;
         say(thread, 'Plan iptal edildi. Üretim başlatılmadı.', { options: followups });
         return render({ scroll: true, focus: !compact.matches });
       case 'stop': return thread.job?.controller.abort();
+      case 'podcastBack':
+        if (thread?.phase !== 'podcast-other') return;
+        clearDraft();
+        thread.values.moment = null;
+        ask(thread, 'podcast-moment', 'O an neredeydin?', PODCAST_MOMENTS);
+        return render({ scroll: true, focus: false });
       case 'attach':
         el('cameraStatus').textContent = '';
         return el('photoDialog').showModal();
@@ -536,7 +625,10 @@
       el('settingsStatus').textContent = 'Geçerli bir HTTPS Foundry uç noktası, API anahtarı ve görsel dağıtımı gir.';
       return;
     }
-    changeConnection({ mode: 'live', endpoint: endpoint[1], apiKey, imageDeployment, labDeployment: data.get('labModel').trim() });
+    let speechVoice;
+    try { speechVoice = FoundrySettings.voice(data.get('voice')); }
+    catch (error) { el('settingsStatus').textContent = error.message; return; }
+    changeConnection({ mode: 'live', endpoint: endpoint[1], apiKey, imageDeployment, labDeployment: data.get('labModel').trim(), speechVoice });
   });
   el('message').addEventListener('input', syncComposer);
   el('message').addEventListener('keydown', event => {
@@ -637,4 +729,17 @@
   });
   compact.addEventListener('change', () => { sideOpen = !compact.matches; panelOpen = false; renderChrome(); });
   render();
+  try {
+    const launch = sessionStorage.getItem('mai-kiosk-launch');
+    sessionStorage.removeItem('mai-kiosk-launch');
+    if (launch && JSON.parse(launch).mode === 'live') {
+      el('settings').showModal();
+      el('settingsStatus').textContent = 'Seçtiğin Canlı Mod bağlantısını kontrol et.';
+      FoundrySettings.loadSaved(el('connection'));
+      el('connection').requestSubmit();
+    }
+  } catch (error) {
+    console.error('Açılış bağlantısı aktarılamadı:', error);
+    notice('Açılış bağlantısı okunamadı. Foundry bağlantısını Ayarlar menüsünden kontrol et.');
+  }
 })();

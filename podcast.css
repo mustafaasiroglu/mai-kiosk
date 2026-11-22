@@ -1,0 +1,33 @@
+.screen[data-screen^="podcast."] { overflow-y: auto; overscroll-behavior: contain; }
+.podcast-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 20px; width: min(100%, 1200px); margin: 24px auto; }
+.podcast-options .choice { min-height: 112px; padding: 20px; }
+.podcast-options h3 { font-size: max(18px, 2.4vmin); }
+.podcast-pack { width: 100%; height: 100px; object-fit: contain; }
+.podcast-entry { width: min(100%, 1000px); }
+.podcast-entry .lab-note-entry { min-height: 56px; }
+.podcast-output { display: grid; gap: 16px; min-width: 0; font-family: "Segoe UI", Aptos, Calibri, sans-serif; }
+.podcast-output h2 { margin: 0; font-size: clamp(24px, 3vmin, 36px); }
+.podcast-output video { display: block; width: 100%; max-height: 74vh; min-width: 0; background: var(--cp-bg); }
+.podcast-output details { border: 1px solid var(--cp-border); border-radius: 10px; background: var(--cp-surface-soft); padding: 16px; color: var(--cp-text); font-size: max(16px, 1.8vmin); }
+.podcast-output summary { cursor: pointer; font-weight: 650; }
+.podcast-output p, .podcast-output li { line-height: 1.6; overflow-wrap: anywhere; }
+.podcast-output li + li { margin-top: 12px; }
+.podcast-output ul { margin: 16px 0 0; padding-left: 24px; }
+.podcast-output a { color: var(--cp-link); }
+.podcast-output .btn { justify-self: start; }
+.podcast-disclosure { margin: 0; color: var(--cp-text-muted); font-size: 16px; }
+.podcast-input-error, .podcast-media-error { color: var(--cp-danger); }
+.screen[data-screen="podcast.result"] .res-layout { flex: none; align-items: start; }
+.screen[data-screen="podcast.result"] .res-side { width: min(100%, 960px); margin: auto; }
+.podcast-entry-back { position: sticky; top: 0; z-index: 3; align-self: flex-start; background: var(--cp-surface); color: var(--cp-text); }
+.podcast-voice { display: grid; gap: 8px; }
+.podcast-voice input { border: 1px solid var(--cp-border); background: var(--cp-surface); color: var(--cp-text); border-radius: 10px; padding: 12px; width: 100%; font: inherit; }
+@media (max-width: 640px) {
+  .screen[data-screen^="podcast."] .kbd { display: none; }
+  .podcast-options { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .podcast-options .choice { padding: 16px 8px; }
+  .podcast-entry { padding: 16px; }
+}
+@media (orientation: landscape) {
+  .screen[data-screen^="podcast."] .key { height: 6.8vmin; min-height: 44px; }
+}

@@ -1,0 +1,37 @@
+{
+  "title": "Okul Çıkışında Gofret Payı",
+  "scene": "Sen zilin ardından okul kapısından çıkınca avuçlarında kıtır kıtır bir çikolatalı gofret tutuyorsun. Sırt çantaların sürtünürken arkadaşların yanına sokuluyor, kâğıdını aceleyle açıyorsun. İnce katmanlar kırılıp çikolata kokusu yayılıyor; yarısını birine uzatıyorsun, öteki yarısı sende kalıyor. 2004’ün sıradan ama sıcak akşamüstünde, paylaşınca tat daha da uzuyor gibi geliyor.",
+  "narration": "Sayın dinleyicilerimiz, 2004 yılından gelen bir anıyla bu akşam birlikteyiz. Sizlere bir dinleyicimizin sıcak mesajını okumak istiyorum. Şimdi hayal edilen bir anıya dönüyoruz. Sen zilin ardından okul kapısından çıkınca avuçlarında kıtır kıtır bir çikolatalı gofret tutuyorsun. Sırt çantaların sürtünürken arkadaşların yanına sokuluyor, kâğıdını aceleyle açıyorsun. İnce katmanlar kırılıp çikolata kokusu yayılıyor; yarısını birine uzatıyorsun, öteki yarısı sende kalıyor. 2004’ün sıradan ama sıcak akşamüstünde, paylaşınca tat daha da uzuyor gibi geliyor. Kaynaklı dönem notları: 2003–2004 eğitim öğretim yılı için karne günü 15 Haziran 2004 olarak duyuruldu. 2004–2005 öğretim yılının başlangıcı 13 Eylül 2004 olarak duyuruldu.",
+  "facts": [
+    {
+      "year": 2004,
+      "text": "2003–2004 eğitim öğretim yılı için karne günü 15 Haziran 2004 olarak duyuruldu.",
+      "url": "https://www.hurriyet.com.tr/gundem/tatil-zili-15-haziranda-calacak-232255",
+      "title": "Hürriyet · 9 Haziran 2004",
+      "evidence": "“2003-2004 eğitim-öğretim yılı, 15 Haziran Salı günü sona eriyor.”"
+    },
+    {
+      "year": 2004,
+      "text": "2004–2005 öğretim yılının başlangıcı 13 Eylül 2004 olarak duyuruldu.",
+      "url": "https://www.hurriyet.com.tr/gundem/tatil-zili-15-haziranda-calacak-232255",
+      "title": "Hürriyet · 9 Haziran 2004",
+      "evidence": "“2004-2005 eğitim-öğretim yılının başlayacağı 13 Eylül 2004 Pazartesi”"
+    }
+  ],
+  "voice": "en-US-Harper:MAI-Voice-2-Flash",
+  "visualDirection": "Warm nostalgic Turkish schoolyard at dismissal time in 2004, soft late-afternoon light, children with backpacks sharing a chocolate wafer bar, close-up on hands and crinkled wrapper, cozy radio-story mood, natural colors, cinematic composition.",
+  "demo": false,
+  "input": {
+    "product": "Çikolatalı Gofret",
+    "year": 2004,
+    "moment": "Okul çıkışı",
+    "memory": "Okul çıkışı arkadaşlarımla gofretimi paylaşırdım."
+  },
+  "imageModel": "MAI-Image-2.7-Flash",
+  "textModel": "gpt-5.4-mini",
+  "sourceReview": "The WebIQ-discovered 9 June 2004 news source was independently read. Only its announced school-calendar dates are retained; no inferred historical claims or archive-index metadata.",
+  "intro": "Sayın dinleyicilerimiz, 2004 yılından gelen bir anıyla bu akşam birlikteyiz. Sizlere bir dinleyicimizin sıcak mesajını okumak istiyorum. Şimdi hayal edilen bir anıya dönüyoruz.",
+  "videoDuration": 56.08,
+  "introDuration": 14.104,
+  "videoComposition": "720x900, 24 fps; actual Speech-driven microphone waveform, then the generated illustration at the story boundary; browser MediaRecorder MP4."
+}

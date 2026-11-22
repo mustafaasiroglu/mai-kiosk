@@ -40,6 +40,7 @@ class LocalSettingsTests(unittest.TestCase):
             '# Comment\nFOUNDRY_ENDPOINT="https://test.services.ai.azure.com"\n'
             "FOUNDRY_API_KEY='fake=key#value'\n"
             "FOUNDRY_IMAGE_DEPLOYMENT=test-image\nFOUNDRY_LAB_DEPLOYMENT=\n"
+            "FOUNDRY_SPEECH_VOICE=en-US-Harper:MAI-Voice-2-Flash\n"
             "UNRELATED_SECRET=never-return\n",
             encoding="utf-8",
         )
@@ -49,6 +50,7 @@ class LocalSettingsTests(unittest.TestCase):
         self.assertEqual(json.loads(body), {
             "endpoint": "https://test.services.ai.azure.com",
             "key": "fake=key#value", "imageModel": "test-image", "labModel": "",
+            "voice": "en-US-Harper:MAI-Voice-2-Flash",
         })
         status, headers, body = self.request("/local-config", method="HEAD")
         self.assertEqual(status, 200)
