@@ -55,9 +55,9 @@ const EXPS = {
     cta: 'Fotoğrafını çek',
   },
   podcast: {
-    id: 'podcast', name: 'Nostalji Podcast', tag: 'Nostalji Podcast', duration: '≈ 2 dk', start: 'podcast.product',
-    steps: ['Ürün', 'Dönem', 'An', 'Anı', 'Sonuç'], c1: '#ff9f43', c2: '#ff4d6d',
-    desc: 'Ürününü ve yılını seç; anını mikrofonlu, nostaljik bir radyo videosuna dönüştürelim.',
+    id: 'podcast', name: 'Zaman Yolculuğu', tag: 'Nostalji Podcast', duration: '≈ 3 dk', start: 'podcast.product',
+    steps: ['Ürün', 'Dönem', 'An', 'Selfie', 'Anı', 'Sonuç'], c1: '#ff9f43', c2: '#ff4d6d',
+    desc: 'Selfieni çek; o yaştaki halinle anını fotoğraflı, sepya bir radyo tiyatrosuna dönüştürelim.',
     cta: 'Anını dinle',
   },
   lab: {
@@ -2135,7 +2135,13 @@ const MAI = {
     }
   },
   async parse(r) {
-    if (!r.ok) throw new Error('MAI isteği başarısız (' + r.status + ')');
+    if (!r.ok) {
+      if (r.headers?.get('content-type')?.includes('application/json')) {
+        const failure = await r.json();
+        if (failure?.error?.code === 'content_safety_violation') throw new Error('Görsel servisi bu sahneyi güvenlik politikası nedeniyle reddetti (content_safety_violation). Üretim durduruldu.');
+      }
+      throw new Error('MAI isteği başarısız (' + r.status + ')');
+    }
     const j = await r.json();
     const b64 = j && j.data && j.data[0] && j.data[0].b64_json;
     if (!b64) throw new Error('MAI yanıtında görsel yok');
@@ -2413,6 +2419,10 @@ const API = {
   },
   share: {
     async publish(exp, image, meta = {}) {
+      if (API.live && exp !== 'podcast' && BlobShare.enabled) {
+        if (!meta.uploadConsent) throw new Error('Azure paylaşımı için yüklemeyi onayla.');
+        return BlobShare.publish(image);
+      }
       const id = uid();
       if (API.live && CONFIG.ai.shareUploadUrl) {
         const r = await Backend.post(CONFIG.ai.shareUploadUrl, { image, meta: { exp, ...meta } });
@@ -2899,7 +2909,7 @@ function resultViewHTML({ img, alt, hideImage = false, title = '', text = '', ex
       ${API.live ? '' : '<p class="fine demo-sample-note">Demo Modu: kayıtlı gerçek örnek gösterilir; seçimler ve yeniden üretme bu görseli değiştirmez.</p>'}
       <div class="qr-card rise" style="--i:4">
         <div class="qr-box"><div class="spinner"></div></div>
-        <div class="qr-copy"><b>${icon('phone')} Telefonuna al</b><span>Telefonunun kamerasını QR koda tut; ${hideImage ? 'videon' : 'görselin'} açılsın, indir ya da LinkedIn ve Instagram’da paylaş.</span><small class="qr-url">Bağlantı hazırlanıyor…</small></div>
+        <div class="qr-copy"><b>${icon('phone')} Telefonuna al</b><span>${!hideImage && API.live && BlobShare.enabled ? 'QR oluşturmak için üretilen görseli Azure’a yüklemeyi onayla. Bağlantıyı bilenler görsele erişebilir.' : `Telefonunun kamerasını QR koda tut; ${hideImage ? 'videon' : 'görselin'} açılsın, indir ya da LinkedIn ve Instagram’da paylaş.`}</span><small class="qr-url">Bağlantı hazırlanıyor…</small>${!hideImage && API.live && BlobShare.enabled ? '<button class="btn btn-glass" data-act="publish">Azure’a yükle ve QR oluştur</button>' : ''}</div>
       </div>
       <div class="btn-row rise" style="--i:5">
         <button class="btn btn-lg btn-primary" data-act="regen">${icon('refresh')} ${API.live ? regenLabel : 'Örneği tekrar göster'}</button>
@@ -2907,27 +2917,46 @@ function resultViewHTML({ img, alt, hideImage = false, title = '', text = '', ex
         <button class="btn btn-lg btn-glass" data-act="restart">${icon('restart')} Baştan başla</button>
       </div>
       ${revision && !API.live ? '<p class="fine">Revizyon için Demo Modunu kapatman gerekir.</p>' : ''}
-      <p class="fine rise" style="--i:6">${icon('shield')} ${esc(CONFIG.share.retentionText)}</p>
+      <p class="fine rise" style="--i:6">${icon('shield')} ${esc(!hideImage && API.live && BlobShare.enabled ? BlobShare.retentionText : CONFIG.share.retentionText)}</p>
     </div>
   </div>`;
 }
 function mountResult(el, ctx, { exp, img, meta = {}, onRegen, colors }) {
   Sound.success();
   ctx.timeout(() => Confetti.burst(colors, { x: 0.32, y: 0.42 }), 380);
+  const upload = API.live && exp !== 'podcast' && BlobShare.enabled;
+  const button = $('[data-act="publish"]', el);
+  let publishing = false;
+  const publish = async () => {
+    if (publishing) return;
+    publishing = true;
+    if (button) button.disabled = true;
+    $('.qr-url', el).textContent = 'Bağlantı hazırlanıyor…';
+    try {
+      const sh = await API.share.publish(exp, img, { ...meta, uploadConsent: upload });
+      if (!ctx.alive) return;
+      STATE.lastShare = { exp, img, url: sh.url, meta, demo: !!sh.demo };
+      $('.qr-box', el).innerHTML = QR.svg(sh.url, { ecl: 'M', border: 2 });
+      $('.qr-url', el).textContent = sh.blob ? `Görsel bağlantısı hazır · son erişim: ${new Date(sh.expires).toLocaleString('tr-TR')}` : sh.url.replace(/^https?:\/\//, '') + (sh.demo ? '  ·  demo bağlantısı' : '');
+      if (button) button.hidden = true;
+    } catch (error) {
+      console.error('Paylaşım bağlantısı hazırlanamadı:', error);
+      if (!ctx.alive) return;
+      $('.qr-box', el).innerHTML = `<p class="fine" style="color:#555">${icon('info')} QR oluşturulamadı</p>`;
+      $('.qr-url', el).textContent = upload ? error.message : 'Paylaşım bağlantısı hazırlanamadı.';
+      if (button) { button.disabled = false; button.textContent = 'Yüklemeyi yeniden dene'; }
+    } finally { publishing = false; }
+  };
   el.addEventListener('click', (e) => {
     const b = e.target.closest('[data-act]'); if (!b) return;
     if (b.dataset.act === 'regen') { Sound.tap(); onRegen(); }
     if (b.dataset.act === 'restart') { Sound.tap(); App.restartExp(exp); }
+    if (b.dataset.act === 'publish') publish();
   });
-  API.share.publish(exp, img, meta).then((sh) => {
-    if (!ctx.alive) return;
-    STATE.lastShare = { exp, img, url: sh.url, meta, demo: !!sh.demo };
-    $('.qr-box', el).innerHTML = QR.svg(sh.url, { ecl: 'M', border: 2 });
-    $('.qr-url', el).textContent = sh.url.replace(/^https?:\/\//, '') + (sh.demo ? '  ·  demo bağlantısı' : '');
-  }).catch(() => {
-    if (!ctx.alive) return;
-    $('.qr-box', el).innerHTML = `<p class="fine" style="color:#555">${icon('info')} QR oluşturulamadı</p>`;
-  });
+  if (upload) {
+    $('.qr-box', el).innerHTML = icon('shield');
+    $('.qr-url', el).textContent = 'Henüz Azure’a yüklenmedi.';
+  } else publish();
 }
 
 /* Genel etkileşimler */
@@ -3115,49 +3144,54 @@ SCREENS['photo.theme'] = {
   },
 };
 
-SCREENS['photo.camera'] = {
-  exp: 'photo', step: 3, title: 'Fotoğraf çekimi',
-  guard: () => (!STATE.photo.productId ? 'photo.quiz' : !STATE.photo.themeId ? 'photo.theme' : null),
+function createCameraScreen(exp = 'photo') {
+  const theater = exp === 'podcast', state = () => STATE[exp];
+  return {
+  exp, step: theater ? 4 : 3, title: theater ? 'Zaman yolculuğu selfien' : 'Fotoğraf çekimi',
+  guard: () => theater
+    ? (!state().product ? 'podcast.product' : !state().era?.start ? 'podcast.era' : !state().moment ? 'podcast.moment' : null)
+    : (!state().productId ? 'photo.quiz' : !state().themeId ? 'photo.theme' : null),
   render() {
-    const p = photoDisplayProduct(), t = byId(THEMES, STATE.photo.themeId);
+    const p = theater ? state().product : photoDisplayProduct(), t = theater ? null : byId(THEMES, state().themeId);
     return `<div class="cam-layout">
       <div class="cam-frame rise">
         <video playsinline muted autoplay></video>
         <img class="cam-shot" alt="${API.live ? 'Çektiğin fotoğraf' : 'Kayıtlı örnek fotoğraf'}">
         <div class="cam-guide">${cameraGuideSVG()}</div>
         <div class="cam-corners"><i></i><i></i><i></i><i></i></div>
-        <span class="chip cam-hint">${icon('user')} Belden yukarın kadrajda olsun</span>
+        <span class="chip cam-hint">${icon('user')} ${theater ? 'Yüzün tek başına ve net görünsün' : 'Belden yukarın kadrajda olsun'}</span>
         <div class="cam-count" aria-live="assertive"></div>
         <div class="cam-flash"></div>
         <div class="cam-state loading"><div class="spinner"></div><p>Kamera açılıyor…</p></div>
         <div class="cam-state error">${icon('camera')}<h3>Kameraya ulaşılamadı</h3><p>Kamera izni verilmemiş ya da cihaz bağlı değil. Tekrar deneyebilir ya da örnek bir fotoğrafla devam edebilirsin.</p></div>
       </div>
       <div class="cam-side">
-        <div class="eyebrow acc rise" style="--i:1">Adım 3 · Pozunu ver</div>
-        <h2 class="rise" style="--i:2">Gülümse, yıldız sensin!</h2>
+        <div class="eyebrow acc rise" style="--i:1">Adım ${theater ? '4 · Selfieni çek' : '3 · Pozunu ver'}</div>
+        <h2 class="rise" style="--i:2">${theater ? 'Anının kahramanı sensin!' : 'Gülümse, yıldız sensin!'}</h2>
         <ul class="tip-list rise" style="--i:3">
-          <li>${icon('user')} Belden yukarın kadrajda olsun</li>
+          <li>${icon('user')} ${theater ? 'Kadrajda yalnızca sen ol' : 'Belden yukarın kadrajda olsun'}</li>
           <li>${icon('sun')} Yüzün ışığa dönük olsun</li>
-          <li>${icon('sparkle')} İstersen ürünü eline al, pozunu ver</li>
+          <li>${icon('sparkle')} ${theater ? 'Seçtiğin dönemdeki halini canlandıracağız' : 'İstersen ürünü eline al, pozunu ver'}</li>
         </ul>
-        <div class="chip-row rise" style="--i:4"><span class="chip">${icon('star')} ${esc(p.name)}</span><span class="chip">${icon('sparkle')} ${esc(t.name)}</span></div>
+        <div class="chip-row rise" style="--i:4"><span class="chip">${icon('star')} ${esc(p.name)}</span><span class="chip">${icon('sparkle')} ${esc(theater ? state().era.name : t.name)}</span></div>
         <div class="cam-actions live rise" style="--i:5">
           <button class="shutter" data-act="shoot" aria-label="Fotoğrafı çek"><span>${icon('camera')}</span></button>
           <div class="shutter-label"><b>Fotoğrafı çek</b><span>3 saniyelik geri sayım başlar</span></div>
         </div>
         <div class="cam-actions review">
           <button class="btn btn-lg btn-glass" data-act="retake">${icon('restart')} Tekrar çek</button>
-          <button class="btn btn-lg btn-ai" data-act="start">${icon('sparkle')} Tasarımı başlat</button>
+          <button class="btn btn-lg btn-ai" data-act="start">${icon('sparkle')} ${theater ? 'Selfieni kullan' : 'Tasarımı başlat'}</button>
         </div>
         <div class="cam-actions error">
           <button class="btn btn-lg btn-glass" data-act="retry">${icon('refresh')} Tekrar dene</button>
           <button class="btn btn-lg btn-primary" data-act="demo">${icon('user')} Örnek fotoğrafla devam et</button>
         </div>
-        <p class="consent rise" style="--i:6">${API.live ? 'Devam ederek fotoğrafının yalnızca bu tasarımı üretmek için işlenmesini kabul edersin.' : 'Demo Modu kayıtlı örnek fotoğrafı kullanır; kameraya erişilmez.'} <button class="link-btn inline" data-act="kvkk">Aydınlatma metni</button></p>
+        <p class="consent rise" style="--i:6">${API.live ? (theater ? 'Devam ederek selfienin anındaki halini üretmek için Microsoft Foundry’de işlenmesini kabul edersin.' : 'Devam ederek fotoğrafının yalnızca bu tasarımı üretmek için işlenmesini kabul edersin.') : 'Demo Modu kayıtlı örnek fotoğrafı kullanır; kameraya erişilmez.'} <button class="link-btn inline" data-act="kvkk">Aydınlatma metni</button></p>
       </div>
     </div>`;
   },
   mount(el, ctx) {
+    const selfie = state();
     el.classList.add('cam-scr');
     const video = $('video', el), shot = $('.cam-shot', el), cnt = $('.cam-count', el), flash = $('.cam-flash', el);
     const set = (s) => { el.dataset.state = s; };
@@ -3170,7 +3204,7 @@ SCREENS['photo.camera'] = {
     };
     const start = () => {
       if (!API.live) {
-        STATE.photo.photo = demoPortrait(); shot.src = STATE.photo.photo; set('review');
+        selfie.photo = demoPortrait(); shot.src = selfie.photo; set('review');
         return;
       }
       set('loading');
@@ -3186,8 +3220,8 @@ SCREENS['photo.camera'] = {
       }).catch(error => { if (ctx.alive && error.name !== 'AbortError') fail(error); });
     };
     ctx.cleanup(() => Camera.stop());
-    if (STATE.photo.photo) { shot.src = STATE.photo.photo; set('review'); }
-    else if (STATE.photo._camErr) { STATE.photo._camErr = false; set('error'); }
+    if (selfie.photo) { shot.src = selfie.photo; set('review'); }
+    else if (selfie._camErr) { selfie._camErr = false; set('error'); }
     else start();
     let busy = false;
     const shoot = async () => {
@@ -3201,7 +3235,7 @@ SCREENS['photo.camera'] = {
         const data = Camera.capture(video);
         if (!data) throw new Error('Kamera henüz fotoğraf çekmeye hazır değil.');
         cnt.textContent = ''; flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go'); Sound.shutter();
-        STATE.photo.photo = data; shot.src = data; set('review');
+        selfie.photo = data; selfie.estimatedAge = null; selfie.currentAge = null; selfie.age = null; shot.src = data; set('review');
         Camera.stop();
       } catch (error) {
         cnt.textContent = '';
@@ -3215,14 +3249,16 @@ SCREENS['photo.camera'] = {
       const a = e.target.closest('[data-act]'); if (!a) return;
       const act = a.dataset.act;
       if (act === 'shoot' && el.dataset.state === 'live') shoot();
-      else if (act === 'retake') { Sound.tap(); STATE.photo.photo = null; if (Camera.stream) set('live'); else start(); }
-      else if (act === 'start' && el.dataset.state === 'review' && STATE.photo.photo) { Sound.tap(); STATE.photo.variation = 0; App.go('photo.gen'); }
+      else if (act === 'retake') { Sound.tap(); selfie.photo = null; selfie.estimatedAge = null; selfie.currentAge = null; selfie.age = null; if (Camera.stream) set('live'); else start(); }
+      else if (act === 'start' && el.dataset.state === 'review' && selfie.photo) { Sound.tap(); selfie.variation = 0; App.go(theater ? 'podcast.age' : 'photo.gen'); }
       else if (act === 'retry') { Sound.tap(); start(); }
-      else if (act === 'demo') { Sound.tap(); STATE.photo.photo = demoPortrait(); shot.src = STATE.photo.photo; set('review'); }
+      else if (act === 'demo') { Sound.tap(); selfie.photo = demoPortrait(); selfie.estimatedAge = null; selfie.currentAge = null; selfie.age = null; shot.src = selfie.photo; set('review'); }
       else if (act === 'kvkk') { Sound.tap(); kvkkModal(); }
     });
   },
-};
+  };
+}
+SCREENS['photo.camera'] = createCameraScreen();
 
 SCREENS['photo.gen'] = {
   exp: 'photo', step: 4, noIdle: true, title: 'Yapay zekâ tasarlıyor',
@@ -3812,6 +3848,73 @@ function perfGuard() {
   };
   setTimeout(() => requestAnimationFrame(loop), 900);
 }
+const BlobShare = {
+  settings: null,
+  retentionText: 'Tüm bağlantılar ortak okuma SAS’ının bitişinde kapanır. Eski dosyalar Azure lifecycle kuralıyla gün bazlı, asenkron temizlenir; bir saatlik silinme garantisi yoktur.',
+  get enabled() { return this.settings !== null; },
+  parse(value, kind) {
+    let url;
+    try { url = new URL(value); }
+    catch { throw new Error('Geçerli bir Azure container SAS URL’si gir.'); }
+    if (url.protocol !== 'https:' || !/^[a-z0-9]{3,24}\.blob\.core\.windows\.net$/.test(url.hostname) ||
+        url.port || url.username || url.password || url.hash || !/^\/[a-z0-9](?:[a-z0-9]|-(?!-)){1,61}[a-z0-9]$/.test(url.pathname)) {
+      throw new Error('SAS URL’si HTTPS Azure Blob container adresi olmalı; dosya yolu içermemeli.');
+    }
+    const params = url.searchParams;
+    if ([...params.keys()].some(key => params.getAll(key).length !== 1) ||
+        !params.get('sig') || !params.get('sv') || params.get('sr') !== 'c' || params.get('spr') !== 'https' ||
+        params.has('ss') || params.has('srt') || params.has('si')) {
+      throw new Error('HTTPS ile sınırlı, bitiş tarihi olan container SAS kullan; account SAS veya stored access policy kullanma.');
+    }
+    const permissions = params.get('sp');
+    if (kind === 'upload' ? !['c', 'cw'].includes(permissions) : permissions !== 'r') {
+      throw new Error(kind === 'upload' ? 'Yükleme SAS’ı yalnızca Create veya Create + Write yetkili olmalı.' : 'Okuma SAS’ı yalnızca Read yetkili olmalı; List, Write ve Delete ekleme.');
+    }
+    const expiry = Date.parse(params.get('se'));
+    const start = params.get('st');
+    if (!Number.isFinite(expiry) || expiry <= Date.now() ||
+        (start && (!Number.isFinite(Date.parse(start)) || Date.parse(start) > Date.now()))) {
+      throw new Error('SAS süresi dolmuş veya henüz başlamamış. Geçerli bir SAS gir.');
+    }
+    return { url, expiry };
+  },
+  readForm(form) {
+    const upload = form.elements.blobUpload?.value.trim() || '';
+    const read = form.elements.blobRead?.value.trim() || '';
+    if (!upload && !read) return null;
+    if (!upload || !read) throw new Error('Azure paylaşımı için hem yükleme hem salt-okuma SAS URL’sini gir.');
+    const a = this.parse(upload, 'upload'), b = this.parse(read, 'read');
+    if (a.url.origin + a.url.pathname !== b.url.origin + b.url.pathname) throw new Error('İki SAS da aynı container’a ait olmalı.');
+    return { upload: a.url.href, read: b.url.href };
+  },
+  fill(form) {
+    if (form.elements.blobUpload) form.elements.blobUpload.value = this.settings?.upload || '';
+    if (form.elements.blobRead) form.elements.blobRead.value = this.settings?.read || '';
+  },
+  async publish(image) {
+    if (!this.settings) throw new Error('Azure paylaşım ayarlarını gir.');
+    const upload = this.parse(this.settings.upload, 'upload'), read = this.parse(this.settings.read, 'read');
+    if (typeof image !== 'string' || !/^data:image\/(?:png|jpeg|webp);base64,/.test(image)) throw new Error('Paylaşılacak görsel PNG, JPEG veya WebP olmalı.');
+    const blob = dataUrlToBlob(image);
+    const extension = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }[blob.type];
+    if (!extension || !blob.size) throw new Error('Paylaşılacak görsel boş veya geçersiz.');
+    const id = crypto.randomUUID(), filename = `${id}.${extension}`;
+    upload.url.pathname += '/' + filename;
+    read.url.pathname += '/' + filename;
+    let response;
+    try {
+      response = await fetch(upload.url.href, {
+        method: 'PUT', body: blob, credentials: 'omit', referrerPolicy: 'no-referrer',
+        headers: { 'Content-Type': blob.type, 'x-ms-blob-type': 'BlockBlob', 'If-None-Match': '*' },
+        signal: AbortSignal.timeout(60000),
+      });
+    } catch {
+      throw new Error('Azure yüklemesi tamamlanamadı. Ağ, CORS ve SAS ayarlarını kontrol et.');
+    }
+    if (!response.ok) throw new Error(`Azure yüklemesi HTTP ${response.status}. SAS yetkilerini, süresini ve ağ erişimini kontrol et.`);
+    return { id, url: read.url.href, expires: new Date(read.expiry).toISOString(), blob: true };
+  },
+};
 const FoundrySettings = {
   storageKey: 'mai-kiosk-foundry',
   fields: ['endpoint', 'key', 'imageModel', 'labModel', 'voice'],
@@ -3867,6 +3970,7 @@ function chooseConnection(start) {
     loading = (async () => {
       try {
         FoundrySettings.loadSaved(form);
+        BlobShare.fill(form);
         const voice = form.elements.voice.value;
         await FoundrySettings.loadLocal(form);
         form.elements.voice.value = voice;
@@ -3919,8 +4023,8 @@ function chooseConnection(start) {
     const match = /^(https:\/\/[a-z0-9][a-z0-9-]*\.services\.ai\.azure\.com)(?:\/mai\/v1(?:\/images\/(?:generations|edits))?)?\/?$/i.exec(endpoint);
     const apiKey = data.get('key').trim(), imageDeployment = data.get('imageModel').trim();
     const labDeployment = data.get('labModel').trim();
-    let speechVoice;
-    try { speechVoice = FoundrySettings.voice(data.get('voice')); }
+    let speechVoice, blobSettings;
+    try { speechVoice = FoundrySettings.voice(data.get('voice')); blobSettings = BlobShare.readForm(form); }
     catch (problem) { error.textContent = problem.message; error.hidden = false; return; }
     if (!match || !apiKey || !imageDeployment) {
       error.textContent = 'Geçerli bir HTTPS Foundry endpoint’i, API anahtarı ve görsel modeli dağıtım adı girin.';
@@ -3937,6 +4041,7 @@ function chooseConnection(start) {
       return;
     }
     FoundrySettings.apply(settings);
+    BlobShare.settings = blobSettings;
     finish();
   });
   const open = () => {

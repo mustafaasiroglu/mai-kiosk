@@ -62,11 +62,16 @@ tercihi olarak iletilir. Demo modunda not alınır ama kayıtlı çıktı deği�
 Ana ekrandaki deneyim sırası **Tatlı Anı Stüdyosu → Lezzet Laboratuvarı →
 Bir Isırıkla O Yıla Dön** şeklindedir.
 
-### Nostalji Podcast · Bir Isırıkla O Yıla Dön
+### Nostalji Podcast · Zaman Yolculuğu
 
 Klasik kiosk, Cowork ve Chat aynı sırayı kullanır:
-**Ülker ürünü → dönem/özel tarih → an → tek cümlelik anı → üretim**.
+**Ülker ürünü → dönem/özel tarih → an → selfie → tek cümlelik anı → üretim**.
+Ana kartta deneyimin yaklaşık süresi **3 dk** gösterilir.
 Hanımeller ve Çokoprens, bu deneyimdeki ürün seçeneklerine eklidir.
+Ambalaj görselleri yerel `assets/hanimeller.png` ve `assets/cokoprens.png`
+dosyalarından tüm arayüzlerde gösterilir; kaynakları Ülker'in resmi
+[Hanımeller](https://www.ulker.com.tr/tr/markalar/hanimeller) ve
+[Çokoprens](https://www.ulker.com.tr/tr/markalar/cokoprens) sayfalarıdır.
 60’lar, 70’ler, 80’ler, 90’lar ve 2000’ler seçilebilir. Özel tarih `2004`
 veya `23.04.2004` biçimindedir; 1944 ile bugün arasında doğrulanır.
 An seçenekleri okul çıkışı, aile ziyareti, ilk iş günü, yolculuk ve Diğer’dir.
@@ -82,21 +87,37 @@ Araştırma tamamlanmaz veya yeterli kaynak bulunamazsa görsel/ses üretilmez;
 yeniden deneme ve dönem değiştirme gerekir. AI kaynak değerlendirmesi hatasız
 olma garantisi değildir; sonuçtaki bağlantılar bağımsız kontrol için açılabilir.
 
-Çıktı **indirilebilir bir anı videosudur**. Sunucu “Sayın dinleyicilerimiz…”
-diye seçilen döneme uygun bir açılış yapar. Önce yalnızca radyo mikrofonu ve
-gerçek ses örneklerine göre hareket eden dalga görünür; dinleyici hikâyesi
-başladığında illüstrasyon belirir. Kaynaklı dönem notları hikâyenin sonunda
-okunur. **Kaynaklı dönem bilgileri**, **Hayal edilen sahne** ve seslendirme
-metni ayrıca gösterilir; kurgu geçişi seslendirmede de açıkça belirtilir.
+Selfiedeki yaklaşık **2026 yaşı** Foundry’de arka planda tahmin edilir;
+kullanıcıya gösterilmez ve yaş sorusu/onayı yoktur. Seçilen dönemin orta yılı
+ve yaklaşık doğum yılı üzerinden geçmiş görünüm hesaplanır; imkânsız veya
+10’dan küçük sonuçlar yaratıcı canlandırma için **10 yaşa** sabitlenir.
+Bu gerçek tarihsel yaş iddiası değildir. Tek ve net bir yüz yoksa yeniden
+selfie istenir; başarısızlıkta sahte yaş tahmini verilmez.
+
+Çıktı **üç uzun cümle ve üç görselli, indirilebilir bir radyo tiyatrosudur**:
+önce doğrulanmış gündemi içeren **kurgusal gazete ve Ülker ilanı**, sonra
+kişinin o yaştaki halini kullanan anının gelişmesi, son olarak aynı sahnenin
+devamı ve sıcak kapanış. Gazete ve ilan gerçek arşiv malzemesi değildir.
+İlk anı karesi selfieyi, kapanış hem selfieyi hem önceki ham kareyi referans alır.
+Tüm karelerde sepya görünüm, hafif film greni ve titreme korunur; azaltılmış
+hareket tercihinde yakınlaşma/titreme kapatılır. Mikrofon açılışı yoktur.
+**Kaynaklı dönem bilgileri**, **Hayal edilen sahne** ve seslendirme metni
+ayrıca gösterilir; hava, kişisel sahne ve yüz dönüşümü yaratıcı tahmindir.
 Video otomatik başlamaz. İptal veya hata önceki başarılı videoyu değiştirmez.
 Demo yalnızca `samples/podcast/` altındaki gerçek kayıtlı MP4’ü oynatır.
+Yeni Demo kaydı `radio-theater-v1` biçiminde hazırlanmış olmalıdır; eski
+mikrofonlu kayıt yeni deneyim gibi gösterilmez. Mevcut yeni örneğin kişisel
+gençleştirme karesi MAI tarafından `content_safety_violation` ile reddedildiği
+için üç sahneli Demo henüz hazır değildir; eski medya dosyaları korunmuştur.
+Bu servis hatası açıkça gösterilir ve başka bir görselle sessizce değiştirilmez.
 
-Canlı video, iki Speech kaydının zamanlaması korunarak cihazda Web Audio,
+Canlı video, üç ayrı Speech kaydının zamanlaması korunarak cihazda Web Audio,
 Canvas ve MediaRecorder ile birleştirilir; ayrı bir video-modeli servisine
 gönderilmez. H.264/AAC MP4 destekleniyorsa MP4, diğer uygun tarayıcılarda WebM
 üretilir. Video kodlama sesin süresi kadar sürer; sekme açık tutulmalıdır.
 Sekme arka plana geçerse eksik animasyonlu video döndürmek yerine açık hata
-gösterilir. Kamera veya mikrofon izni istenmez; yalnızca üretilmiş ses kullanılır.
+gösterilir. Selfie için kullanıcı kamera açabilir veya fotoğraf yükleyebilir;
+mikrofon izni istenmez. Demo kamerayı açmaz ve kayıtlı örneği kullanır.
 
 Her on yıl için 1940–2020 arasında bir kez hazırlanmış özgün enstrümantal döngü
 `assets/podcast-music/` altında bulunur. Bunlar dönemlerden esinlenir; gerçek
@@ -105,9 +126,10 @@ aynı besteleri yeniden üretir. Özel tarihte ilgili on yıl seçilir. Müzik v
 karıştırılır, konuşma sırasında kısılır ve başta/sonda yumuşakça girip çıkar.
 Kullanıcı başına yeni müzik servisi çağrısı veya müzik üretim ücreti yoktur.
 
-WebIQ yalnızca yıl aralığı ve genel an türünü araştırır; kişisel anı veya
-Diğer alanının metni web aramasına gönderilmez. Anı, hikâye ve görsel üretimi
-için Foundry’ye; oluşturulan anlatım seslendirme için Speech’e gönderilir.
+WebIQ yalnızca seçilen somut yılı, varsa tarih sınırını ve genel an türünü
+araştırır; kişisel anı, Diğer metni, selfie veya yaş web aramasına gönderilmez.
+Selfie yaş tahmini ve geçmiş yüzün üretilmesi için, anı ise hikâye ve görsel
+üretimi için Foundry’ye; anlatım seslendirme için Speech’e gönderilir.
 Hassas kişisel bilgi yazmayın. Web araması Azure veri işleme sınırlarının
 dışında işlenebilir; [Foundry web search veri işleme koşullarını](https://learn.microsoft.com/azure/foundry/openai/how-to/web-search)
 kurulumunuz için değerlendirin.
@@ -210,12 +232,14 @@ Bu liste galeri ve Demo sonuçları için ortaktır. `path` uzantısız JPEG yol
 Fotoğraf kayıtlarının `productId` değeri görseldeki gerçek ürüne karşılık gelmelidir.
 Güncel fotoğraf JPEG'leri `samples/photo-*.jpg`; kaynak PNG'leri ve Laboratuvar
 örnekleri `samples/reference-photo/` altında saklanır. Podcast örneği
-`samples/podcast/` altındadır; `video` MP4, `poster` mikrofon görselinin yoludur.
+`samples/podcast/` altındadır; `video` MP4, `poster` ilk gazete karesinin yoludur.
+Radyo tiyatrosu JSON kaydı `radio-theater-v1` formatında üç sıralı sahne,
+seslendirme metni, sahne başlangıç zamanları ve yaklaşık yaş bilgisini saklar.
 Eski deneme arşivleri ve yinelenen fotoğraf JPEG'leri temizlendi.
 Her örneğin ham PNG, kioskta oluşturulan JPEG ve JSON kaydı bulunur.
 Altı portre için referans `samples/reference.jpg` dosyasıdır; JSON kayıtlarında
-referansın SHA-256 özeti saklanır. Podcast illüstrasyonu ve Laboratuvar ambalajları
-kişi fotoğrafı kullanmadan kendi tasarım akışlarıyla üretilir. Yeni Laboratuvar
+referansın SHA-256 özeti saklanır. Podcastin anı/kapanış kareleri örnek selfieyi
+referans alır; Laboratuvar ambalajları kişi fotoğrafı kullanmaz. Yeni Laboratuvar
 örneklerinde GPT'nin ürettiği metin ve görsel yönlendirmesi de JSON kaydında
 saklanır. Anahtar bu örneklere eklenmez. Bu dosyalar herkese açık Pages
 yayınına girdiğinden fotoğrafları ve üretilen sonuçları yalnızca ilgili

@@ -905,7 +905,7 @@ body.lite .pack-float { transform: rotate(-7deg); }
 }
 
 </style>
-<link rel="stylesheet" href="podcast.css?v=20261122-4">
+<link rel="stylesheet" href="podcast.css?v=20261122-6">
 </head>
 <body data-exp="home">
 <div id="app">
@@ -952,7 +952,14 @@ body.lite .pack-float { transform: rotate(-7deg); }
         <option value="MAI-Thinking-1"></option>
       </datalist>
     </label>
-    <p>Ayarlar ve anahtar bu tarayıcıda saklanır. Yalnızca güvendiğin cihazda kullan. Üretimde seçtiğin fotoğraf Foundry’ye gönderilir.</p>
+    <label>Azure Blob yükleme SAS URL’si (isteğe bağlı)
+      <input name="blobUpload" type="password" autocomplete="off" spellcheck="false" placeholder="https://hesap.blob.core.windows.net/container?…">
+    </label>
+    <label>Azure Blob salt-okuma SAS URL’si
+      <input name="blobRead" type="password" autocomplete="off" spellcheck="false" placeholder="https://hesap.blob.core.windows.net/container?…">
+    </label>
+    <p>Azure için aynı private container’a ait iki SAS gir: yükleme Create / Create + Write; okuma yalnızca Read. SAS’lar yalnızca açık sayfada tutulur; yenileme veya Copilot’a geçişte yeniden girilir. Sonuçta yüklemeyi ayrıca onaylarsın. GUID dosya adları yetki izolasyonu sağlamaz; başka dosyanın adını bilen ortak okuma SAS’ıyla ona da erişebilir. Silme kuralını Azure’da ayrıca kur.</p>
+    <p>Foundry ayarları ve anahtarı bu tarayıcıda saklanır. Yalnızca güvendiğin cihazda kullan. Üretimde seçtiğin fotoğraf Foundry’ye gönderilir.</p>
     <div class="btn-row">
       <button type="submit" class="btn btn-ai">İlerle</button>
     </div>
@@ -960,10 +967,10 @@ body.lite .pack-float { transform: rotate(-7deg); }
 </dialog>
 <noscript><div class="noscript">Bu deneyim için JavaScript gereklidir.</div></noscript>
 <script src="samples.js?v=20261122-11"></script>
-<script src="kiosk-engine.js?v=20261122-12"></script>
+<script src="kiosk-engine.js?v=20261122-15"></script>
 <script src="podcast-music.js?v=20261122-2"></script>
-<script src="podcast-video.js?v=20261122-3"></script>
-<script src="podcast.js?v=20261122-4"></script>
+<script src="podcast-video.js?v=20261122-4"></script>
+<script src="podcast.js?v=20261122-7"></script>
 <script>boot();</script>
 </body>
 </html>

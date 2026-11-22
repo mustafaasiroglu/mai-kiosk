@@ -18,7 +18,10 @@ const key = 'browser-regression-placeholder';
 const png = fs.readFileSync(path.join(__dirname, 'assets', 'ulker-logo.png')).toString('base64');
 const concept = JSON.parse(fs.readFileSync(path.join(__dirname, 'samples', 'reference-photo', 'pack-cake.json'), 'utf8')).concept;
 const podcastMP3 = () => fs.readFileSync(path.join(__dirname, 'samples', 'podcast', 'radio-memory.mp3'));
-const podcastStory = { title: 'Paylaşılan küçük mutluluk', scene: 'Okul kapısında arkadaşlarınla gofretini paylaşıyorsun ve eve giden yol sana daha sıcak geliyor.', visualDirection: 'Warm nostalgic schoolyard illustration.' };
+const podcastStory = { title: 'Paylaşılan küçük mutluluk', contextLead: 'serin bir okul çıkışında gazeteler usulca hışırdıyor',
+  memorySentence: 'Kahramanımız okul kapısında en yakın arkadaşlarını beklerken çantasından gofretini çıkarmış, çıtır katmanları özenle bölerek herkese küçük bir pay uzatmış ve birlikte geçirilen bu sıradan molanın sıcaklığını yıllar sonra bile hatırlamıştı.',
+  endingSentence: 'Arkadaşlarıyla aynı okul kapısından ağır ağır uzaklaşırken avucunda kalan kırıntılara gülümseyen kahramanımız, paylaşmanın küçücük bir gofreti nasıl kocaman bir hatıraya dönüştürdüğünü o an anlamıştı.',
+  memoryVisual: 'Younger selfie person sharing a wafer at a schoolyard.', endingVisual: 'Same person, clothes and schoolyard, continuing the memory.' };
 function podcastResearchFixture(body, verified = true) {
   const year = JSON.parse(body.input).start;
   const facts = [15, 13].map((day, index) => ({ year, text: `${year} yılında okul takviminde ${day} ${index ? 'Eylül' : 'Haziran'} tarihi yer aldı.`, url: 'https://example.test/school-calendar', title: 'Intercepted test archive', evidence: `${year} okul takvimi.` }));
@@ -101,10 +104,11 @@ async function withPage(platform, task) {
       return route.fulfill({ contentType: 'audio/mpeg', body: state.failure === 'invalid-audio' ? Buffer.from('Not an MP3') : podcastMP3().subarray(0, 24000) });
     }
     const text = request.url().includes('chat/completions');
+    if (text && request.postDataJSON().response_format?.json_schema?.name === 'podcast_age') return route.fulfill({ json: { choices: [{ message: { content: JSON.stringify(state.ageResponse || { hasSingleFace: true, estimatedAge: 80 }) } }] } });
     if (!text && state.holdImage) return;
     if (text && state.failure === 'invalid-copy') return route.fulfill({ json: { choices: [{ message: { content: '{"name":""}' } }] } });
     await route.fulfill({ json: text
-      ? { choices: [{ message: { content: JSON.stringify(state.copy || (request.postDataJSON().response_format?.json_schema?.name === 'radio_story' ? podcastStory : concept)) } }] }
+      ? { choices: [{ message: { content: JSON.stringify(state.copy || (request.postDataJSON().response_format?.json_schema?.name === 'radio_theater' ? podcastStory : concept)) } }] }
       : state.failure === 'missing-image' ? { data: [] } : { data: [{ b64_json: state.png || png }] } });
   });
   try {
@@ -438,6 +442,13 @@ async function podcastFlow(page, state, ui, live, index = 0) {
       await screen(page, '#podcast-input').fill('Yaz tatilinin ilk günü');
       await screen(page, '[type="submit"]').click();
     }
+    await screenIs(page, 'podcast.camera');
+    if (live && !state.windowsWebKit) {
+      await screen(page, '[data-act="shoot"]').click();
+      await page.waitForFunction(() => document.querySelector('.screen.is-in')?.dataset.state === 'review');
+    } else if (live) await screen(page, '[data-act="demo"]').click();
+    await screen(page, '[data-act="start"]').click();
+    if (state.windowsWebKit && live) { await screenIs(page, 'podcast.age'); await screen(page, '.podcast-age-error').filter({ hasText: 'canlı video oluşturmayı desteklemiyor' }).waitFor(); return; }
     await screenIs(page, 'podcast.memory');
     assert.equal(await screen(page, '.kbd .key').first().isVisible(), !state.hasTouch);
     assert.equal(await screen(page, '[type="submit"]').isDisabled(), true);
@@ -466,13 +477,16 @@ async function podcastFlow(page, state, ui, live, index = 0) {
       await page.locator('#message').fill('Yaz tatilinin ilk günü');
       await page.locator('#send').click();
     }
+    await page.getByRole('button', { name: 'Örnek fotoğrafı kullan', exact: true }).click();
+    if (state.windowsWebKit && live) { await page.locator('#messages').filter({ hasText: 'canlı video oluşturmayı desteklemiyor' }).waitFor(); return; }
+    await page.locator('#messages').filter({ hasText: 'Anını tek cümleyle anlat.' }).waitFor();
     await page.locator('#message').fill('Bir anı. İkinci anı.');
     await page.locator('#send').click();
     assert.match(await page.locator('#messages').innerText(), /tek bir cümle/);
     await page.locator('#message').fill(memory);
     await page.locator('#send').click();
     if (ui === 'cowork' || live) {
-      assert.equal(state.calls.length, 0, 'No service may be called before generation consent');
+      assert.ok(state.calls.every(call => call.path.endsWith('/chat/completions') && JSON.parse(call.body).response_format?.json_schema?.name === 'podcast_age'), 'Only separately consented selfie analysis may run before final generation consent');
       await page.locator('#messages [data-action="approve"]').click();
     }
   }
@@ -480,7 +494,7 @@ async function podcastFlow(page, state, ui, live, index = 0) {
 
 async function podcastResult(page, state, ui, live) {
   if (live && state.windowsWebKit) {
-    await (ui === 'classic' ? screen(page, '.gen-error.show') : page.locator('#messages').filter({ hasText: 'canlı video oluşturmayı desteklemiyor' })).waitFor();
+    await (ui === 'classic' ? screen(page, '.podcast-age-error') : page.locator('#messages').filter({ hasText: 'canlı video oluşturmayı desteklemiyor' })).waitFor();
     assert.equal(state.calls.length, 0, 'Unsupported recording must fail before paid services are called');
     return;
   }
@@ -517,7 +531,8 @@ async function podcastResult(page, state, ui, live) {
   for (const call of state.calls) assert.equal(call.key, key);
   if (live) {
     assert.equal(state.calls.filter(call => call.path.endsWith('/responses')).length, 2);
-    assert.equal(state.calls.filter(call => call.path.endsWith('/tts/cognitiveservices/v1')).length, 2);
+    assert.equal(state.calls.filter(call => call.path.endsWith('/tts/cognitiveservices/v1')).length, 3);
+    assert.equal(state.calls.filter(call => call.path.endsWith('/images/edits')).length, 2);
     const speech = state.calls.find(call => call.path.endsWith('/tts/cognitiveservices/v1'));
     assert.ok(speech.body.includes('en-US-Harper:MAI-Voice-2-Flash'));
     assert.equal(speech.contentType, 'application/ssml+xml');
@@ -562,7 +577,7 @@ describe('podcast flow, sources and native video matrix', { concurrency: 3 }, ()
     test(`${platform.name} / ${ui} / ${live ? 'Live (intercepted)' : 'Demo'}: podcast choices, consent, sources and video`, { timeout: 60000 }, () => withPage(platform, async (page, state) => {
       await podcastFlow(page, state, ui, live, platformIndex * 6 + uiIndex * 2 + Number(live));
       await podcastResult(page, state, ui, live);
-      assert.equal(await page.evaluate(() => window.cameraTest.calls), 0);
+      assert.equal(await page.evaluate(() => window.cameraTest.calls), ui === 'classic' && live && !state.windowsWebKit ? 1 : 0);
       if (process.env.KIOSK_TEST_ARTIFACTS) await page.screenshot({ path: path.join(process.env.KIOSK_TEST_ARTIFACTS, `podcast-${ui}-${platform.browser}-${platform.viewport.width}-${live ? 'live' : 'demo'}.png`), fullPage: true });
     }));
   }
@@ -658,11 +673,11 @@ describe('podcast keyboard back and recording interruptions', { concurrency: 2 }
     const audio = podcastMP3().subarray(0, 24000).toString('base64');
     for (const interruption of ['abort', 'hidden']) {
       const result = await page.evaluate(async ({ audio, interruption, image }) => {
-        const controller = new AbortController(), tracks = [], levels = [];
-        const microphone = PodcastVideo.microphone;
-        PodcastVideo.microphone = function (canvas, level, waveform) {
-          if (waveform) levels.push(level);
-          return microphone.call(this, canvas, level, waveform);
+        const controller = new AbortController(), tracks = [], frames = [];
+        const drawFrame = PodcastVideo.drawFrame;
+        PodcastVideo.drawFrame = function (...args) {
+          frames.push(args[2]);
+          return drawFrame.apply(this, args);
         };
         const capture = HTMLCanvasElement.prototype.captureStream;
         HTMLCanvasElement.prototype.captureStream = function (...args) {
@@ -674,7 +689,8 @@ describe('podcast keyboard back and recording interruptions', { concurrency: 2 }
         };
         const session = PodcastVideo.prepare(controller.signal);
         const music = await PodcastMusic.load({ start: 2004 }, controller.signal);
-        const render = PodcastVideo.render({ introAudio: 'data:audio/mpeg;base64,' + audio, storyAudio: 'data:audio/mpeg;base64,' + audio, image: 'data:image/png;base64,' + image, signal: controller.signal, session, music, era: { start: 2004, end: 2004 } });
+        const scenes = ['context', 'memory', 'ending'].map(kind => ({ kind, audio: 'data:audio/mpeg;base64,' + audio, image: 'data:image/png;base64,' + image }));
+        const render = PodcastVideo.render({ scenes, signal: controller.signal, session, music });
         const timer = setTimeout(() => {
           if (interruption === 'abort') controller.abort(new Error('Test recording cancelled'));
           else {
@@ -687,18 +703,92 @@ describe('podcast keyboard back and recording interruptions', { concurrency: 2 }
         finally {
           clearTimeout(timer); await session.dispose();
           HTMLCanvasElement.prototype.captureStream = capture;
-          PodcastVideo.microphone = microphone;
+          PodcastVideo.drawFrame = drawFrame;
           delete document.hidden;
         }
-        return { error, tracks: tracks.map(track => track.readyState), context: session.context.state, maxLevel: Math.max(...levels), minLevel: Math.min(...levels) };
+        return { error, tracks: tracks.map(track => track.readyState), context: session.context.state, frames: frames.length };
       }, { audio, interruption, image: png });
       assert.match(result.error || '', interruption === 'abort' ? /cancelled/ : /sekme/);
       assert.ok(result.tracks.length >= 2);
       assert.ok(result.tracks.every(track => track === 'ended'));
       assert.equal(result.context, 'closed');
-      assert.ok(result.maxLevel > .001 && result.maxLevel > result.minLevel, 'Actual decoded Speech must modulate the microphone animation');
+      assert.ok(result.frames > 1, 'Film frames must actually render before encoding is interrupted');
     }
   }));
+});
+
+test('Chromium: three decoded speech clips produce three timed, distinct movie frames', { timeout: 30000 }, () => withPage(platforms[0], async (page, state) => {
+  await initialize(page, state, 'classic', false);
+  const result = await page.evaluate(async () => {
+    const wave = seconds => {
+      const count = Math.round(seconds * 24000), bytes = new Uint8Array(44 + count * 2), view = new DataView(bytes.buffer);
+      const text = (offset, value) => [...value].forEach((char, i) => { bytes[offset + i] = char.charCodeAt(0); });
+      text(0, 'RIFF'); view.setUint32(4, bytes.length - 8, true); text(8, 'WAVE'); text(12, 'fmt ');
+      view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+      view.setUint32(24, 24000, true); view.setUint32(28, 48000, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+      text(36, 'data'); view.setUint32(40, count * 2, true);
+      for (let i = 0; i < count; i++) view.setInt16(44 + i * 2, Math.sin(i * 2 * Math.PI * 440 / 24000) * 3000, true);
+      return 'data:audio/wav;base64,' + btoa(String.fromCharCode(...bytes));
+    };
+    const images = ['red', 'lime', 'blue'].map(color => {
+      const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1;
+      const g = canvas.getContext('2d'); g.fillStyle = color; g.fillRect(0, 0, 1, 1); return canvas.toDataURL();
+    });
+    const scenes = ['context', 'memory', 'ending'].map((kind, i) => ({ kind, image: images[i], audio: wave([.32, .48, .64][i]) }));
+    const session = PodcastVideo.prepare(), observations = [], draw = PodcastVideo.drawFrame;
+    PodcastVideo.drawFrame = function (...args) { observations.push({ index: images.indexOf(args[1].src), time: args[2] }); return draw.apply(this, args); };
+    let url, player;
+    try {
+      const output = await PodcastVideo.render({ scenes, session, music: await PodcastMusic.load({ start: 2004 }) });
+      url = URL.createObjectURL(output.video); player = document.createElement('video'); player.muted = true;
+      await new Promise((resolve, reject) => { player.onloadedmetadata = resolve; player.onerror = () => reject(new Error('Encoded movie cannot be decoded')); player.src = url; });
+      const colors = [];
+      for (const time of [.25, .9, 1.5]) {
+        await new Promise((resolve, reject) => { player.onseeked = resolve; player.onerror = () => reject(new Error('Encoded frame cannot be decoded')); player.currentTime = time; });
+        const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1;
+        const g = canvas.getContext('2d'); g.drawImage(player, 0, 0, 1, 1); colors.push([...g.getImageData(0, 0, 1, 1).data].slice(0, 3));
+      }
+      return { starts: output.sceneStartTimes, duration: output.videoDuration, observations, colors };
+    } finally {
+      PodcastVideo.drawFrame = draw; await session.dispose();
+      if (player) { player.pause(); player.removeAttribute('src'); player.load(); }
+      if (url) URL.revokeObjectURL(url);
+    }
+  });
+  for (const [index, expected] of [0, .48, 1.12].entries()) {
+    assert.ok(Math.abs(result.starts[index] - expected) < .002);
+    const first = result.observations.find(frame => frame.index === index);
+    assert.ok(first && first.time >= expected && first.time < expected + .25, 'A distinct frame must appear at its decoded clip boundary');
+  }
+  assert.ok(Math.abs(result.duration - 1.76) < .002);
+  const brightness = result.colors.map(color => color.reduce((sum, value) => sum + value, 0));
+  assert.ok(brightness[1] > brightness[0] + 40 && brightness[0] > brightness[2] + 40, 'The encoded movie, not only the canvas, must contain the three different frames');
+}));
+
+describe('podcast automatic selfie processing before memory', { concurrency: 2 }, () => {
+  for (const platform of platforms.filter(platform => platform.browser === 'chromium')) for (const ui of ['classic', 'cowork', 'chat']) {
+    test(`${platform.name} / ${ui}: a before-birth era automatically continues without an age question`, { timeout: 30000 }, () => withPage(platform, async (page, state) => {
+      state.ageResponse = { hasSingleFace: true, estimatedAge: 40 };
+      await initialize(page, state, ui, true);
+      if (ui === 'classic') {
+        await screen(page, '[data-go="podcast.product"]').click(); await screenIs(page, 'podcast.product');
+        await screen(page, '[data-product]').first().click(); await screenIs(page, 'podcast.era');
+        await screen(page, '[data-era]').first().click(); await screenIs(page, 'podcast.moment');
+        await screen(page, '[data-moment]').first().click(); await screenIs(page, 'podcast.camera');
+        await screen(page, '[data-act="shoot"]').click();
+        await page.waitForFunction(() => document.querySelector('.screen.is-in')?.dataset.state === 'review');
+        await screen(page, '[data-act="start"]').click();
+        await screenIs(page, 'podcast.memory');
+        assert.equal(await page.evaluate(() => STATE.podcast.age.age), 10);
+      } else {
+        await startAgent(page, 'podcast'); await option(page, 0).click(); await option(page, 0).click(); await option(page, 0).click();
+        await page.getByRole('button', { name: 'Örnek fotoğrafı kullan', exact: true }).click();
+        await page.locator('#messages').filter({ hasText: 'Anını tek cümleyle anlat.' }).waitFor();
+        assert.equal(await page.getByRole('button', { name: 'Tahmini onayla', exact: true }).count(), 0);
+      }
+      assert.equal(state.calls.length, 1, 'Preparing the selfie must not start public research');
+    }));
+  }
 });
 
 describe('podcast narrator settings across interfaces', { concurrency: 2 }, () => {

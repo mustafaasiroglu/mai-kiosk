@@ -14,7 +14,7 @@
   </script>
   <base href="../">
   <link rel="stylesheet" href="copilot/style.css?v=20261122-1">
-  <link rel="stylesheet" href="podcast.css?v=20261122-4">
+  <link rel="stylesheet" href="podcast.css?v=20261122-6">
 </head>
 <body>
   <div class="shell">
@@ -84,6 +84,9 @@
       <label>Görsel modeli dağıtımı<input name="imageModel" value="MAI-Image-2.7-Flash" required></label>
       <label>Metin ve WebIQ modeli dağıtımı<input name="labModel" value="gpt-5.4-mini"></label>
       <label>Nostalji Podcast anlatıcı sesi<input name="voice" value="en-US-Harper:MAI-Voice-2-Flash"></label>
+      <label>Azure Blob yükleme SAS URL’si (isteğe bağlı)<input name="blobUpload" type="password" autocomplete="off" spellcheck="false" placeholder="https://hesap.blob.core.windows.net/container?…"></label>
+      <label>Azure Blob salt-okuma SAS URL’si<input name="blobRead" type="password" autocomplete="off" spellcheck="false" placeholder="https://hesap.blob.core.windows.net/container?…"></label>
+      <p class="muted">Aynı private container: yükleme Create / Create + Write; okuma yalnızca Read. SAS’lar yalnızca açık sayfada tutulur; yenilemede yeniden girilir. Sonuçta Azure yüklemesini ayrıca onaylarsın. GUID yetki izolasyonu sağlamaz; başka dosyanın adını bilen ortak okuma SAS’ıyla ona da erişebilir. Lifecycle temizliğini Azure’da ayrıca kur.</p>
       <p id="settingsStatus" role="status"></p>
       <button type="submit" class="primary">Bağlantıyı kullan</button>
     </form>
@@ -107,10 +110,10 @@
   <input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
   <div id="notice" role="status" class="notice" hidden></div>
   <script src="samples.js?v=20261122-11"></script>
-  <script src="kiosk-engine.js?v=20261122-12"></script>
+  <script src="kiosk-engine.js?v=20261122-15"></script>
   <script src="podcast-music.js?v=20261122-2"></script>
-  <script src="podcast-video.js?v=20261122-3"></script>
-  <script src="podcast.js?v=20261122-4"></script>
-  <script src="copilot/app.js?v=20261122-11"></script>
+  <script src="podcast-video.js?v=20261122-4"></script>
+  <script src="podcast.js?v=20261122-7"></script>
+  <script src="copilot/app.js?v=20261122-14"></script>
 </body>
 </html>

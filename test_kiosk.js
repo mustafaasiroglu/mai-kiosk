@@ -70,17 +70,18 @@ function verifiedPodcastResponse() {
 }
 function podcastHarness(overrides = {}) {
   const calls = [], stages = [], sessions = [];
-  const input = { product: { id: 'gofret' }, era: { id: 'custom', name: '2004' }, moment: { id: 'school' }, memory: 'Arkadaşlarımla gofretimi paylaşırdım.' };
+  const input = { product: { id: 'gofret' }, era: { id: 'custom', name: '2004' }, moment: { id: 'school' }, memory: 'Arkadaşlarımla gofretimi paylaşırdım.', photo: 'test-selfie', currentAge: 80 };
   const sample = JSON.parse(fs.readFileSync(path.join(__dirname, 'samples', 'podcast', 'radio-memory.json'), 'utf8'));
   const mp3 = fs.readFileSync(path.join(__dirname, 'samples', 'podcast', 'radio-memory.mp3'));
   const config = { ai: { endpoint: 'https://test.services.ai.azure.com', apiKey: 'test-placeholder', labDeployment: 'gpt-test', speechVoice: podcastVoice } };
   const context = vm.createContext({
-    URL: class extends URL {}, AbortSignal, Blob, Uint8Array, atob,
+    URL: class extends URL {}, AbortController, AbortSignal, Blob, Uint8Array, atob,
     CONFIG: config, API: { live: true }, SCREENS: {}, STATE: { podcast: {} },
     PodcastMusic: { load: async (_era, signal) => { signal?.throwIfAborted(); return new ArrayBuffer(44); }, decade: era => Math.floor(era.start / 10) * 10 },
     PodcastVideo: {
+      format() { return 'video/mp4'; },
       prepare() { const session = { ready: Promise.resolve(), disposed: false, async dispose() { this.disposed = true; } }; sessions.push(session); return session; },
-      async render(options) { calls.push(['video', options]); options.signal?.throwIfAborted(); return { video: new Blob(['test movie'], { type: 'video/mp4' }), videoPoster: 'radio-poster', introDuration: 1, videoDuration: 2 }; },
+      async render(options) { calls.push(['video', options]); options.signal?.throwIfAborted(); return { video: new Blob(['test movie'], { type: 'video/mp4' }), videoPoster: 'radio-poster', sceneStartTimes: [0, 1, 2], videoDuration: 3 }; },
       async validate(blob) { return blob; },
     },
     PRODUCTS: [{ id: 'gofret', name: 'Çikolatalı Gofret', ingredientEn: 'chocolate' }],
@@ -96,15 +97,24 @@ function podcastHarness(overrides = {}) {
     MAI: {
       request: async (...args) => { calls.push(['research', ...args]); return { ok: true, json: async () => args[1].text ? verifiedPodcastResponse() : groundedPodcastResponse() }; },
       generate: async (...args) => { calls.push(['image', ...args]); return 'generated-image'; },
+      edit: async (...args) => { calls.push(['edit', ...args]); return 'generated-image'; },
     },
-    Chat: { json: async (...args) => { calls.push(['story', ...args]); return { title: 'Paylaşılan mutluluk', scene: 'Okul çıkışında gofretini arkadaşlarınla paylaşıyorsun.', visualDirection: 'Warm schoolyard illustration.' }; } },
+    Chat: { json: async (...args) => {
+      if (args[3]?.json_schema?.name === 'podcast_age') { calls.push(['age', ...args]); return { hasSingleFace: true, estimatedAge: 80 }; }
+      calls.push(['story', ...args]); return { title: 'Paylaşılan mutluluk', contextLead: 'serin bir okul çıkışında gazeteler usulca hışırdıyor',
+        memorySentence: 'Kahramanımız okul kapısında en yakın arkadaşlarını beklerken çantasından gofretini çıkarmış, çıtır katmanları özenle bölerek herkese küçük bir pay uzatmış ve birlikte geçirilen bu sıradan molanın sıcaklığını yıllar sonra bile hatırlamıştı.',
+        endingSentence: 'Arkadaşlarıyla aynı okul kapısından ağır ağır uzaklaşırken avucunda kalan kırıntılara gülümseyen kahramanımız, paylaşmanın küçücük bir gofreti nasıl kocaman bir hatıraya dönüştürdüğünü o an anlamıştı.',
+        memoryVisual: 'Schoolyard scene with the younger selfie person.', endingVisual: 'Same person, clothes and schoolyard, continuing the scene.' };
+    } },
+    createCameraScreen: () => ({}), resizeDataUrl: async () => 'prepared-selfie', dataUrlToBlob: data => new Blob([data], { type: 'image/jpeg' }), loadImage: async () => ({ width: 896, height: 1120 }),
     composePhoto: async image => { calls.push(['compose', image]); return 'composed-image'; },
     fetch: async (...args) => { calls.push(['speech', ...args]); return new Response(mp3, { headers: { 'content-type': 'audio/mpeg' } }); },
     sampleFor: () => ({ prompt: 'sample.json', video: 'sample.mp4', poster: 'radio-poster.png' }),
-    SavedSamples: { response: async (_path, signal) => { signal?.throwIfAborted(); return { json: async () => sample, blob: async () => new Blob(['test movie'], { type: 'video/mp4' }) }; }, image: async () => 'saved-image' },
+    SavedSamples: { response: async (_path, signal) => { signal?.throwIfAborted(); return { json: async () => sample, blob: async () => new Blob([Buffer.alloc(128)], { type: _path.endsWith('.jpg') ? 'image/jpeg' : 'video/mp4' }) }; }, image: async () => 'saved-image' },
     ...overrides,
   });
   vm.runInContext(podcastSource, context);
+  context.podcastComposeFrame = async raw => { calls.push(['compose', raw]); return 'composed-image'; };
   return { context, calls, stages, sessions, input, config, sample, mp3 };
 }
 
@@ -134,6 +144,83 @@ test('both new nostalgia products enter the shared story and illustration genera
   }
 });
 
+test('podcast privately projects approximate age onto the selected era with a minimum of ten', () => {
+  const { context, input } = podcastHarness();
+  const age = context.podcastAge({ start: 1960, end: 1969 }, 80);
+  assert.equal(age.birthYear, 1946); assert.equal(age.year, 1964); assert.equal(age.age, 18);
+  assert.equal(age.min, 14); assert.equal(age.max, 23);
+  const overlap = context.podcastAge({ start: 2000, end: 2009 }, 22);
+  assert.equal(overlap.year, 2004); assert.equal(overlap.min, 10); assert.equal(overlap.max, 10);
+  assert.equal(context.podcastAge({ start: 2004, end: 2004 }, 22).age, 10);
+  assert.equal(context.podcastAge({ start: 1960, end: 1969 }, 40).age, 10);
+  for (const invalid of [0, 111, 2.5, '40', NaN]) assert.throws(() => context.podcastAge({ start: 2004, end: 2004 }, invalid));
+  assert.throws(() => context.validatePodcastInput({ ...input, photo: '' }), /selfie/);
+});
+
+test('selfie analysis uses vision and rejects unclear faces, invalid ages, cancellation and unsupported recording', async () => {
+  const { context, calls, input } = podcastHarness();
+  assert.equal(await context.API.podcast.estimateAge(input.photo), 80);
+  assert.equal(calls[0][2][1].image_url.url, 'prepared-selfie');
+  assert.equal(calls[0][4].json_schema.name, 'podcast_age');
+  let resized;
+  context.loadImage = async () => ({ width: 2000, height: 1000 });
+  context.resizeDataUrl = async (_photo, width, height) => { resized = [width, height]; return 'prepared-selfie'; };
+  await context.API.podcast.estimateAge(input.photo);
+  assert.deepEqual(resized, [768, 384], 'Vision must see the entire photo, not crop other faces out');
+  for (const result of [{ hasSingleFace: false, estimatedAge: 80 }, { hasSingleFace: true, estimatedAge: 0 }, { hasSingleFace: true, estimatedAge: '40' }]) {
+    context.Chat.json = async () => result;
+    await assert.rejects(context.API.podcast.estimateAge(input.photo), /Tek ve net/);
+  }
+  const controller = new AbortController();
+  context.Chat.json = async () => { controller.abort(new Error('Stopped')); return { hasSingleFace: true, estimatedAge: 80 }; };
+  await assert.rejects(context.API.podcast.estimateAge(input.photo, controller.signal), /Stopped/);
+  context.PodcastVideo.format = () => { throw new Error('Unsupported recording'); };
+  await assert.rejects(context.API.podcast.estimateAge(input.photo), /Unsupported recording/);
+});
+
+test('a late selfie estimate cannot repopulate a closed or retaken kiosk screen', async () => {
+  const { context } = podcastHarness();
+  let resolve;
+  const waiting = new Promise(done => { resolve = done; }), cleanups = [];
+  context.STATE.podcast = { photo: 'old-photo', era: { start: 2004, end: 2004 }, estimatedAge: null };
+  context.API.podcast.estimateAge = () => waiting;
+  const control = () => ({ addEventListener() {}, disabled: true, value: '', textContent: '' });
+  const nodes = { '.podcast-prep': control(), '.podcast-age-error': control() };
+  context.$ = selector => nodes[selector];
+  const ctx = { alive: true, cleanup: action => cleanups.push(action) };
+  context.SCREENS['podcast.age'].mount(control(), ctx);
+  ctx.alive = false; cleanups.forEach(action => action());
+  context.STATE.podcast.photo = 'new-photo';
+  resolve(80);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(context.STATE.podcast.estimatedAge, null);
+  assert.equal(context.STATE.podcast.photo, 'new-photo');
+});
+
+test('radio theater requires three long sentences, preserves the exact date and rejects short or multi-sentence copy', async () => {
+  const { context, input } = podcastHarness();
+  const copy = await context.Chat.json('', '');
+  const facts = [{ text: '2004 yılında bir kültür etkinliği düzenlendi.' }, { text: '2004 yılında bir bilim etkinliği duyuruldu.' }];
+  const values = context.validatePodcastInput({ ...input, era: { id: 'custom', name: '23.04.2004' } });
+  const theater = context.podcastTheater(copy, facts, values);
+  assert.equal(theater.scenes.length, 3);
+  assert.match(theater.scenes[0].text, /23 Nisan 2004/);
+  assert.equal(theater.narration, theater.scenes.map(scene => scene.text).join(' '));
+  assert.throws(() => context.podcastTheater({ ...copy, endingSentence: 'Kısa bir anıydı.' }, facts, values), /20 kelimelik/);
+  assert.throws(() => context.podcastTheater({ ...copy, memorySentence: copy.memorySentence + ' Sonra eve gitti.' }, facts, values), /tek uzun cümle/);
+});
+
+test('verified agenda dates must be real calendar dates and not later than an exact memory date', () => {
+  const { context } = podcastHarness();
+  const response = verifiedPodcastResponse(), record = JSON.parse(response.output[1].content[0].text);
+  const verify = () => { response.output[1].content[0].text = JSON.stringify(record); return context.podcastVerifiedFacts(response, { start: 2004, end: 2004 }, '2004-02-29'); };
+  record.facts[0].date = '2004-01-23'; record.facts[1].date = '2004-02-29';
+  assert.equal(verify().length, 2);
+  record.facts[1].date = '2004-02-30'; assert.throws(verify, /tarihi geçersiz/);
+  record.facts[1].date = '2004-03-01'; assert.throws(verify, /anının tarihinden önce/);
+  record.facts[1].date = null; assert.throws(verify, /anının tarihinden önce/);
+});
+
 test('podcast requires completed research, two cited facts and safe, bounded citations', () => {
   const { context } = podcastHarness();
   assert.equal(context.podcastFacts(groundedPodcastResponse()).length, 2);
@@ -155,8 +242,8 @@ test('podcast verifies public sources before fiction, image and same-endpoint Sp
   const { context, input, calls, config } = podcastHarness();
   const stages = [];
   const result = await context.API.podcast.generate(input, { onStage: index => { stages.push(index); if (index === 2) config.ai.speechVoice = 'en-US-AvaMultilingualNeural'; } });
-  assert.deepEqual(stages, [0, 1, 2, 3, 4]);
-  assert.deepEqual(calls.map(call => call[0]), ['research', 'research', 'story', 'image', 'compose', 'speech', 'speech', 'video']);
+  assert.deepEqual(stages, [0, 1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(calls.map(call => call[0]), ['research', 'research', 'story', 'image', 'compose', 'edit', 'compose', 'edit', 'compose', 'speech', 'speech', 'speech', 'video']);
   for (const call of calls.filter(call => call[0] === 'research')) {
     assert.equal(call[1], 'responses');
     assert.equal(call[2].store, false);
@@ -170,9 +257,14 @@ test('podcast verifies public sources before fiction, image and same-endpoint Sp
   assert.ok(speech[2].body.includes(podcastVoice));
   assert.equal(result.voice, podcastVoice);
   assert.equal(result.image, 'composed-image');
-  assert.match(result.intro, /^Sayın dinleyicilerimiz/);
-  assert.match(result.intro, /2004/);
-  assert.ok(result.narration.indexOf('Şimdi hayal edilen') < result.narration.indexOf('Kaynaklı dönem notları'));
+  assert.match(result.scenes[0].text, /^Takvimler 2004/);
+  assert.equal(result.scenes.length, 3);
+  assert.deepEqual(Array.from(result.scenes, scene => scene.kind), ['context', 'memory', 'ending']);
+  assert.equal(result.narration, result.scenes.map(scene => scene.text).join(' '));
+  const edits = calls.filter(call => call[0] === 'edit');
+  assert.equal(edits[0][2].length, 1);
+  assert.equal(edits[1][2].length, 2);
+  assert.equal(await edits[1][2][1].text(), 'generated-image');
   assert.equal(result.video.type, 'video/mp4');
   assert.equal(calls.filter(call => call[0] === 'speech').every(call => call[2].body.includes(podcastVoice)), true);
 });
@@ -217,15 +309,14 @@ test('podcast Speech escapes SSML and surfaces service and malformed-audio error
   await assert.rejects(context.podcastAudio('Anı'), /MP3/);
   context.fetch = async () => { throw new Error('Network failure'); };
   await assert.rejects(context.podcastAudio('Anı'), /Ses servisine bağlanılamadı/);
-  assert.throws(() => context.podcastNarration([{ text: 'kelime '.repeat(181) }], 'Anı'), /çok uzun/);
 });
 
 test('podcast cancellation at every stage prevents later requests and successful results', async () => {
-  for (const cancelAt of [0, 1, 2, 3, 4]) {
+  for (const cancelAt of [0, 1, 2, 3, 4, 5, 6]) {
     const { context, input, calls, sessions } = podcastHarness();
     const controller = new AbortController();
     await assert.rejects(context.API.podcast.generate(input, { signal: controller.signal, onStage: index => { if (index === cancelAt) controller.abort(); } }), /abort/i);
-    assert.equal(calls.filter(call => call[0] === 'speech').length, cancelAt === 4 ? 2 : 0);
+    assert.equal(calls.filter(call => call[0] === 'speech').length, cancelAt === 6 ? 3 : 0);
     if (cancelAt <= 2) assert.equal(calls.filter(call => call[0] === 'image').length, 0);
     assert.equal(sessions.every(session => session.disposed), true);
   }
@@ -233,6 +324,11 @@ test('podcast cancellation at every stage prevents later requests and successful
 
 test('podcast Demo reads the saved video, rejects malformed metadata and honors cancellation', async () => {
   const { context, input, calls, sample } = podcastHarness();
+  const copy = await context.Chat.json('', '');
+  const theater = context.podcastTheater(copy, sample.facts, context.validatePodcastInput(input));
+  Object.assign(sample, { format: 'radio-theater-v1', narration: theater.narration, scene: theater.scenes.slice(1).map(scene => scene.text).join(' '),
+    scenes: theater.scenes.map((scene, index) => ({ ...scene, image: `samples/podcast/${['radio-context', 'radio-memory', 'radio-ending'][index]}.jpg` })) });
+  calls.length = 0;
   context.API.live = false;
   const result = await context.API.podcast.generate(input);
   assert.equal(result.demo, true);
@@ -244,6 +340,20 @@ test('podcast Demo reads the saved video, rejects malformed metadata and honors 
   const controller = new AbortController();
   controller.abort();
   await assert.rejects(context.API.podcast.generate(input, { signal: controller.signal }), /abort/i);
+});
+
+test('legacy Demo is explicitly unavailable rather than passed off as a new selfie theater', async () => {
+  const { context, sample, input } = podcastHarness();
+  context.API.live = false; delete sample.format;
+  await assert.rejects(context.API.podcast.estimateAge(input.photo), /henüz hazır değil/);
+  await assert.rejects(context.API.podcast.sample(), /üç sahne/);
+});
+
+test('image policy refusal remains an explicit failure, not a replacement image', async () => {
+  const response = new Response(JSON.stringify({ error: { code: 'content_safety_violation', message: 'Output content violated safety policies.' } }), { status: 400, headers: { 'content-type': 'application/json' } });
+  const context = vm.createContext({ response });
+  vm.runInContext(sourceBetween('const MAI =', 'const Chat ='), context);
+  await assert.rejects(vm.runInContext('MAI.parse(response)', context), /content_safety_violation/);
 });
 
 test('saving narrator voice preserves shared credentials and rejects invalid names and storage failures', () => {
@@ -480,7 +590,7 @@ test('Demo camera uses samples/reference.jpg without requesting webcam access, i
   });
   vm.runInContext(sampleSource, context);
   vm.runInContext(sourceBetween('function demoPortrait()', '/* ---------- Fotoğraf temaları'), context);
-  vm.runInContext(sourceBetween("SCREENS['photo.camera'] =", "SCREENS['photo.gen'] ="), context);
+  vm.runInContext(sourceBetween("function createCameraScreen(", "SCREENS['photo.gen'] ="), context);
   context.SCREENS['photo.camera'].mount(el, { alive: true, cleanup() {} });
   assert.equal(context.STATE.photo.photo, 'samples/reference.jpg');
   assert.equal(elements['.cam-shot'].src, 'samples/reference.jpg');
@@ -596,7 +706,7 @@ test('failed live capture shows an error without silently substituting the demo 
     App: { go: id => transitions.push(id) },
     demoPortrait: () => assert.fail('A failed real capture must not become a sample photo'),
   });
-  vm.runInContext(sourceBetween("SCREENS['photo.camera'] =", "SCREENS['photo.gen'] ="), context);
+  vm.runInContext(sourceBetween("function createCameraScreen(", "SCREENS['photo.gen'] ="), context);
   context.SCREENS['photo.camera'].mount(el, { alive: true, cleanup() {}, sleep: async () => {} });
   await new Promise(resolve => setImmediate(resolve));
   click({ target: { closest: () => ({ dataset: { act: 'shoot' } }) } });

@@ -102,6 +102,7 @@
       ${result.podcast ? '' : `<img src="${esc(result.image)}" alt="${esc(result.title)}">`}
       <figcaption>${result.podcast ? podcastOutputHTML(result.podcast) : `<strong>${esc(result.title)}</strong>${result.slogan ? `<p>${esc(result.slogan)}</p>` : ''}${result.story ? `<p class="muted">${esc(result.story)}</p>` : ''}`}</figcaption>
       ${result.podcast ? '' : `<a class="artifact-action" href="${esc(result.image)}" download="${result.file}">${svg('download')} Görseli indir</a>`}
+      ${!result.podcast && result.live && BlobShare.enabled ? `<div class="blob-share">${result.share ? `<div class="qr-box" style="width:180px;height:180px">${QR.svg(result.share.url, { ecl: 'M', border: 2 })}</div><a class="artifact-action" href="${esc(result.share.url)}" target="_blank" rel="noopener noreferrer">Görseli telefonda aç</a><p class="muted">Son erişim: ${esc(new Date(result.share.expires).toLocaleString('tr-TR'))}</p>` : `<button type="button" class="pill" data-action="publish" data-output="${threads.flatMap(t => t.messages).findIndex(m => m.result === result)}"${result.publishing ? ' disabled' : ''}>${result.publishing ? 'Azure’a yükleniyor…' : 'Azure’a yükle ve QR oluştur'}</button><p class="muted">Yüklemeyi onayladığında üretilen görsel Azure’a gönderilir. Bağlantıyı bilenler erişebilir.</p>${result.shareError ? `<p role="alert">${esc(result.shareError)}</p>` : ''}`}<p class="muted">${esc(BlobShare.retentionText)}</p></div>` : ''}
       ${revision ? `<div class="pills"><button type="button" class="pill" data-action="revise"${result.canRevise ? '' : ' disabled'}>${svg('edit')} Revizyon İste</button></div>${result.canRevise ? '' : '<p class="muted">Revizyon için Demo Modunu kapatman gerekir.</p>'}` : ''}
     </figure>`;
   }
@@ -158,7 +159,7 @@
     el('send').disabled = !el('message').value.trim() && !draftPhoto;
     el('stop').hidden = !working;
     el('podcastBack').hidden = working || thread.phase !== 'podcast-other';
-    el('attachButton').hidden = !(API.live && thread.phase === 'reference' && !working);
+    el('attachButton').hidden = !(API.live && ['reference', 'podcast-reference'].includes(thread.phase) && !working);
     el('composerMode').textContent = modeName(mode);
     el('attachment').innerHTML = draftPhoto ? `<span class="pill">${svg('file')}${esc(draftPhoto.name)} ${action('removeAttachment', svg('close'), 'icon-btn')}</span>` : '';
     el('attachment').querySelector('button')?.setAttribute('aria-label', 'Fotoğrafı kaldır');
@@ -252,28 +253,32 @@
         break;
       }
       case 'reference':
+      case 'podcast-reference': {
+        const theater = t.agent.id === 'podcast', phase = theater ? 'podcast-reference' : 'reference';
         if (choice?.id === 'camera' || normalize(text) === 'kamerayi ac') {
-          if (!API.live) return ask(t, 'reference', 'Demo Modu kamerayı açmaz; örnek fotoğrafla devam et.', referenceOptions());
-          ask(t, 'reference', 'Fotoğrafını çekip Gönder düğmesine bas. Üretim ancak son onayından sonra başlayacak.', referenceOptions());
+          if (!API.live) return ask(t, phase, 'Demo Modu kamerayı açmaz; örnek fotoğrafla devam et.', referenceOptions());
+          ask(t, phase, theater ? 'Selfieni çekip Gönder düğmesine bas; fotoğraf geçmişteki halini canlandırmak için Foundry’ye gönderilecek.' : 'Fotoğrafını çekip Gönder düğmesine bas. Üretim ancak son onayından sonra başlayacak.', referenceOptions());
           el('photoDialog').showModal();
           openCamera();
           break;
         }
         if (choice?.id === 'upload' || normalize(text) === 'fotograf yukle') {
-          if (!API.live) return ask(t, 'reference', 'Demo Modu kayıtlı örnek fotoğrafı kullanır.', referenceOptions());
-          ask(t, 'reference', 'Bir fotoğraf seçip Gönder düğmesine bas. Fotoğraf henüz Foundry’ye gönderilmeyecek.', referenceOptions());
+          if (!API.live) return ask(t, phase, 'Demo Modu kayıtlı örnek fotoğrafı kullanır.', referenceOptions());
+          ask(t, phase, theater ? 'Tek yüzlü bir selfie seç ve Gönder ile anında kullanmak için Foundry’ye gönder.' : 'Bir fotoğraf seçip Gönder düğmesine bas. Fotoğraf henüz Foundry’ye gönderilmeyecek.', referenceOptions());
           el('photoInput').click();
           break;
         }
         if (photo) v.photo = photo.data;
-        else if (choice?.id === 'sample' || normalize(text) === 'ornek fotografi kullan') v.photo = null;
-        else return ask(t, 'reference', 'Henüz bir fotoğraf eklenmedi. Kamera, dosya veya örnek fotoğraf seçeneklerinden birini kullan.', referenceOptions());
+        else if (choice?.id === 'sample' || normalize(text) === 'ornek fotografi kullan') v.photo = theater ? demoPortrait() : null;
+        else return ask(t, phase, 'Henüz bir fotoğraf eklenmedi. Kamera, dosya veya örnek fotoğraf seçeneklerinden birini kullan.', referenceOptions());
+        if (theater) { v.estimatedAge = null; v.currentAge = null; v.age = null; estimatePodcastAge(t); break; }
         if (API.live) prepare(t, `${v.theme.name} · ${v.product.name}`, 'Referans fotoğraf Microsoft Foundry’ye gönderilecek. Yalnızca kullanma iznin olan bir fotoğrafla devam et.', true);
         else {
           const sample = sampleFor(`photo-${v.theme.id}`);
           prepare(t, `${v.theme.name} · ${sample.product}`, `Seçtiğin lezzet ruhu ${v.product.name}. Demo kişiselleştirme yapmaz: bu temanın ${sample.product} ile kayıtlı portresini getireceğim. Kamera açılmayacak ve yeni görsel üretilmeyecek.`);
         }
         break;
+      }
       case 'podcast-product': {
         const product = choice || matchOptions(PODCAST_PRODUCTS, text)[0];
         if (!product) return ask(t, 'podcast-product', 'Bir Ülker ürünü seç.', PODCAST_PRODUCTS);
@@ -299,21 +304,21 @@
         if (!moment) return ask(t, 'podcast-moment', 'Bir an seç.', PODCAST_MOMENTS);
         v.moment = moment;
         if (moment.id === 'other') ask(t, 'podcast-other', 'O anı kısaca nasıl adlandıralım?');
-        else ask(t, 'podcast-memory', 'Anını tek cümleyle anlat. Hassas kişisel bilgi yazma.');
+        else promptPodcastSelfie(t);
         break;
       }
       case 'podcast-other':
         try { v.moment = { id: 'other', name: podcastText(text, 'Anın', 80) }; }
         catch (error) { return ask(t, 'podcast-other', error.message); }
-        ask(t, 'podcast-memory', 'Anını tek cümleyle anlat. Hassas kişisel bilgi yazma.');
+        promptPodcastSelfie(t);
         break;
       case 'podcast-memory':
         v.memory = text;
         try { validatePodcastInput(v); }
         catch (error) { return ask(t, 'podcast-memory', error.message); }
         prepare(t, `${v.product.name} · ${v.era.name} · ${v.moment.name}`, API.live
-          ? 'WebIQ yalnızca dönemi ve genel an türünü araştıracak. Anın Foundry’de özgün bir radyo hikâyesi ve illüstrasyona dönüşecek; kaynaklı bilgilerle hayal edilen sahne ayrı gösterilip ayrı okunacak.'
-          : 'Demo, yeni araştırma veya üretim yapmadan kayıtlı örnek illüstrasyonu ve sesli anıyı gösterecek.', API.live);
+          ? 'WebIQ yalnızca yılı ve genel an türünü araştıracak. Selfien ve anın Foundry’ye gönderilip üç uzun cümle, kurgu gazete ve o yaştaki halini içeren iki devam karesi üretilecek. Üç sahne, hafif dönem müziğiyle sepya videoya dönüşecek.'
+          : 'Demo, yeni araştırma veya üretim yapmadan kayıtlı üç sahneli radyo tiyatrosunu gösterecek.', API.live);
         break;
       case 'base': {
         const base = choice || matchOptions(LAB_BASES, text)[0];
@@ -399,6 +404,28 @@
   ];
   const followups = [{ id: 'change', name: 'Seçimleri değiştir' }, { id: 'retry', name: 'Yeniden dene' }];
   const singleFlavor = { id: 'single-flavor', name: 'Tek malzemeyle devam et' };
+  function promptPodcastSelfie(t) {
+    ask(t, 'podcast-reference', API.live
+      ? 'Anını yazmadan önce selfieni çek. Gönderince fotoğraf geçmişteki halini canlandırmak için Foundry’ye gönderilecek.'
+      : 'Demo kamerayı açmaz. Örnek selfieyle akışı keşfet.', referenceOptions());
+  }
+  async function estimatePodcastAge(t) {
+    const controller = new AbortController(), job = { steps: ['Selfieni hazırla'], status: 'running', step: 0, controller };
+    t.job = job; t.phase = 'podcast-age-loading'; add(t, { type: 'job', job });
+    render({ scroll: true });
+    try {
+      const age = await API.podcast.estimateAge(t.values.photo, controller.signal);
+      controller.signal.throwIfAborted();
+      t.values.estimatedAge = age; t.values.currentAge = age;
+      t.values.age = podcastAge(t.values.era, age);
+      job.status = 'complete'; job.step = 1;
+      ask(t, 'podcast-memory', 'Anını tek cümleyle anlat. Geçmişteki halin radyo tiyatrosunun kahramanı olacak. Hassas kişisel bilgi yazma.');
+    } catch (error) {
+      job.status = controller.signal.aborted ? 'stopped' : 'error';
+      if (!controller.signal.aborted) console.error('Selfie yaş tahmini başarısız:', error);
+      ask(t, 'podcast-reference', controller.signal.aborted ? 'Selfie hazırlığı durduruldu. Yeniden fotoğraf seçebilirsin.' : error.message, referenceOptions());
+    } finally { t.job = null; if (thread === t && view === 'chat') render({ scroll: true }); }
+  }
   function promptLab(t) {
     ask(t, 'base', 'Ürünün temeli ne olsun?', LAB_BASES);
   }
@@ -451,7 +478,7 @@
       photo: ['Referansları hazırla ve portreyi üret', 'Portreyi sohbete ekle'],
       podcast: [...PODCAST_STAGES, 'Anı videosunu sohbete ekle'],
       lab: ['Ürün adı, sloganı ve hikâyeyi yaz', 'Ambalajı oluştur', 'Konsepti sohbete ekle'],
-    })[t.agent.id] : t.agent.id === 'podcast' ? ['Kayıtlı illüstrasyonu getir', 'Kayıtlı sesli anıyı getir', 'Çıktıyı sohbete ekle'] : ['Kayıtlı demo çıktısını getir', 'Çıktıyı sohbete ekle'];
+    })[t.agent.id] : t.agent.id === 'podcast' ? ['Kayıtlı üç sahneyi getir', 'Kayıtlı radyo tiyatrosunu getir', 'Çıktıyı sohbete ekle'] : ['Kayıtlı demo çıktısını getir', 'Çıktıyı sohbete ekle'];
     const job = { steps, status: 'running', step: 0, controller };
     t.phase = 'running';
     t.job = job;
@@ -485,9 +512,9 @@
       advance();
       job.step++;
       job.status = 'complete';
-      t.result = { image, title, story, slogan, concept, podcast, canRevise: t.agent.id === 'lab' && live, file: `copilot-${t.agent.id}.jpg` };
+      t.result = { image, title, story, slogan, concept, podcast, live, canRevise: t.agent.id === 'lab' && live, file: `copilot-${t.agent.id}.jpg` };
       t.revision = null;
-      say(t, revision ? 'Revizyonun hazır. Önceki tasarımın da sohbette duruyor.' : podcast ? (live ? 'Radyo anı videon hazır. Buradan izleyebilir ve indirebilirsin.' : 'Kayıtlı demo videosu hazır. Bu işlemde yeni bir video üretilmedi.') : live ? 'Çıktın hazır. Görseli buradan indirebilirsin.' : 'Kayıtlı demo çıktısı hazır. Bu işlemde yeni bir görsel üretilmedi.', {
+      say(t, revision ? 'Revizyonun hazır. Önceki tasarımın da sohbette duruyor.' : podcast ? (live ? 'Üç sahneli radyo tiyatron hazır. Buradan izleyebilir ve indirebilirsin.' : 'Kayıtlı demo videosu hazır. Bu işlemde yeni bir video üretilmedi.') : live ? 'Çıktın hazır. Görseli buradan indirebilirsin.' : 'Kayıtlı demo çıktısı hazır. Bu işlemde yeni bir görsel üretilmedi.', {
         result: t.result,
         options: live ? followups : [followups[0]],
       });
@@ -522,6 +549,7 @@
     status.textContent = 'Ortak bağlantı ayarları okunuyor…';
     try {
       FoundrySettings.loadSaved(form);
+      BlobShare.fill(form);
       const selectedVoice = form.elements.voice.value;
       await FoundrySettings.loadLocal(form);
       form.elements.voice.value = selectedVoice;
@@ -532,7 +560,7 @@
     } finally { form.inert = false; }
   }
 
-  function changeConnection(settings) {
+  function changeConnection(settings, blobSettings = null) {
     if (threads.some(t => t.job)) return notice('Modu değiştirmek için devam eden işlemleri bitir veya durdur.');
     if (settings.mode === 'live') {
       try { FoundrySettings.save(settings); }
@@ -543,6 +571,9 @@
       }
     }
     FoundrySettings.apply(settings);
+    BlobShare.settings = blobSettings;
+    el('connection').elements.blobUpload.value = '';
+    el('connection').elements.blobRead.value = '';
     renderCards();
     for (const t of threads) t.values.photo = null;
     threads.length = 0;
@@ -574,6 +605,23 @@
       return;
     }
     switch (command) {
+      case 'publish': {
+        const owner = thread;
+        const result = threads.flatMap(t => t.messages)[Number(target.dataset.output)]?.result;
+        if (!result || result.podcast || !result.live || result.publishing || result.share) return;
+        result.publishing = true;
+        result.shareError = '';
+        render({ scroll: false });
+        try { result.share = await BlobShare.publish(result.image); }
+        catch (error) {
+          console.error('Azure paylaşımı başarısız:', error);
+          result.shareError = error.message;
+        } finally {
+          result.publishing = false;
+          if (thread === owner && view === 'chat') render({ scroll: false });
+        }
+        return;
+      }
       case 'agents': return openCatalog();
       case 'new': return view === 'chat' ? newThread(thread.agent) : openCatalog(true);
       case 'sidebar': sideOpen = !sideOpen; return renderChrome();
@@ -644,10 +692,10 @@
       el('settingsStatus').textContent = 'Geçerli bir HTTPS Foundry uç noktası, API anahtarı ve görsel dağıtımı gir.';
       return;
     }
-    let speechVoice;
-    try { speechVoice = FoundrySettings.voice(data.get('voice')); }
+    let speechVoice, blobSettings;
+    try { speechVoice = FoundrySettings.voice(data.get('voice')); blobSettings = BlobShare.readForm(event.currentTarget); }
     catch (error) { el('settingsStatus').textContent = error.message; return; }
-    changeConnection({ mode: 'live', endpoint: endpoint[1], apiKey, imageDeployment, labDeployment: data.get('labModel').trim(), speechVoice });
+    changeConnection({ mode: 'live', endpoint: endpoint[1], apiKey, imageDeployment, labDeployment: data.get('labModel').trim(), speechVoice }, blobSettings);
   });
   el('message').addEventListener('input', syncComposer);
   el('message').addEventListener('keydown', event => {
@@ -661,7 +709,7 @@
   });
   async function openCamera() {
     const request = ++cameraRequest, preview = el('cameraPreview'), start = el('cameraStart'), status = el('cameraStatus');
-    if (!API.live || !thread || thread.phase !== 'reference' || !el('photoDialog').open) return;
+    if (!API.live || !thread || !['reference', 'podcast-reference'].includes(thread.phase) || !el('photoDialog').open) return;
     start.disabled = true;
     preview.hidden = false;
     status.textContent = 'Kamera izni bekleniyor…';
@@ -725,7 +773,7 @@
   el('photoInput').addEventListener('change', async event => {
     const file = event.target.files[0];
     event.target.value = '';
-    if (!file || !API.live || view !== 'chat' || thread.phase !== 'reference') return;
+    if (!file || !API.live || view !== 'chat' || !['reference', 'podcast-reference'].includes(thread.phase)) return;
     if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 10 * 1024 * 1024) {
       return notice('En fazla 10 MB boyutunda bir JPEG, PNG veya WebP seç.');
     }
