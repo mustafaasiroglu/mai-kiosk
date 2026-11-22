@@ -3388,7 +3388,6 @@ SCREENS.home = {
       <div class="exp-cards">${EXP_ORDER.map((id, i) => expCardHTML(EXPS[id], i)).join('')}</div>
       <footer class="home-foot rise" style="--i:8">
         <div class="tap-hint">${icon('tap')} Başlamak için bir deneyime dokun</div>
-        <p class="fine">${icon('shield')} Fotoğrafların ve bilgilerin yalnızca bu deneyim için kullanılır.</p>
       </footer>
     </div>`;
   },

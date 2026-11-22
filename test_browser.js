@@ -287,6 +287,66 @@ describe('complete kiosk, Chat and Cowork scenario matrix', { concurrency: 3 }, 
   }
 });
 
+describe('home card layout', { concurrency: 3 }, () => {
+  for (const platform of [
+    ...platforms,
+    { name: 'wide desktop Chromium', browser: 'chromium', viewport: { width: 1920, height: 1080 } },
+    { name: 'short landscape Chromium', browser: 'chromium', viewport: { width: 812, height: 375 } },
+  ]) {
+    test(`${platform.name}: equal inset thumbnails and a centered start hint`, () => withPage(platform, async (page, state) => {
+      await initialize(page, state, 'classic', false);
+      await page.waitForFunction(() => App.cur.el.classList.contains('is-settled'));
+      const measure = () => page.evaluate(() => {
+        const cards = [...App.cur.el.querySelectorAll('.exp-card')].map(card => {
+          const bounds = card.getBoundingClientRect();
+          const art = card.querySelector('.exp-art').getBoundingClientRect();
+          const cta = card.querySelector('.exp-cta').getBoundingClientRect();
+          return {
+            height: bounds.height, artHeight: art.height, inset: art.left - bounds.left,
+            rightInset: bounds.right - art.right, topInset: art.top - bounds.top,
+            ctaBottom: bounds.bottom - cta.bottom, ctaVisible: cta.bottom <= bounds.bottom,
+          };
+        });
+        const hint = App.cur.el.querySelector('.tap-hint'), bounds = hint.getBoundingClientRect();
+        return {
+          cards, center: bounds.left + bounds.width / 2, viewport: innerWidth,
+          font: parseFloat(getComputedStyle(hint).fontSize), bottom: bounds.bottom, viewportHeight: innerHeight,
+          notices: App.cur.el.querySelectorAll('.home-foot .fine').length,
+          portrait: matchMedia('(orientation: portrait)').matches,
+        };
+      });
+      const check = data => {
+        assert.equal(data.cards.length, 3);
+        assert.ok(Math.max(...data.cards.map(card => card.height)) - Math.min(...data.cards.map(card => card.height)) < 1);
+        assert.ok(Math.max(...data.cards.map(card => card.artHeight)) - Math.min(...data.cards.map(card => card.artHeight)) < 1);
+        assert.ok(Math.max(...data.cards.map(card => card.ctaBottom)) - Math.min(...data.cards.map(card => card.ctaBottom)) < 1);
+        for (const card of data.cards) {
+          assert.ok(card.inset >= 10 && card.topInset >= 10);
+          if (!data.portrait) {
+            assert.ok(card.rightInset >= 10);
+            assert.ok(card.artHeight / card.height < 0.4, 'Landscape thumbnails occupy less than 40% of the card');
+          }
+          assert.equal(card.ctaVisible, true);
+        }
+        assert.ok(Math.abs(data.center - data.viewport / 2) < 1);
+        assert.ok(data.font >= 14);
+        assert.ok(data.bottom <= data.viewportHeight);
+        assert.equal(data.notices, 0);
+      };
+      check(await measure());
+      if (process.env.KIOSK_TEST_ARTIFACTS) {
+        fs.mkdirSync(process.env.KIOSK_TEST_ARTIFACTS, { recursive: true });
+        const name = platform.name.toLowerCase().replaceAll(' ', '-');
+        await page.screenshot({ path: path.join(process.env.KIOSK_TEST_ARTIFACTS, `home-${name}.png`) });
+      }
+      await page.waitForTimeout(3700);
+      check(await measure());
+      await screen(page, '[data-go="photo.quiz"]').click();
+      await screenIs(page, 'photo.quiz');
+    }));
+  }
+});
+
 describe('camera, approval and failure regressions', { concurrency: 3 }, () => {
   for (const platform of platforms.filter(platform => platform.browser === 'chromium')) {
     for (const ui of ['classic', 'cowork', 'chat']) {

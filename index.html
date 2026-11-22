@@ -745,31 +745,30 @@ h1, h2, h3, h4 { margin: 0; font-family: var(--font-display); letter-spacing: -.
 .hero-lead { margin: 0; font-size: var(--fs-lg); color: var(--ink2); max-width: 124vmin; line-height: 1.4; text-wrap: balance; }
 .exp-cards { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3vmin; }
 .exp-card {
-  position: relative; display: flex; flex-direction: column; text-align: left; min-height: 0; overflow: hidden; cursor: pointer; color: #fff; padding: 0;
+  position: relative; display: grid; grid-template-rows: minmax(0, 2fr) minmax(0, 3fr); gap: 2.4vmin; text-align: left; min-height: 0; overflow: hidden; cursor: pointer; color: #fff; padding: 2.8vmin;
   border-radius: var(--r-xl); border: 1px solid var(--line); background: linear-gradient(180deg, rgba(255, 255, 255, .085), rgba(255, 255, 255, .025));
   transition: transform .45s var(--ease), box-shadow .45s, border-color .45s;
 }
 .exp-card.is-attract { border-color: color-mix(in srgb, var(--c1) 65%, transparent); box-shadow: 0 0 0 .3vmin color-mix(in srgb, var(--c1) 45%, transparent), 0 3vmin 9vmin -3vmin var(--c1); }
 .exp-art {
-  position: relative; flex: 1 1 0; min-height: 10vmin; overflow: hidden;
+  position: relative; min-height: 0; overflow: hidden; border-radius: var(--r-md);
   background: radial-gradient(120% 100% at 50% 0%, color-mix(in srgb, var(--c1) 50%, transparent), transparent 70%), linear-gradient(160deg, color-mix(in srgb, var(--c1) 34%, #0b0b1e), color-mix(in srgb, var(--c2) 26%, #0b0b1e));
 }
 .exp-art > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.exp-body { padding: 2.4vmin 2.8vmin 2.6vmin; display: flex; flex-direction: column; gap: 1.1vmin; flex: none; }
+.exp-body { padding: .8vmin 0 0; display: flex; flex-direction: column; gap: 1.1vmin; min-width: 0; min-height: 0; }
 .exp-tags { display: flex; gap: 1vmin; flex-wrap: wrap; }
 .tag { padding: .7vmin 1.4vmin; border-radius: 999px; font-size: var(--fs-xs); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #fff; background: linear-gradient(120deg, var(--c1), var(--c2)); }
 .tag.soft { background: rgba(255, 255, 255, .1); letter-spacing: .02em; text-transform: none; font-weight: 600; display: inline-flex; gap: .7vmin; align-items: center; color: var(--ink2); }
 .exp-card h3 { font-size: var(--fs-h3); font-weight: 750; }
 .exp-card p { margin: 0; font-size: var(--fs-sm); color: var(--ink2); line-height: 1.4; }
-.exp-cta { margin-top: .6vmin; display: flex; align-items: center; justify-content: space-between; font: 700 var(--fs-md) var(--font-display); }
+.exp-cta { margin-top: auto; display: flex; align-items: center; justify-content: space-between; font: 700 var(--fs-md) var(--font-display); }
 .exp-cta i { width: 6.6vmin; height: 6.6vmin; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(120deg, var(--c1), var(--c2)); box-shadow: 0 1.4vmin 3vmin -1vmin var(--c1); transition: transform .4s var(--spring); }
 .exp-card.is-attract .exp-cta i { transform: translateX(.6vmin) scale(1.06); }
 .exp-cta .ic { font-size: 2.9vmin; }
-.home-foot { display: flex; justify-content: space-between; align-items: center; gap: 3vmin; margin-top: 2.4vmin; flex: none; color: var(--ink3); font-size: var(--fs-sm); }
-.tap-hint { display: inline-flex; align-items: center; gap: 1.2vmin; color: var(--ink2); font-weight: 600; }
-.tap-hint .ic { font-size: 3.4vmin; animation: tapHint 1.8s ease-in-out infinite; }
+.home-foot { display: flex; justify-content: center; align-items: center; margin-top: 2.4vmin; flex: none; text-align: center; }
+.tap-hint { display: inline-flex; align-items: center; justify-content: center; gap: 1.2vmin; color: var(--ink2); font-size: clamp(14px, 2.45vmin, 26px); font-weight: 600; }
+.tap-hint .ic { font-size: 1.5em; animation: tapHint 1.8s ease-in-out infinite; }
 @keyframes tapHint { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-.8vmin) rotate(-6deg); } }
-.home-foot .fine { font-size: var(--fs-sm); }
 
 /* Ana ekran kart illüstrasyonları — Anı Stüdyosu: soyut "anı baskıları" */
 .art-photo { position: absolute; inset: 0; overflow: hidden; container-type: size; --pw: min(37cqw, 60cqh); }
@@ -974,9 +973,7 @@ body.is-mobile #mobile-root { display: block; }
   .brand .ms-word, .brand .partner-word { font-size: var(--fs-sm); }
   .home-hero { margin: 5vmin auto 5vmin; }
   .exp-cards { grid-template-columns: 1fr; grid-auto-rows: minmax(0, 1fr); gap: 2.6vmin; }
-  .exp-card { flex-direction: row; }
-  .exp-art { flex: 0 0 44%; }
-  .exp-body { flex: 1; justify-content: center; }
+  .exp-card { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); grid-template-rows: minmax(0, 1fr); }
   .home-foot { flex-direction: column; align-items: center; text-align: center; gap: 1.6vmin; }
   .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
