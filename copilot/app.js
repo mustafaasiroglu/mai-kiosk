@@ -31,7 +31,7 @@
   document.querySelectorAll('[data-icon]').forEach(node => { node.innerHTML = svg(node.dataset.icon); });
 
   const agents = [
-    { id: 'photo', name: 'Fotoğraf Stüdyosu', description: 'Bir tema seç, Ülker evreninde sana özel bir portre hazırla.', prompt: 'Bir Ülker portresi hazırlayalım' },
+    { id: 'photo', name: 'Fotoğraf Stüdyosu', description: 'Nasıl bir yıldız olduğunu keşfet, temanı seç ve poz ver.', prompt: 'Bir Ülker portresi hazırlayalım' },
     { id: 'career', name: 'Kariyer Koçu', description: 'Örnek bir kariyer profilini görsel bir yol haritasına dönüştür.', prompt: 'Kariyer haritamı hazırla' },
     { id: 'lab', name: 'Lezzet Laboratuvarı', description: 'Yeni bir Ülker lezzeti tasarla; adını, sloganını ve ambalajını oluştur.', prompt: 'Yeni bir atıştırmalık tasarlayalım' },
   ];
@@ -174,6 +174,8 @@
 
   function clearDraft() {
     photoRead++;
+    if (el('photoDialog').open) el('photoDialog').close();
+    closeCamera();
     draftPhoto = null;
     el('message').value = '';
     el('photoInput').value = '';
@@ -209,11 +211,7 @@
     switch (t.phase) {
       case 'start':
         if (t.agent.id === 'photo') {
-          const themes = matchOptions(THEMES, text);
-          if (themes.length === 1) {
-            t.phase = 'theme';
-            readInput(t, text, themes[0]);
-          } else ask(t, 'theme', 'Portre için hangi temayı seçmek istersin?', THEMES);
+          ask(t, 'character', 'Ofiste nasıl bir yıldızsın? Sana en çok benzeyeni seç; lezzet ruhunu birlikte bulalım.', characters);
         } else if (t.agent.id === 'career') {
           ask(t, 'name', 'Haritada hangi isim görünsün? Profil bilgileri temsili olacak; LinkedIn’de arama yapmayacağım.', [{ id: 'sample', name: 'Örnek profille devam et' }]);
         } else {
@@ -224,30 +222,46 @@
           } else promptLab(t);
         }
         break;
+      case 'character': {
+        const character = choice || matchOptions(characters, text)[0] || matchOptions(PRODUCTS, text)[0];
+        const product = character && byId(PRODUCTS, character.id);
+        if (!product) return ask(t, 'character', 'Sana en çok benzeyen yıldızı aşağıdan seçebilir veya ürünün adını yazabilirsin.', characters);
+        v.product = product;
+        say(t, `Lezzet ruhun: ${product.name}. ${product.reveal}`);
+        ask(t, 'theme', 'Hikâyen hangi dünyada geçsin? Portre için bir tema seç.', THEMES);
+        break;
+      }
       case 'theme': {
         const theme = choice || matchOptions(THEMES, text)[0];
         if (!theme) return ask(t, 'theme', 'Temayı bulamadım. Aşağıdaki seçeneklerden birini seçebilir veya adını yazabilirsin.', THEMES);
         v.theme = theme;
-        if (API.live) {
-          ask(t, 'product', 'Portrede hangi Ülker ürünü yer alsın?', PRODUCTS);
-        } else {
-          const sample = sampleFor(`photo-${theme.id}`);
-          prepare(t, `${theme.name} · ${sample.product}`, 'Bu temanın kayıtlı demo portresini getireceğim. Kamera açılmayacak ve yeni görsel üretilmeyecek.');
-        }
-        break;
-      }
-      case 'product': {
-        const product = choice || matchOptions(PRODUCTS, text)[0];
-        if (!product) return ask(t, 'product', 'Ürünü aşağıdaki seçeneklerden seçebilir veya adını yazabilirsin.', PRODUCTS);
-        v.product = product;
-        ask(t, 'reference', 'Bir fotoğraf eklemek için + düğmesini kullan veya örnek fotoğraftan devam et.', referenceOptions);
+        ask(t, 'reference', API.live
+          ? 'Poz vermeye geç: kamerayı açıp fotoğrafını çek, bir fotoğraf yükle veya örnek fotoğrafı seç.'
+          : 'Demo Modu kamerayı açmaz. Örnek fotoğrafla devam et; son adımda bu temanın kayıtlı portresini göstereceğim.', referenceOptions());
         break;
       }
       case 'reference':
+        if (choice?.id === 'camera' || normalize(text) === 'kamerayi ac') {
+          if (!API.live) return ask(t, 'reference', 'Demo Modu kamerayı açmaz; örnek fotoğrafla devam et.', referenceOptions());
+          ask(t, 'reference', 'Fotoğrafını çekip Gönder düğmesine bas. Üretim ancak son onayından sonra başlayacak.', referenceOptions());
+          el('photoDialog').showModal();
+          openCamera();
+          break;
+        }
+        if (choice?.id === 'upload' || normalize(text) === 'fotograf yukle') {
+          if (!API.live) return ask(t, 'reference', 'Demo Modu kayıtlı örnek fotoğrafı kullanır.', referenceOptions());
+          ask(t, 'reference', 'Bir fotoğraf seçip Gönder düğmesine bas. Fotoğraf henüz Foundry’ye gönderilmeyecek.', referenceOptions());
+          el('photoInput').click();
+          break;
+        }
         if (photo) v.photo = photo.data;
         else if (choice?.id === 'sample' || normalize(text) === 'ornek fotografi kullan') v.photo = null;
-        else return ask(t, 'reference', 'Henüz bir fotoğraf eklenmedi. Bir dosya seç veya örnek fotoğrafı kullan.', referenceOptions);
-        prepare(t, `${v.theme.name} · ${v.product.name}`, 'Referans fotoğraf Microsoft Foundry’ye gönderilecek. Yalnızca kullanma iznin olan bir fotoğrafla devam et.', true);
+        else return ask(t, 'reference', 'Henüz bir fotoğraf eklenmedi. Kamera, dosya veya örnek fotoğraf seçeneklerinden birini kullan.', referenceOptions());
+        if (API.live) prepare(t, `${v.theme.name} · ${v.product.name}`, 'Referans fotoğraf Microsoft Foundry’ye gönderilecek. Yalnızca kullanma iznin olan bir fotoğrafla devam et.', true);
+        else {
+          const sample = sampleFor(`photo-${v.theme.id}`);
+          prepare(t, `${v.theme.name} · ${sample.product}`, `Seçtiğin lezzet ruhu ${v.product.name}. Demo kişiselleştirme yapmaz: bu temanın ${sample.product} ile kayıtlı portresini getireceğim. Kamera açılmayacak ve yeni görsel üretilmeyecek.`);
+        }
         break;
       case 'name':
         if (choice?.id !== 'sample' && (text.length > 50 || !/^[\p{L}\p{M} .'-]+$/u.test(text))) {
@@ -310,7 +324,11 @@
     }
   }
 
-  const referenceOptions = [{ id: 'sample', name: 'Örnek fotoğrafı kullan' }];
+  const characters = PRODUCTS.map(product => ({ id: product.id, name: product.persona.title }));
+  const referenceOptions = () => [
+    ...(API.live ? [{ id: 'camera', name: 'Kamerayı aç' }, { id: 'upload', name: 'Fotoğraf yükle' }] : []),
+    { id: 'sample', name: 'Örnek fotoğrafı kullan' },
+  ];
   const profiles = CAREER_ARCHETYPES.map((p, i) => ({ id: `profile-${i}`, name: p.headline, arch: i }));
   const followups = [{ id: 'change', name: 'Seçimleri değiştir' }, { id: 'retry', name: 'Yeniden dene' }];
   function promptLab(t) {
@@ -406,17 +424,11 @@
   async function showSettings() {
     const dialog = el('settings'), form = el('connection'), status = el('settingsStatus');
     dialog.showModal();
-    if (!['localhost', '127.0.0.1'].includes(location.hostname) || location.protocol !== 'http:' || form.dataset.loaded) return;
     form.inert = true;
-    status.textContent = 'Yerel ayarlar okunuyor…';
+    status.textContent = 'Ortak bağlantı ayarları okunuyor…';
     try {
-      const response = await fetch('/local-config', { cache: 'no-store', signal: AbortSignal.timeout(5000) });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const values = await response.json();
-      for (const key of ['endpoint', 'key', 'imageModel', 'labModel']) {
-        if (typeof values[key] === 'string') form.elements[key].value = values[key];
-      }
-      form.dataset.loaded = 'true';
+      FoundrySettings.loadSaved(form);
+      await FoundrySettings.loadLocal(form);
       status.textContent = '';
     } catch (error) {
       console.error('Yerel ayarlar okunamadı:', error);
@@ -426,7 +438,15 @@
 
   function changeConnection(settings) {
     if (threads.some(t => t.job)) return notice('Modu değiştirmek için devam eden işlemleri bitir veya durdur.');
-    Object.assign(CONFIG.ai, settings);
+    if (settings.mode === 'live') {
+      try { FoundrySettings.save(settings); }
+      catch (error) {
+        console.error('Bağlantı ayarları kaydedilemedi:', error);
+        el('settingsStatus').textContent = 'Ortak ayarlar kaydedilemedi. Tarayıcı depolama izinlerini kontrol et.';
+        return;
+      }
+    }
+    FoundrySettings.apply(settings);
     for (const t of threads) t.values.photo = null;
     threads.length = 0;
     thread = null;
@@ -530,11 +550,12 @@
   });
   async function openCamera() {
     const request = ++cameraRequest, preview = el('cameraPreview'), start = el('cameraStart'), status = el('cameraStatus');
+    if (!API.live || !thread || thread.phase !== 'reference' || !el('photoDialog').open) return;
     start.disabled = true;
+    preview.hidden = false;
     status.textContent = 'Kamera izni bekleniyor…';
     try {
-      if (!navigator.mediaDevices?.getUserMedia) throw new Error('Tarayıcı kamera erişimini desteklemiyor.');
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: 'user' } });
+      const stream = await Camera.start(preview);
       if (request !== cameraRequest || !el('photoDialog').open) {
         stream.getTracks().forEach(track => track.stop());
         if (request === cameraRequest) start.disabled = false;
@@ -543,31 +564,53 @@
       preview.srcObject = stream;
       preview.hidden = false;
       el('cameraShot').hidden = false;
+      stream.getVideoTracks().forEach(track => track.addEventListener('ended', () => {
+        if (request === cameraRequest && el('photoDialog').open) {
+          closeCamera();
+          status.textContent = 'Kamera bağlantısı kesildi. Tekrar açabilir veya bir dosya seçebilirsin.';
+        }
+      }, { once: true }));
       status.textContent = '';
     } catch (error) {
-      console.error('Kamera açılamadı:', error);
       if (request !== cameraRequest) return;
-      start.disabled = false;
-      status.textContent = 'Kamera açılamadı. Tarayıcı izinlerini kontrol et veya bir dosya seç.';
+      console.error('Kamera açılamadı:', error);
+      closeCamera();
+      status.textContent = `${error.message} Tarayıcı izinlerini kontrol et veya bir dosya seç.`;
     }
   }
-  function capturePhoto() {
-    const data = Camera.capture(el('cameraPreview'));
-    if (!data) { el('cameraStatus').textContent = 'Kamera henüz hazır değil.'; return; }
-    photoRead++;
-    draftPhoto = { name: 'Kamera fotoğrafı.jpg', data };
-    el('photoDialog').close();
-    syncComposer();
+  async function capturePhoto() {
+    const request = cameraRequest;
+    el('cameraShot').disabled = true;
+    try {
+      await Camera.ready(el('cameraPreview'));
+      if (request !== cameraRequest || !el('photoDialog').open) return;
+      const data = Camera.capture(el('cameraPreview'));
+      if (!data) throw new Error('Kamera henüz hazır değil.');
+      photoRead++;
+      draftPhoto = { name: 'Kamera fotoğrafı.jpg', data };
+      closeCamera();
+      el('photoDialog').close();
+      syncComposer();
+    } catch (error) {
+      if (request !== cameraRequest) return;
+      console.error('Fotoğraf çekilemedi:', error);
+      closeCamera();
+      el('cameraStatus').textContent = `${error.message} Tekrar dene veya bir dosya seç.`;
+    } finally {
+      el('cameraShot').disabled = false;
+    }
   }
-  el('photoDialog').addEventListener('close', () => {
+  function closeCamera() {
     cameraRequest++;
     const preview = el('cameraPreview');
-    preview.srcObject?.getTracks().forEach(track => track.stop());
+    Camera.stop();
     preview.srcObject = null;
     preview.hidden = true;
     el('cameraStart').disabled = false;
     el('cameraShot').hidden = true;
-  });
+  }
+  el('photoDialog').addEventListener('close', () => { if (!el('photoDialog').open) closeCamera(); });
+  el('photoDialog').addEventListener('cancel', closeCamera);
   el('photoInput').addEventListener('change', async event => {
     const file = event.target.files[0];
     event.target.value = '';

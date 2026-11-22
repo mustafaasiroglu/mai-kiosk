@@ -42,7 +42,7 @@ test('connection selection can repeatedly switch Demo and Live and cancel withou
     localStorage: { getItem: key => stored.get(key), setItem: (key, value) => stored.set(key, value) },
     FormData: class { constructor(form) { this.form = form; } get(name) { return this.form.elements[name].value; } },
   });
-  vm.runInContext(sourceBetween('function chooseConnection(', 'function boot()'), context);
+  vm.runInContext(sourceBetween('const FoundrySettings =', 'function boot()'), context);
   const reopen = context.chooseConnection(() => transitions.push(config.ai.mode));
   assert.equal((await element('#connection-dialog').dispatch('cancel')).prevented, true);
   await element('#connection-demo').dispatch('click');
@@ -326,6 +326,152 @@ test('Demo camera uses sample_photo.jpeg without requesting webcam access, inclu
   click({ target: { closest: () => ({ dataset: { act: 'retake' } }) } });
   assert.equal(context.STATE.photo.photo, 'sample_photo.jpeg');
   assert.equal(el.dataset.state, 'review');
+});
+
+test('pose button ignores the document color theme and keeps the selected photo theme', () => {
+  let click;
+  const next = { disabled: true }, grid = { classList: { add() {} } }, transitions = [];
+  const context = vm.createContext({
+    SCREENS: {}, STATE: { photo: { productId: 'cocostar' } },
+    $: selector => selector === '.theme-grid' ? grid : next,
+    $$: () => [], Sound: { tap() {}, select() {} },
+    App: { go: id => transitions.push(id) },
+  });
+  vm.runInContext(sourceBetween("SCREENS['photo.theme'] =", "SCREENS['photo.camera'] ="), context);
+  context.SCREENS['photo.theme'].mount({ addEventListener: (_event, handler) => { click = handler; } });
+  const theme = { dataset: { theme: 'snowglobe' } };
+  click({ target: { closest: selector => selector === 'button[data-theme]' ? theme : null } });
+  assert.equal(next.disabled, false);
+  for (const colorTheme of ['light', 'dark']) {
+    click({ target: { closest: selector => {
+      if (selector === '[data-theme]') return { dataset: { theme: colorTheme } };
+      return selector === '[data-act="next"]' ? next : null;
+    } } });
+    assert.equal(context.STATE.photo.themeId, 'snowglobe');
+  }
+  assert.deepEqual(transitions, ['photo.camera', 'photo.camera']);
+});
+
+function cameraHarness(getUserMedia) {
+  const context = vm.createContext({
+    navigator: { mediaDevices: { getUserMedia } }, DOMException, setTimeout, clearTimeout,
+    requestAnimationFrame: fn => setTimeout(fn, 0), cancelAnimationFrame: clearTimeout,
+  });
+  vm.runInContext(sourceBetween('const Camera = {', '/* Türkçe Q ekran klavyesi */') + '\nglobalThis.camera = Camera;', context);
+  return context.camera;
+}
+const testStream = () => {
+  const track = { stopped: 0, stop() { this.stopped++; } };
+  return { track, getTracks: () => [track] };
+};
+const testVideo = play => ({
+  srcObject: null, videoWidth: 1080, videoHeight: 1350, readyState: 4,
+  setAttribute() {}, play: play || (async () => {}),
+});
+
+test('late camera permission cannot revive a closed screen or stop a newer camera', async () => {
+  const pending = [];
+  const camera = cameraHarness(() => new Promise(resolve => pending.push(resolve)));
+  const first = testStream(), second = testStream(), oldVideo = testVideo(), newVideo = testVideo();
+  const oldRequest = camera.start(oldVideo);
+  camera.stop();
+  const newRequest = camera.start(newVideo);
+  pending[1](second);
+  assert.equal(await newRequest, second);
+  pending[0](first);
+  await assert.rejects(oldRequest, { name: 'AbortError' });
+  assert.equal(first.track.stopped, 1);
+  assert.equal(second.track.stopped, 0);
+  assert.equal(oldVideo.srcObject, null);
+  assert.equal(newVideo.srcObject, second);
+  camera.stop();
+  assert.equal(second.track.stopped, 1);
+  assert.equal(newVideo.srcObject, null);
+});
+
+test('camera playback and permission failures propagate and release acquired tracks', async () => {
+  const stream = testStream(), video = testVideo(async () => { throw new Error('Playback blocked'); });
+  const camera = cameraHarness(async () => stream);
+  await assert.rejects(camera.start(video), /Playback blocked/);
+  assert.equal(stream.track.stopped, 1);
+  assert.equal(video.srcObject, null);
+  assert.equal(camera.stream, null);
+  await assert.rejects(cameraHarness(async () => { throw new DOMException('Permission denied', 'NotAllowedError'); }).start(testVideo()), { name: 'NotAllowedError' });
+  assert.equal(camera.capture({ videoWidth: 1080, videoHeight: 1350, readyState: 1 }), null);
+});
+
+test('camera waits for a drawable frame and cancels that wait when its screen closes', async () => {
+  const stream = testStream(), camera = cameraHarness(async () => stream), video = testVideo();
+  video.readyState = 1;
+  let ready = false;
+  const opening = camera.start(video).then(() => { ready = true; });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(ready, false);
+  video.readyState = 2;
+  await opening;
+  camera.stop();
+  const nextStream = testStream(), nextCamera = cameraHarness(async () => nextStream), nextVideo = testVideo();
+  nextVideo.readyState = 1;
+  const pending = nextCamera.start(nextVideo);
+  await new Promise(resolve => setImmediate(resolve));
+  nextCamera.stop();
+  await assert.rejects(pending, { name: 'AbortError' });
+  assert.equal(nextStream.track.stopped, 1);
+  assert.equal(nextVideo.srcObject, null);
+});
+
+test('failed live capture shows an error without silently substituting the demo photo', async () => {
+  const elements = Object.fromEntries(['video', '.cam-shot', '.cam-count', '.cam-flash', '.cam-state.error p']
+    .map(selector => [selector, { classList: { add() {}, remove() {} } }]));
+  let click, stopped = 0;
+  const errors = [], transitions = [];
+  const el = { dataset: {}, classList: { add() {} }, addEventListener: (_type, handler) => { click = handler; } };
+  const context = vm.createContext({
+    SCREENS: {}, API: { live: true }, STATE: { photo: {} },
+    $: selector => elements[selector],
+    Camera: { start: async () => ({ getVideoTracks: () => [] }), capture: () => null, stop: () => { stopped++; } },
+    Sound: { tick() {}, tap() {} }, console: { error: (...args) => errors.push(args) },
+    App: { go: id => transitions.push(id) },
+    demoPortrait: () => assert.fail('A failed real capture must not become a sample photo'),
+  });
+  vm.runInContext(sourceBetween("SCREENS['photo.camera'] =", "SCREENS['photo.gen'] ="), context);
+  context.SCREENS['photo.camera'].mount(el, { alive: true, cleanup() {}, sleep: async () => {} });
+  await new Promise(resolve => setImmediate(resolve));
+  click({ target: { closest: () => ({ dataset: { act: 'shoot' } }) } });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(el.dataset.state, 'error');
+  assert.equal(context.STATE.photo.photo, undefined);
+  assert.match(elements['.cam-state.error p'].textContent, /fotoğraf çekmeye hazır değil/);
+  assert.equal(stopped, 1);
+  assert.equal(errors.length, 1);
+  click({ target: { closest: () => ({ dataset: { act: 'start' } }) } });
+  assert.deepEqual(transitions, []);
+});
+
+test('kiosk and Cowork reuse saved Foundry credentials and local settings override saved values', async () => {
+  const stored = new Map(), form = { elements: Object.fromEntries(['endpoint', 'key', 'imageModel', 'labModel'].map(name => [name, { value: '' }])) };
+  const context = vm.createContext({
+    CONFIG: { ai: {} }, AbortSignal,
+    localStorage: { getItem: key => stored.get(key), setItem: (key, value) => stored.set(key, value) },
+    location: { hostname: 'localhost', protocol: 'http:' },
+    fetch: async () => ({ ok: true, json: async () => ({ key: 'local-test-key', labModel: '' }) }),
+  });
+  vm.runInContext(sourceBetween('const FoundrySettings =', 'function chooseConnection(') + '\nglobalThis.settings = FoundrySettings;', context);
+  const settings = { endpoint: 'https://test.services.ai.azure.com', apiKey: 'shared-test-key', imageDeployment: 'test-image', labDeployment: 'test-text' };
+  context.settings.save(settings);
+  context.settings.loadSaved(form);
+  assert.equal(form.elements.key.value, 'shared-test-key');
+  assert.equal(form.elements.imageModel.value, 'test-image');
+  await context.settings.loadLocal(form);
+  assert.equal(form.elements.key.value, 'local-test-key');
+  assert.equal(form.elements.labModel.value, '');
+  assert.equal(form.elements.endpoint.value, settings.endpoint);
+  context.settings.apply(settings);
+  assert.equal(context.CONFIG.ai.modelLabel, 'test-image');
+  context.fetch = async () => ({ ok: false, status: 500 });
+  await assert.rejects(context.settings.loadLocal(form), /HTTP 500/);
+  context.localStorage.setItem = () => { throw new Error('Storage blocked'); };
+  assert.throws(() => context.settings.save(settings), /Storage blocked/);
 });
 
 test('Demo returns saved gallery outputs and matching Lab copy without generating images or text', async () => {

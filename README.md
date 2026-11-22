@@ -12,6 +12,12 @@ adresini açın (GitHub Pages: `/mai-kiosk/copilot/`). Klasik kiosk `/` adresind
 çalışmaya devam eder; **Ayarlar → Copilot** ile yeni arayüze geçebilirsiniz.
 
 Fotoğraf Stüdyosu, Kariyer Koçu ve Lezzet Laboratuvarı aynı sohbet arayüzündedir.
+Fotoğraf akışı hem **Chat** hem **Cowork** için klasik kiosk ile aynı sıradadır:
+**Ofiste nasıl bir yıldızsın? → lezzet ruhun → tema → kamera/fotoğraf → üretim**.
+Kamera ve dosya seçimi tema seçildikten sonra sunulur; fotoğrafı çekip
+**Gönder** düğmesine basınca son üretim onayı gelir. Kamera izni reddedilirse
+yeniden deneme, dosya ve örnek fotoğraf seçenekleri kullanılabilir.
+Pencere veya sohbet kapatıldığında ve çekimden sonra kamera durdurulur.
 **Cowork** üretim planını onaya sunar; çalışma alanında adımları ve indirilebilir
 çıktıları gösterir. **Chat** akışı daha doğrudan ilerletir; canlı fotoğrafın
 Foundry’ye gönderilmesi için her iki görünümde de onay gerekir.
@@ -19,8 +25,14 @@ Foundry’ye gönderilmesi için her iki görünümde de onay gerekir.
 Demo modunda yeni görsel üretilmez ve kamera açılmaz; kayıtlı örnekler kullanılır.
 Canlı üretimi Copilot **Ayarlar** menüsünden Foundry bağlantısıyla açabilirsiniz.
 Kariyer verileri her iki modda da temsili olup LinkedIn’e bağlanılmaz.
-Copilot sohbetleri, fotoğrafları ve bağlantı bilgileri açık sayfada tutulur;
+Copilot sohbetleri ve fotoğrafları yalnızca açık sayfada tutulur;
 yenileme veya Demo/Canlı bağlantı modu değişikliği sohbetleri temizler.
+Klasik kiosk, Chat ve Cowork aynı origin'deki `mai-kiosk-foundry`
+tarayıcı kaydını kullanır: bir arayüzde kaydedilen Foundry uç noktası,
+API anahtarı ve model adları diğer arayüzün Canlı ayarlarında da doldurulur.
+Her arayüz yine Demo ile başlar veya mod seçimi ister; kayıtlı anahtar
+kendiliğinden canlı üretim başlatmaz. Yerel `.env` varsa ortak kayıt üstüne
+uygulanır. Anahtar yalnızca güvendiğiniz cihazda saklanmalıdır.
 
 ### Klasik kiosk
 
@@ -138,6 +150,14 @@ voxel/pixel-art dünyasına ait olmasını ister.
 
 Yerel kontroller: `node --test test_kiosk.js` ve
 `python -m unittest -q test_local_server`. Bu kontroller model çağrısı yapmaz.
+Tarayıcı regresyonları için `npm install`, ardından
+`npx playwright install chromium webkit` ve `npm test` çalıştırın.
+`npm run test:browser` klasik kiosk, Chat ve Cowork akışlarını masaüstü ve
+dokunmatik mobil ekranlarda sınar. Tarayıcı testleri gerçek Foundry çağrısı
+yapmaz: başarılı/hatalı model yanıtlarını kontrollü olarak taklit eder;
+kameranın açılması, izin hataları, onay, indirme ve ortak anahtar kullanımı
+ayrıca denetlenir. Gerçek cihaz kamerası ve gerçek Foundry bağlantısı için
+cihazda Canlı mod denemesi ayrıca gereklidir.
 
 ## GitHub Pages
 

@@ -3109,18 +3109,58 @@ const Idle = {
 
 /* Kamera */
 const Camera = {
-  stream: null,
+  stream: null, video: null, request: 0, cancelReady: null,
   async start(video) {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('Kamera desteklenmiyor');
     this.stop();
-    this.stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1080 } } });
-    video.srcObject = this.stream; video.muted = true; video.setAttribute('playsinline', '');
-    try { await video.play(); } catch (e) { /* otomatik oynatma engellenirse sessizce geç */ }
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error('Kamera için HTTPS veya localhost üzerinden desteklenen bir tarayıcı kullan.');
+    const request = this.request;
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1080 } } });
+    if (request !== this.request) {
+      stream.getTracks().forEach(track => track.stop());
+      throw new DOMException('Kamera isteği iptal edildi.', 'AbortError');
+    }
+    this.stream = stream; this.video = video;
+    video.srcObject = stream; video.muted = true; video.setAttribute('playsinline', '');
+    try {
+      await video.play();
+      if (request !== this.request) throw new DOMException('Kamera isteği iptal edildi.', 'AbortError');
+      await this.ready(video);
+      if (request !== this.request) throw new DOMException('Kamera isteği iptal edildi.', 'AbortError');
+    } catch (error) {
+      if (request === this.request) this.stop();
+      throw error;
+    }
+    return stream;
   },
-  stop() { if (this.stream) { this.stream.getTracks().forEach((t) => t.stop()); this.stream = null; } },
+  ready(video) {
+    if (video.videoWidth && video.videoHeight && video.readyState >= 2) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      let frame = 0;
+      const finish = error => {
+        clearTimeout(timer); cancelAnimationFrame(frame);
+        if (this.cancelReady === cancel) this.cancelReady = null;
+        if (error) reject(error); else resolve();
+      };
+      const cancel = () => finish(new DOMException('Kamera isteği iptal edildi.', 'AbortError'));
+      const timer = setTimeout(() => finish(new Error('Kamera görüntüsü hazırlanamadı. Kamerayı tekrar aç.')), 10000);
+      const check = () => {
+        if (video.videoWidth && video.videoHeight && video.readyState >= 2) finish();
+        else frame = requestAnimationFrame(check);
+      };
+      this.cancelReady = cancel;
+      check();
+    });
+  },
+  stop() {
+    this.request++;
+    this.cancelReady?.();
+    this.stream?.getTracks().forEach(track => track.stop());
+    if (this.video) this.video.srcObject = null;
+    this.stream = null; this.video = null;
+  },
   capture(video, W = 1080, H = 1350) {
     const vw = video.videoWidth, vh = video.videoHeight;
-    if (!vw || !vh) return null;
+    if (!vw || !vh || video.readyState < 2) return null;
     const c = makeCanvas(W, H), g = c.getContext('2d');
     const s = Math.max(W / vw, H / vh), dw = vw * s, dh = vh * s;
     g.translate(W, 0); g.scale(-1, 1);
@@ -3470,9 +3510,9 @@ SCREENS['photo.theme'] = {
   mount(el) {
     const grid = $('.theme-grid', el), next = $('[data-act="next"]', el);
     el.addEventListener('click', (e) => {
-      const b = e.target.closest('[data-theme]');
+      const b = e.target.closest('button[data-theme]');
       if (b) {
-        $$('[data-theme]', el).forEach((x) => x.classList.toggle('is-selected', x === b));
+        $$('button[data-theme]', el).forEach((x) => x.classList.toggle('is-selected', x === b));
         grid.classList.add('has-selection');
         STATE.photo.themeId = b.dataset.theme;
         next.disabled = false;
@@ -3530,14 +3570,29 @@ SCREENS['photo.camera'] = {
     el.classList.add('cam-scr');
     const video = $('video', el), shot = $('.cam-shot', el), cnt = $('.cam-count', el), flash = $('.cam-flash', el);
     const set = (s) => { el.dataset.state = s; };
+    const fail = error => {
+      console.error('Kamera kullanılamadı:', error);
+      if (!ctx.alive) return;
+      const text = $('.cam-state.error p', el);
+      if (text) text.textContent = `${error.message} Tarayıcı izinlerini kontrol et; tekrar deneyebilir veya örnek fotoğrafı açıkça seçebilirsin.`;
+      set('error');
+    };
     const start = () => {
       if (!API.live) {
         STATE.photo.photo = demoPortrait(); shot.src = STATE.photo.photo; set('review');
         return;
       }
       set('loading');
-      Camera.start(video).then(() => { if (!ctx.alive) { Camera.stop(); return; } set('live'); })
-        .catch(() => { if (ctx.alive) set('error'); });
+      Camera.start(video).then(stream => {
+        if (!ctx.alive) return;
+        stream.getVideoTracks().forEach(track => track.addEventListener('ended', () => {
+          if (ctx.alive && ['live', 'countdown'].includes(el.dataset.state)) {
+            Camera.stop();
+            fail(new Error('Kamera bağlantısı kesildi.'));
+          }
+        }, { once: true }));
+        set('live');
+      }).catch(error => { if (ctx.alive && error.name !== 'AbortError') fail(error); });
     };
     ctx.cleanup(() => Camera.stop());
     if (STATE.photo.photo) { shot.src = STATE.photo.photo; set('review'); }
@@ -3546,20 +3601,31 @@ SCREENS['photo.camera'] = {
     let busy = false;
     const shoot = async () => {
       if (busy) return; busy = true; set('countdown');
-      for (let n = 3; n >= 1; n--) {
-        cnt.textContent = String(n); cnt.classList.remove('pop'); void cnt.offsetWidth; cnt.classList.add('pop');
-        Sound.tick(); await ctx.sleep(1000);
+      try {
+        for (let n = 3; n >= 1; n--) {
+          cnt.textContent = String(n); cnt.classList.remove('pop'); void cnt.offsetWidth; cnt.classList.add('pop');
+          Sound.tick(); await ctx.sleep(1000);
+          if (!ctx.alive || el.dataset.state !== 'countdown') return;
+        }
+        const data = Camera.capture(video);
+        if (!data) throw new Error('Kamera henüz fotoğraf çekmeye hazır değil.');
+        cnt.textContent = ''; flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go'); Sound.shutter();
+        STATE.photo.photo = data; shot.src = data; set('review');
+        Camera.stop();
+      } catch (error) {
+        cnt.textContent = '';
+        Camera.stop();
+        fail(error);
+      } finally {
+        busy = false;
       }
-      cnt.textContent = ''; flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go'); Sound.shutter();
-      const data = Camera.capture(video) || demoPortrait();
-      STATE.photo.photo = data; shot.src = data; set('review'); busy = false;
     };
     el.addEventListener('click', (e) => {
       const a = e.target.closest('[data-act]'); if (!a) return;
       const act = a.dataset.act;
       if (act === 'shoot' && el.dataset.state === 'live') shoot();
       else if (act === 'retake') { Sound.tap(); STATE.photo.photo = null; if (Camera.stream) set('live'); else start(); }
-      else if (act === 'start') { Sound.tap(); STATE.photo.variation = 0; App.go('photo.gen'); }
+      else if (act === 'start' && el.dataset.state === 'review' && STATE.photo.photo) { Sound.tap(); STATE.photo.variation = 0; App.go('photo.gen'); }
       else if (act === 'retry') { Sound.tap(); start(); }
       else if (act === 'demo') { Sound.tap(); STATE.photo.photo = demoPortrait(); shot.src = STATE.photo.photo; set('review'); }
       else if (act === 'kvkk') { Sound.tap(); kvkkModal(); }
@@ -4355,10 +4421,38 @@ function perfGuard() {
   };
   setTimeout(() => requestAnimationFrame(loop), 900);
 }
+const FoundrySettings = {
+  storageKey: 'mai-kiosk-foundry',
+  fields: ['endpoint', 'key', 'imageModel', 'labModel'],
+  fill(form, settings) {
+    for (const name of this.fields) {
+      if (typeof settings?.[name] === 'string') form.elements[name].value = settings[name];
+    }
+  },
+  loadSaved(form) {
+    const saved = localStorage.getItem(this.storageKey);
+    if (saved) this.fill(form, JSON.parse(saved));
+  },
+  async loadLocal(form) {
+    if (location.protocol !== 'http:' || !['localhost', '127.0.0.1'].includes(location.hostname)) return;
+    const response = await fetch('/local-config', { cache: 'no-store', signal: AbortSignal.timeout(5000) });
+    if (!response.ok) throw new Error(`Yerel ayarlar HTTP ${response.status}`);
+    this.fill(form, await response.json());
+  },
+  save({ endpoint, apiKey, imageDeployment, labDeployment }) {
+    localStorage.setItem(this.storageKey, JSON.stringify({
+      endpoint, key: apiKey, imageModel: imageDeployment, labModel: labDeployment,
+    }));
+  },
+  apply(settings) {
+    Object.assign(CONFIG.ai, settings);
+    if (settings.imageDeployment) CONFIG.ai.modelLabel = settings.imageDeployment;
+  },
+};
+
 function chooseConnection(start) {
   const dialog = $('#connection-dialog'), form = $('#connection-form'), error = $('#connection-error');
   const choice = $('#connection-choice'), help = $('#connection-help'), title = $('#connection-title');
-  const storageKey = 'mai-kiosk-foundry';
   let chosen = false;
   $('#connection-live').innerHTML = 'Canlı Mod ' + icon('key');
   const finish = () => {
@@ -4376,13 +4470,7 @@ function chooseConnection(start) {
     help.textContent = 'Microsoft Foundry bağlantı bilgilerini gir.';
     error.hidden = true;
     try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        const settings = JSON.parse(saved);
-        for (const name of ['endpoint', 'key', 'imageModel', 'labModel']) {
-          if (typeof settings?.[name] === 'string') form.elements[name].value = settings[name];
-        }
-      }
+      FoundrySettings.loadSaved(form);
     } catch (e) {
       console.error('Kayıtlı bağlantı ayarları okunamadı:', e);
       error.textContent = 'Kayıtlı ayarlar okunamadı. Bilgileri yeniden girin ve tarayıcı depolama izinlerini kontrol edin.';
@@ -4392,12 +4480,7 @@ function chooseConnection(start) {
       form.inert = true;
       help.textContent = 'Yerel .env ayarları okunuyor…';
       try {
-        const response = await fetch('/local-config', { cache: 'no-store', signal: AbortSignal.timeout(5000) });
-        if (!response.ok) throw new Error(`Yerel ayarlar HTTP ${response.status}`);
-        const settings = await response.json();
-        for (const name of ['endpoint', 'key', 'imageModel', 'labModel']) {
-          if (typeof settings?.[name] === 'string') form.elements[name].value = settings[name];
-        }
+        await FoundrySettings.loadLocal(form);
         help.textContent = 'Microsoft Foundry bağlantı bilgilerini kontrol et.';
       } catch (e) {
         console.error('Yerel bağlantı ayarları okunamadı:', e);
@@ -4429,20 +4512,16 @@ function chooseConnection(start) {
       error.hidden = false;
       return;
     }
+    const settings = { mode: 'live', endpoint: match[1], apiKey, imageDeployment, labDeployment };
     try {
-      localStorage.setItem(storageKey, JSON.stringify({
-        endpoint: match[1], key: apiKey, imageModel: imageDeployment, labModel: labDeployment,
-      }));
+      FoundrySettings.save(settings);
     } catch (e) {
       console.error('Bağlantı ayarları kaydedilemedi:', e);
       error.textContent = 'Ayarlar tarayıcıya kaydedilemedi. Tarayıcı depolama izinlerini kontrol edin.';
       error.hidden = false;
       return;
     }
-    Object.assign(CONFIG.ai, {
-      mode: 'live', endpoint: match[1], apiKey, imageDeployment, modelLabel: imageDeployment,
-      labDeployment,
-    });
+    FoundrySettings.apply(settings);
     finish();
   });
   const open = () => {

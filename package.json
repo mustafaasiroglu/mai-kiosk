@@ -1,0 +1,12 @@
+{
+  "name": "mai-kiosk",
+  "private": true,
+  "scripts": {
+    "test": "node --test test_kiosk.js test_browser.js",
+    "test:unit": "node --test test_kiosk.js",
+    "test:browser": "node --test test_browser.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.65.1"
+  }
+}
