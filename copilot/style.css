@@ -257,7 +257,13 @@ dialog input { display: block; width: 100%; padding: 8px 10px; border: 1px solid
 .settings-nav button { padding: 12px 13px; text-align: left; border-radius: 16px; font-size: 18px; }
 .settings-nav button:hover, .settings-nav [aria-selected="true"] { background: var(--cp-surface-soft); }
 .settings-nav [aria-selected="true"] { font-weight: 600; }
-.settings-content { padding-top: 28px; min-width: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--cp-border) transparent; }
+.settings-content { padding-top: 28px; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--cp-border) transparent; }
+#settingsConnections:not([hidden]) { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+.settings-content:has(#settingsConnections:not([hidden])) { overflow: hidden; }
+.connection-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 0 4px 16px 0; }
+.connection-actions { display: flex; flex: none; gap: 12px; padding: 16px 0 0; border-top: 1px solid var(--cp-border); background: var(--cp-surface); }
+.connection-actions .settings-save { margin-top: 0; }
+.settings-secondary { padding: 9px 24px; border: 1px solid var(--cp-border); border-radius: 12px; background: var(--cp-surface-soft); }
 .settings-content h3 { font-size: 20px; font-weight: 600; padding-bottom: 12px; border-bottom: 1px solid var(--cp-border); }
 .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 80px; font-size: 18px; }
 .settings-row label { margin: 0; }

@@ -826,26 +826,24 @@
     if (!settingsLoading) settingsFeedback('');
   }
   function syncSettingsControls() {
-    for (const id of ['generalDemo', 'connectionsDemo']) {
-      el(id).checked = settingsDemo;
-      el(id).disabled = settingsLoading;
-    }
+    el('applyLaunch').disabled = settingsLoading;
+    el('launchDemo').disabled = settingsLoading;
     el('connection').inert = settingsLoading;
-    el('connectionFields').disabled = settingsLoading || settingsDemo;
+    el('connectionFields').disabled = settingsLoading;
     el('voiceSettings').inert = settingsLoading;
     el('settingsFullscreen').checked = !!document.fullscreenElement;
     el('settingsFullscreen').disabled = !document.fullscreenEnabled;
     el('settingsFullscreen').title = document.fullscreenEnabled ? '' : 'Fullscreen is not supported by this browser.';
     el('settings').querySelector('[role="tablist"]').setAttribute('aria-orientation', compact.matches ? 'horizontal' : 'vertical');
   }
-  async function showSettings(tab = 'general') {
+  async function showSettings(tab = 'connections') {
     const dialog = el('settings'), form = el('connection'), status = el('settingsStatus');
     const request = ++settingsRequest, staged = form.cloneNode(true);
     staged.reset();
     staged.elements.voice.value = CONFIG.ai.speechVoice;
     settingsLoading = true;
     selectSettingsTab(tab);
-    dialog.showModal();
+    if (!dialog.open) dialog.showModal();
     syncSettingsControls();
     settingsFeedback('Loading shared connection settings…');
     try {
@@ -959,6 +957,7 @@
         }
         return;
       }
+      case 'kiosk': return location.assign(new URL('.', document.baseURI).href);
       case 'agents': return openCatalog();
       case 'library': return openLibrary();
       case 'librarySearch':
@@ -1039,20 +1038,10 @@
     selectSettingsTab(buttons[index].dataset.settingsTab);
     buttons[index].focus();
   });
-  for (const id of ['generalDemo', 'connectionsDemo']) el(id).addEventListener('change', event => {
-    if (settingsLoading) { syncSettingsControls(); return; }
-    settingsDemo = event.currentTarget.checked;
-    if (!settingsDemo) selectSettingsTab('connections');
+  el('launchDemo').addEventListener('click', () => {
+    if (settingsLoading) return;
     try {
-      if (settingsDemo) {
-        if (!changeConnection({ mode: 'mock', apiKey: '' })) settingsDemo = !API.live;
-      } else if (localStorage.getItem(FoundrySettings.storageKey)) {
-        const { settings, blobSettings } = savedConnection();
-        if (!changeConnection(settings, blobSettings)) settingsDemo = !API.live;
-      } else {
-        FoundrySettings.saveMode('live');
-        settingsFeedback('Enter and save your connection to enable live generation.');
-      }
+      if (changeConnection({ mode: 'mock', apiKey: '' })) el('settings').close();
     } catch (error) {
       console.error('Connection mode could not be changed:', error);
       settingsFeedback(uiError(error), true);
@@ -1095,10 +1084,10 @@
   el('searchInput').addEventListener('input', renderSearch);
   el('connection').addEventListener('submit', event => {
     event.preventDefault();
-    if (settingsLoading || settingsDemo) return settingsFeedback('Turn off Demo Mode before editing or saving connections.', true);
+    if (settingsLoading) return settingsFeedback('Wait for settings to finish loading.', true);
     try {
       const { settings, blobSettings } = readConnection(new FormData(event.currentTarget));
-      if (changeConnection(settings, blobSettings, true)) settingsFeedback('Connections saved. Foundry connection ready.');
+      if (changeConnection(settings, blobSettings, true)) el('settings').close();
     } catch (error) {
       console.error('Connection settings could not be saved:', error);
       settingsFeedback(uiError(error), true);
@@ -1235,4 +1224,5 @@
     console.error('Açılış bağlantısı aktarılamadı:', error);
     notice('Startup settings could not be loaded. Check the Foundry connection in Settings.');
   }
+  showSettings('connections');
 })();

@@ -36,28 +36,29 @@ Agent açılışında başlık, oluşturucu bilgisi, mesaj alanı ve başlangı�
 referanstaki merkez yerleşimi kullanır; mobilde aynı düzen dar ekrana uyarlanır.
 Mesaj alanının sağ altında referanstaki **Auto Medium** etiketi görünür;
 bu bir model seçici değildir, Foundry dağıtımları Ayarlar'dan yönetilir.
-Settings popup'ında solda **General**, **Connections** ve **Voice** sekmeleri bulunur.
+Chat/Cowork açılışında Settings popup'ı **Connections** seçili açılır;
+solda sırasıyla **Connections**, **General** ve **Voice** bulunur.
 Agent kartları, sol menü, sohbet başlığı ve kütüphane aynı gradyan zeminli,
 katmanlı kamera, laboratuvar şişesi ve radyo ikonlarını kullanır.
 Fotoğraf Stüdyosu pembe, Lezzet Laboratuvarı mavi ve Zaman Yolculuğu yeşildir;
 ikon ve gradyan renkleri açık/koyu temaya uyarlanır.
-General'da **Demo Mode** ilk kullanımda açık, **Full screen** varsayılan kapalıdır;
+General'da Demo Mode anahtarı yoktur; **Full screen** varsayılan kapalıdır.
 Demo Mode seçimi tarayıcıda saklanır ve refresh sonrası geri yüklenir.
 Kapalı seçimde kayıtlı geçerli bağlantı uygulanır; bağlantı yoksa alanlar
 düzenlenebilir kalır, ayarlar kaydedilene kadar canlı üretim başlamaz.
 fullscreen durumu tarayıcıyla senkron kalır. **Language → English** ve
 **Theme → System** sabittir, değiştirilemez.
-Connections'daki Demo Mode anahtarı General ile aynı durumu paylaşır:
-Demo Mode kapatılınca Connections otomatik açılır; bağlantı alanları ve **Save**
-yalnızca kapalıyken kullanılabilir. Kayıtlı bağlantı varsa uygulanır; yoksa
-alanlar düzenlemeye açılır, geçerli ayarlar kaydedilene kadar canlı üretim başlamaz.
-Save bağlantıyı kaydedip uygular, kendi başına üretim başlatmaz.
+Connections alanları Demo'da da düzenlenebilir. Alttaki sabit **Apply & Launch**
+bağlantıyı doğrular, kaydeder, canlı modu uygular ve popup'ı kapatır;
+ikincil **Demo Mode** kayıtlı bağlantıyı silmeden Demo'yu açıp popup'ı kapatır.
+İki buton da form kaydırılırken görünür kalır; model üretimi başlatmaz.
 Sağ üstteki **Demo Mode** etiketine tıklamak doğrudan Connections sekmesini açar.
 Voice sekmesinde model/ses kimliği seçilip ayrı kaydedilir; bu işlem API anahtarını,
-SAS'ı ve bağlantı alanlarını değiştirmez. Demo Mode açıkken bağlantı düzenleme
-kilitlidir; devam eden üretim yoksa Voice ayrı kaydedilebilir.
+SAS'ı ve bağlantı alanlarını değiştirmez; devam eden üretim yoksa Voice ayrı kaydedilebilir.
 `?ui=chat` ve `?ui=cowork` adresleri mevcut akış davranışlarını korur;
 Home / Code, bu iki akış arasında geçiş anahtarı değildir.
+Sol üstteki Apps ikonu ana root adresindeki klasik Kiosk UI'ı açar;
+Home ve Agents butonları Copilot agent kataloğunda kalır.
 Fotoğraf akışı hem **Chat** hem **Cowork** için klasik kiosk ile aynı sıradadır:
 **Ofiste nasıl bir yıldızsın? → lezzet ruhun → tema → kamera/fotoğraf → üretim**.
 Kamera ve dosya seçimi tema seçildikten sonra sunulur; fotoğrafı çekip

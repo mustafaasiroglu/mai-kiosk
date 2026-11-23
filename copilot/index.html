@@ -13,13 +13,13 @@
     })();
   </script>
   <base href="../">
-  <link rel="stylesheet" href="copilot/style.css?v=20261123-13">
+  <link rel="stylesheet" href="copilot/style.css?v=20261123-14">
   <link rel="stylesheet" href="podcast.css?v=20261122-6">
 </head>
 <body>
   <div class="shell">
     <aside id="sidebar" class="sidebar" aria-label="Navigation">
-      <header><b class="wordmark">Copilot</b><div class="sidebar-tools"><button type="button" class="icon-btn" data-action="agents" aria-label="Discover agents" data-icon="grid"></button><button type="button" class="icon-btn" data-action="new" aria-label="New chat" data-icon="edit" disabled title="New chats are not available from this control yet"></button><button type="button" class="icon-btn" data-action="sidebar" aria-label="Close navigation" data-icon="layout"></button></div></header>
+      <header><b class="wordmark">Copilot</b><div class="sidebar-tools"><button type="button" class="icon-btn" data-action="kiosk" aria-label="Open Kiosk UI" title="Open Kiosk UI" data-icon="grid"></button><button type="button" class="icon-btn" data-action="new" aria-label="New chat" data-icon="edit" disabled title="New chats are not available from this control yet"></button><button type="button" class="icon-btn" data-action="sidebar" aria-label="Close navigation" data-icon="layout"></button></div></header>
       <div class="switch" aria-label="Copilot workspace">
         <button type="button" id="homeTab" data-action="agents" aria-pressed="true">Home</button><button type="button" id="codeTab" aria-pressed="false" disabled title="Code is not available yet">Code</button>
       </div>
@@ -105,22 +105,21 @@
     <header><h2 id="settingsTitle">Settings</h2><button type="button" class="icon-btn" data-action="closeSettings" data-icon="close" aria-label="Close settings"></button></header>
     <div class="settings-layout">
       <nav class="settings-nav" role="tablist" aria-label="Settings sections" aria-orientation="vertical">
-        <button type="button" id="generalTab" role="tab" data-settings-tab="general" aria-selected="true" aria-controls="settingsGeneral">General</button>
-        <button type="button" id="connectionsTab" role="tab" data-settings-tab="connections" aria-selected="false" aria-controls="settingsConnections" tabindex="-1">Connections</button>
+        <button type="button" id="connectionsTab" role="tab" data-settings-tab="connections" aria-selected="true" aria-controls="settingsConnections">Connections</button>
+        <button type="button" id="generalTab" role="tab" data-settings-tab="general" aria-selected="false" aria-controls="settingsGeneral" tabindex="-1">General</button>
         <button type="button" id="voiceTab" role="tab" data-settings-tab="voice" aria-selected="false" aria-controls="settingsVoice" tabindex="-1">Voice</button>
       </nav>
       <div class="settings-content">
-        <section id="settingsGeneral" role="tabpanel" aria-labelledby="generalTab">
+        <section id="settingsGeneral" role="tabpanel" aria-labelledby="generalTab" hidden>
           <h3>Preferences</h3>
-          <div class="settings-row"><label for="generalDemo">Demo Mode</label><input id="generalDemo" class="settings-switch" type="checkbox" role="switch" checked></div>
           <div class="settings-row"><label for="settingsFullscreen">Full screen</label><input id="settingsFullscreen" class="settings-switch" type="checkbox" role="switch"></div>
           <div class="settings-row"><label for="settingsLanguage">Language</label><select id="settingsLanguage" class="settings-fixed" disabled><option>English</option></select></div>
           <div class="settings-row"><label for="settingsTheme">Theme</label><select id="settingsTheme" class="settings-fixed" disabled><option>System</option></select></div>
         </section>
-        <section id="settingsConnections" role="tabpanel" aria-labelledby="connectionsTab" hidden>
+        <section id="settingsConnections" role="tabpanel" aria-labelledby="connectionsTab">
+          <div class="connection-scroll">
           <h3>Connections</h3>
-          <div class="settings-row"><label for="connectionsDemo">Demo Mode</label><input id="connectionsDemo" class="settings-switch" type="checkbox" role="switch" checked></div>
-          <p class="settings-help muted">Turn off Demo Mode to edit your connection. Save to apply it for live generation.</p>
+          <p class="settings-help muted">Apply your connection to launch live mode, or explore saved outputs in Demo Mode.</p>
           <form id="connection">
             <fieldset id="connectionFields">
               <label>Foundry endpoint<input name="endpoint" required placeholder="https://resource.services.ai.azure.com"></label>
@@ -132,9 +131,13 @@
               <label>Text model deployment<input name="labModel" value="gpt-5.4-mini"></label>
               <input name="voice" type="hidden" value="en-US-Harper:MAI-Voice-2-Flash">
               <p class="settings-help muted">Saved in this browser and shared with Kiosk, Chat and Cowork. Use a trusted device.</p>
-              <button type="submit" class="settings-save">Save</button>
             </fieldset>
           </form>
+          </div>
+          <div class="connection-actions">
+            <button type="submit" form="connection" id="applyLaunch" class="settings-save">Apply &amp; Launch</button>
+            <button type="button" id="launchDemo" class="settings-secondary">Demo Mode</button>
+          </div>
         </section>
         <section id="settingsVoice" role="tabpanel" aria-labelledby="voiceTab" hidden>
           <h3>Voice</h3>
@@ -178,6 +181,6 @@
   <script src="podcast-video.js?v=20261122-6"></script>
   <script src="podcast.js?v=20261123-9"></script>
   <script src="copilot/output-library.js?v=20261123-1"></script>
-  <script src="copilot/app.js?v=20261123-19"></script>
+  <script src="copilot/app.js?v=20261123-21"></script>
 </body>
 </html>
