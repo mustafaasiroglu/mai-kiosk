@@ -257,6 +257,13 @@ dialog input { display: block; width: 100%; padding: 8px 10px; border: 1px solid
 .settings-nav button { padding: 12px 13px; text-align: left; border-radius: 16px; font-size: 18px; }
 .settings-nav button:hover, .settings-nav [aria-selected="true"] { background: var(--cp-surface-soft); }
 .settings-nav [aria-selected="true"] { font-weight: 600; }
+.interface-selection { display: flex; padding: 4px; gap: 4px; border: 1px solid var(--cp-border); border-radius: 10px; background: var(--cp-surface-soft); }
+.interface-selection button { padding: 8px 12px; border-radius: 7px; white-space: nowrap; font-size: 14px; }
+.interface-selection [aria-pressed="true"] { background: var(--cp-surface); color: var(--cp-accent); }
+.settings-embedded .shell, .settings-embedded .notice { display: none; }
+.settings-embedded body { background: transparent; }
+.settings-embedded .settings-dialog::backdrop { background: transparent; }
+.interface-row { flex-wrap: wrap; padding-block: 16px; gap: 12px; }
 .settings-content { padding-top: 28px; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--cp-border) transparent; }
 #settingsConnections:not([hidden]) { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 .settings-content:has(#settingsConnections:not([hidden])) { overflow: hidden; }

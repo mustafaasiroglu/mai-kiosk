@@ -2667,6 +2667,7 @@ const Topbar = {
     const exp = def.exp && EXPS[def.exp];
     this.el.classList.toggle('is-hidden', !exp);
     if (!exp) return;
+    if (Settings.fab) $('.tb-right', this.el).append(Settings.fab);
     const badge = $('[data-mode-label]', this.el);
     badge.hidden = API.live; badge.textContent = modeLabel();
     $('.tb-exp b', this.el).textContent = exp.name;
@@ -3010,7 +3011,7 @@ SCREENS.home = {
   title: 'Ana ekran',
   render() {
     return `<div class="home">
-      <header class="home-top rise" style="--i:0">${brandLockup('lg')}<div class="live-chip" data-mode="${CONFIG.ai.mode}"${API.live ? ' hidden' : ''}><span class="dot"></span><span data-mode-label>${modeLabel()}</span></div></header>
+      <header class="home-top rise" style="--i:0">${brandLockup('lg')}<div class="home-mode-actions"><div class="live-chip" data-mode="${CONFIG.ai.mode}"${API.live ? ' hidden' : ''}><span class="dot"></span><span data-mode-label>${modeLabel()}</span></div></div></header>
       <div class="home-hero">
         <div class="eyebrow-chip rise" style="--i:1">${icon('sparkle')} Microsoft yapay zekâ teknolojileriyle</div>
         <h1 class="hero-title rise" style="--i:2">Yapay zekâ ile <span class="grad-text">yıldızını parlat.</span></h1>
@@ -3022,6 +3023,7 @@ SCREENS.home = {
     </div>`;
   },
   mount(el, ctx) {
+    if (Settings.fab) $('.home-mode-actions', el).append(Settings.fab);
     const cards = $$('.exp-card:not(:disabled)', el);
     let i = 0;
     const tick = () => { cards.forEach((c, k) => c.classList.toggle('is-attract', k === i % cards.length)); i++; };
@@ -3763,15 +3765,14 @@ function modeLabel() { return API.live ? '' : 'Demo Modu'; }
 
 const Settings = {
   el: null, fab: null, openConnection: null,
-  get open() { return !!this.el?.open; },
+  get open() { return !!this.el?.open || !!this.shared?.open; },
   init() {
     if (this.el) return;
     this.fab = document.createElement('button');
     this.fab.className = 'settings-fab';
-    this.fab.innerHTML = `${icon('settings')} Ayarlar`;
-    this.fab.setAttribute('aria-haspopup', 'dialog');
-    this.fab.setAttribute('aria-controls', 'kiosk-settings');
-    this.fab.setAttribute('aria-expanded', 'false');
+    this.fab.innerHTML = icon('settings');
+    this.fab.setAttribute('aria-label', 'Open settings');
+    this.fab.title = 'Settings';
     this.el = document.createElement('dialog');
     this.el.id = 'kiosk-settings';
     this.el.className = 'settings-panel';
@@ -3786,7 +3787,18 @@ const Settings = {
         <a class="settings-item" href="copilot/">${icon('sparkle')}<span class="settings-copy"><b>Copilot</b><small>Üç deneyimi sohbet içinde kullan</small></span>${icon('arrowRight')}</a>
       </div>`;
     document.body.append(this.fab, this.el);
-    this.fab.addEventListener('click', () => this.toggle());
+    this.fab.addEventListener('click', () => this.openShared());
+    window.addEventListener('message', event => {
+      const frame = this.shared?.querySelector('iframe');
+      if (event.origin !== location.origin || event.source !== frame?.contentWindow || event.data?.type !== 'kiosk-settings-close') return;
+      this.shared.close();
+      frame.remove();
+      Idle.reset();
+      if (event.data.launch) {
+        if (FoundrySettings.loadInterface() === 'copilot') location.assign('copilot/?ui=chat');
+        else location.reload();
+      }
+    });
     this.el.addEventListener('close', () => {
       this.fab.setAttribute('aria-expanded', 'false');
       Idle.reset();
@@ -3802,6 +3814,22 @@ const Settings = {
     });
     document.addEventListener('fullscreenchange', () => this.refresh());
     this.refresh();
+  },
+  openShared() {
+    if (App.cur?.def.noIdle) return Toast.show('Devam eden işlemi tamamla veya durdur; ardından ayarları aç.');
+    if (!this.shared) {
+      this.shared = document.createElement('dialog');
+      this.shared.className = 'shared-settings-host';
+      this.shared.setAttribute('aria-label', 'Settings');
+      this.shared.addEventListener('cancel', () => { this.shared.querySelector('iframe')?.remove(); Idle.reset(); });
+      document.body.append(this.shared);
+    }
+    if (this.shared.open) return;
+    const frame = document.createElement('iframe');
+    frame.title = 'Settings';
+    frame.src = 'copilot/?ui=chat&settings=embedded';
+    this.shared.replaceChildren(frame);
+    this.shared.showModal();
   },
   refresh() {
     if (!this.el) return;
@@ -3921,6 +3949,13 @@ const BlobShare = {
 };
 const FoundrySettings = {
   storageKey: 'mai-kiosk-foundry',
+  loadInterface() {
+    return localStorage.getItem('mai-kiosk-interface') === 'kiosk' ? 'kiosk' : 'copilot';
+  },
+  saveInterface(value) {
+    if (!['copilot', 'kiosk'].includes(value)) throw new Error('Geçersiz arayüz tercihi.');
+    localStorage.setItem('mai-kiosk-interface', value);
+  },
   modeStorageKey: 'mai-kiosk-mode',
   loadMode() {
     const mode = localStorage.getItem(this.modeStorageKey);
@@ -4107,6 +4142,24 @@ function boot() {
   Topbar.init();
   Settings.init();
   Idle.init();
+  try {
+    if (FoundrySettings.loadMode() === 'live') {
+      const saved = JSON.parse(localStorage.getItem(FoundrySettings.storageKey) || 'null');
+      if (!saved || !/^https:\/\/[a-z0-9-]+\.services\.ai\.azure\.com\/?$/i.test(saved.endpoint || '') ||
+          !saved.key?.trim() || !saved.imageModel?.trim()) throw new Error('Kayıtlı Foundry bağlantısı eksik veya geçersiz.');
+      const blobSettings = saved.blobSas ? { sas: BlobShare.parse(saved.blobSas).url.href } : null;
+      FoundrySettings.apply({
+        mode: 'live', endpoint: saved.endpoint.replace(/\/$/, ''), apiKey: saved.key,
+        imageDeployment: saved.imageModel, labDeployment: saved.labModel || '',
+        webIQApiKey: FoundrySettings.webIQKey(saved.webIQKey || ''),
+        speechVoice: FoundrySettings.voice(saved.voice || CONFIG.ai.speechVoice),
+      });
+      BlobShare.settings = blobSettings;
+    }
+  } catch (error) {
+    console.error('Kiosk açılış ayarları yüklenemedi:', error);
+    Toast.show('Bağlantı yüklenemedi. Sağ üstteki Ayarlar ikonundan bağlantını kontrol et.');
+  }
   App.go('home');
-  Settings.openConnection = chooseConnection(() => App.home());
+  Settings.openConnection = () => Settings.openShared();
 }

@@ -13,7 +13,7 @@
     })();
   </script>
   <base href="../">
-  <link rel="stylesheet" href="copilot/style.css?v=20261123-14">
+  <link rel="stylesheet" href="copilot/style.css?v=20261123-15">
   <link rel="stylesheet" href="podcast.css?v=20261122-6">
 </head>
 <body>
@@ -43,6 +43,7 @@
       <header class="topbar">
         <button type="button" id="openSidebar" class="icon-btn" data-action="sidebar" aria-label="Open navigation" data-icon="layout" hidden></button>
         <span id="topTitle" class="top-title"></span>
+        <button type="button" class="mode-badge" data-action="kiosk">Kiosk Mode</button>
         <button type="button" id="modeBadge" class="mode-badge" data-action="connectionSettings" aria-label="Open connection settings"></button>
         <button type="button" class="icon-btn" data-action="new" aria-label="New chat" data-icon="edit" disabled title="New chats are not available from this control yet"></button>
         <button type="button" id="workspaceButton" class="icon-btn" data-action="workspace" aria-controls="workspace" aria-label="Sources and outputs" data-icon="panel" hidden></button>
@@ -105,18 +106,19 @@
     <header><h2 id="settingsTitle">Settings</h2><button type="button" class="icon-btn" data-action="closeSettings" data-icon="close" aria-label="Close settings"></button></header>
     <div class="settings-layout">
       <nav class="settings-nav" role="tablist" aria-label="Settings sections" aria-orientation="vertical">
-        <button type="button" id="connectionsTab" role="tab" data-settings-tab="connections" aria-selected="true" aria-controls="settingsConnections">Connections</button>
-        <button type="button" id="generalTab" role="tab" data-settings-tab="general" aria-selected="false" aria-controls="settingsGeneral" tabindex="-1">General</button>
+        <button type="button" id="generalTab" role="tab" data-settings-tab="general" aria-selected="true" aria-controls="settingsGeneral">General</button>
+        <button type="button" id="connectionsTab" role="tab" data-settings-tab="connections" aria-selected="false" aria-controls="settingsConnections" tabindex="-1">Connections</button>
         <button type="button" id="voiceTab" role="tab" data-settings-tab="voice" aria-selected="false" aria-controls="settingsVoice" tabindex="-1">Voice</button>
       </nav>
       <div class="settings-content">
-        <section id="settingsGeneral" role="tabpanel" aria-labelledby="generalTab" hidden>
+        <section id="settingsGeneral" role="tabpanel" aria-labelledby="generalTab">
           <h3>Preferences</h3>
+          <div class="settings-row interface-row"><span id="interfaceLabel">Preferred Interface</span><div class="interface-selection" role="group" aria-labelledby="interfaceLabel"><button type="button" data-interface="copilot" aria-pressed="true">Copilot UI</button><button type="button" data-interface="kiosk" aria-pressed="false">Dark Kiosk UI</button></div></div>
           <div class="settings-row"><label for="settingsFullscreen">Full screen</label><input id="settingsFullscreen" class="settings-switch" type="checkbox" role="switch"></div>
           <div class="settings-row"><label for="settingsLanguage">Language</label><select id="settingsLanguage" class="settings-fixed" disabled><option>English</option></select></div>
           <div class="settings-row"><label for="settingsTheme">Theme</label><select id="settingsTheme" class="settings-fixed" disabled><option>System</option></select></div>
         </section>
-        <section id="settingsConnections" role="tabpanel" aria-labelledby="connectionsTab">
+        <section id="settingsConnections" role="tabpanel" aria-labelledby="connectionsTab" hidden>
           <div class="connection-scroll">
           <h3>Connections</h3>
           <p class="settings-help muted">Apply your connection to launch live mode, or explore saved outputs in Demo Mode.</p>
@@ -176,11 +178,11 @@
   <input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
   <div id="notice" role="status" class="notice" hidden></div>
   <script src="samples.js?v=20261123-2"></script>
-  <script src="kiosk-engine.js?v=20261123-4"></script>
+  <script src="kiosk-engine.js?v=20261123-8"></script>
   <script src="podcast-music.js?v=20261122-2"></script>
   <script src="podcast-video.js?v=20261122-6"></script>
   <script src="podcast.js?v=20261123-9"></script>
   <script src="copilot/output-library.js?v=20261123-1"></script>
-  <script src="copilot/app.js?v=20261123-21"></script>
+  <script src="copilot/app.js?v=20261123-22"></script>
 </body>
 </html>

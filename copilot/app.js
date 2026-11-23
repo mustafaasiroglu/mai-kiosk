@@ -2,6 +2,14 @@
   'use strict';
 
   const el = id => document.getElementById(id);
+  const embeddedSettings = window.parent !== window && new URLSearchParams(location.search).get('settings') === 'embedded';
+  const fullscreenDocument = embeddedSettings ? window.parent.document : document;
+  if (embeddedSettings) document.documentElement.classList.add('settings-embedded');
+  function closeSettings(launch = false) {
+    el('settings').close();
+    if (embeddedSettings) window.parent.postMessage({ type: 'kiosk-settings-close', launch }, location.origin);
+    else if (launch && FoundrySettings.loadInterface() === 'kiosk') location.assign(new URL('.', document.baseURI).href);
+  }
   const uiError = error => ({
     'Geçerli bir Azure container SAS URL’si gir.': 'Enter a valid Azure container SAS URL.',
     'SAS URL’si HTTPS Azure Blob container adresi olmalı; dosya yolu içermemeli.': 'Use an HTTPS Azure Blob container SAS URL without a file path.',
@@ -826,17 +834,21 @@
     if (!settingsLoading) settingsFeedback('');
   }
   function syncSettingsControls() {
+    document.querySelectorAll('[data-interface]').forEach(button => {
+      button.setAttribute('aria-pressed', String(button.dataset.interface === FoundrySettings.loadInterface()));
+      button.disabled = settingsLoading;
+    });
     el('applyLaunch').disabled = settingsLoading;
     el('launchDemo').disabled = settingsLoading;
     el('connection').inert = settingsLoading;
     el('connectionFields').disabled = settingsLoading;
     el('voiceSettings').inert = settingsLoading;
-    el('settingsFullscreen').checked = !!document.fullscreenElement;
-    el('settingsFullscreen').disabled = !document.fullscreenEnabled;
-    el('settingsFullscreen').title = document.fullscreenEnabled ? '' : 'Fullscreen is not supported by this browser.';
+    el('settingsFullscreen').checked = !!fullscreenDocument.fullscreenElement;
+    el('settingsFullscreen').disabled = !fullscreenDocument.fullscreenEnabled;
+    el('settingsFullscreen').title = fullscreenDocument.fullscreenEnabled ? '' : 'Fullscreen is not supported by this browser.';
     el('settings').querySelector('[role="tablist"]').setAttribute('aria-orientation', compact.matches ? 'horizontal' : 'vertical');
   }
-  async function showSettings(tab = 'connections') {
+  async function showSettings(tab = 'general') {
     const dialog = el('settings'), form = el('connection'), status = el('settingsStatus');
     const request = ++settingsRequest, staged = form.cloneNode(true);
     staged.reset();
@@ -1015,7 +1027,7 @@
       case 'closeSearch': return el('searchDialog').close();
       case 'settings': return showSettings();
       case 'connectionSettings': return showSettings('connections');
-      case 'closeSettings': return el('settings').close();
+      case 'closeSettings': return closeSettings();
     }
   });
   el('settings').addEventListener('close', () => {
@@ -1041,7 +1053,7 @@
   el('launchDemo').addEventListener('click', () => {
     if (settingsLoading) return;
     try {
-      if (changeConnection({ mode: 'mock', apiKey: '' })) el('settings').close();
+      if (changeConnection({ mode: 'mock', apiKey: '' })) closeSettings(true);
     } catch (error) {
       console.error('Connection mode could not be changed:', error);
       settingsFeedback(uiError(error), true);
@@ -1051,15 +1063,15 @@
     const fullscreen = event.currentTarget.checked;
     event.currentTarget.disabled = true;
     try {
-      if (fullscreen) await document.documentElement.requestFullscreen();
-      else if (document.fullscreenElement) await document.exitFullscreen();
+      if (fullscreen) await fullscreenDocument.documentElement.requestFullscreen();
+      else if (fullscreenDocument.fullscreenElement) await fullscreenDocument.exitFullscreen();
       settingsFeedback('');
     } catch (error) {
       console.error('Fullscreen mode could not be changed:', error);
       settingsFeedback('The browser did not allow the fullscreen change.', true);
     } finally { syncSettingsControls(); }
   });
-  document.addEventListener('fullscreenchange', syncSettingsControls);
+  fullscreenDocument.addEventListener('fullscreenchange', syncSettingsControls);
 
   function rememberJobExpansion(event) {
     const summary = event.type === 'click' ? event.target.closest('summary') : null;
@@ -1087,7 +1099,7 @@
     if (settingsLoading) return settingsFeedback('Wait for settings to finish loading.', true);
     try {
       const { settings, blobSettings } = readConnection(new FormData(event.currentTarget));
-      if (changeConnection(settings, blobSettings, true)) el('settings').close();
+      if (changeConnection(settings, blobSettings, true)) closeSettings(true);
     } catch (error) {
       console.error('Connection settings could not be saved:', error);
       settingsFeedback(uiError(error), true);
@@ -1224,5 +1236,16 @@
     console.error('Açılış bağlantısı aktarılamadı:', error);
     notice('Startup settings could not be loaded. Check the Foundry connection in Settings.');
   }
-  showSettings('connections');
+  el('settings').addEventListener('cancel', event => { event.preventDefault(); closeSettings(); });
+  document.querySelectorAll('[data-interface]').forEach(button => button.addEventListener('click', () => {
+    try {
+      FoundrySettings.saveInterface(button.dataset.interface);
+      syncSettingsControls();
+      settingsFeedback('Preferred interface saved.');
+    } catch (error) {
+      console.error('Interface preference could not be saved:', error);
+      settingsFeedback('Interface preference could not be saved. Check browser storage permissions.', true);
+    }
+  }));
+  showSettings('general');
 })();

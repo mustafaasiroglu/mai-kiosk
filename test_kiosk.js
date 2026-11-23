@@ -989,6 +989,29 @@ test('saving narrator voice preserves shared credentials and rejects invalid nam
   assert.equal(config.ai.speechVoice, 'en-US-AvaMultilingualNeural');
 });
 
+test('preferred interface persists independently of mode and connection settings', () => {
+  const stored = new Map(), storage = {
+    getItem: key => stored.get(key) ?? null,
+    setItem: (key, value) => stored.set(key, value),
+  };
+  const load = () => {
+    const context = vm.createContext({ localStorage: storage });
+    vm.runInContext(sourceBetween('const FoundrySettings =', 'function chooseConnection(') + '\nglobalThis.settings = FoundrySettings;', context);
+    return context.settings;
+  };
+  assert.equal(load().loadInterface(), 'copilot');
+  stored.set('mai-kiosk-mode', 'live');
+  stored.set('mai-kiosk-foundry', '{"key":"test-placeholder"}');
+  load().saveInterface('kiosk');
+  assert.equal(load().loadInterface(), 'kiosk');
+  assert.equal(stored.get('mai-kiosk-mode'), 'live');
+  assert.equal(stored.get('mai-kiosk-foundry'), '{"key":"test-placeholder"}');
+  assert.throws(() => load().saveInterface('invalid'), /Geçersiz/);
+  storage.setItem = () => { throw new Error('Storage blocked'); };
+  assert.throws(() => load().saveInterface('copilot'), /Storage blocked/);
+  assert.equal(load().loadInterface(), 'kiosk');
+});
+
 test('Demo Mode preference survives reloads independently of saved credentials', () => {
   const stored = new Map(), storage = {
     getItem: key => stored.get(key) ?? null,
