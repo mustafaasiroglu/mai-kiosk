@@ -161,7 +161,7 @@ img { -webkit-user-drag: none; }
 .step.is-active { color: #fff; }
 .step.is-active i { background: var(--acc); border-color: transparent; color: #fff; box-shadow: 0 0 2.6vmin var(--acc-soft); }
 .tb-right { justify-self: end; display: flex; align-items: center; gap: 12px; }
-.tb-mode { font-size: var(--fs-xs); color: var(--cp-text-soft); }
+.tb-mode { font-size: var(--fs-xs); color: var(--cp-text-soft); background: none; border: 0; cursor: pointer; }
 
 /* Marka kilidi */
 .brand { display: flex; align-items: center; gap: 1.4vmin; white-space: nowrap; }
@@ -622,7 +622,7 @@ h1, h2, h3, h4 { margin: 0; font-family: var(--font-display); letter-spacing: -.
 .home { height: 100%; display: flex; flex-direction: column; min-height: 0; padding-bottom: 6vmin; }
 .home-top { display: flex; align-items: center; justify-content: space-between; flex: none; }
 .home-mode-actions { display: flex; align-items: center; gap: 12px; }
-.live-chip { display: inline-flex; align-items: center; gap: 1.2vmin; padding: 1.1vmin 2.2vmin; border-radius: 999px; background: var(--glass); border: 1px solid var(--line); font-size: var(--fs-sm); color: var(--ink2); font-weight: 600; }
+.live-chip { display: inline-flex; align-items: center; gap: 1.2vmin; padding: 1.1vmin 2.2vmin; border-radius: 999px; background: var(--glass); border: 1px solid var(--line); font-size: var(--fs-sm); color: var(--ink2); font-weight: 600; cursor: pointer; }
 .live-chip .dot { width: 1.3vmin; height: 1.3vmin; border-radius: 50%; background: #3ee08f; animation: livePulse 2s infinite; }
 .live-chip[data-mode="mock"] .dot { background: var(--ink3); animation: none; }
 @keyframes livePulse { 0% { box-shadow: 0 0 0 0 rgba(62, 224, 143, .6); } 100% { box-shadow: 0 0 0 1.6vmin rgba(62, 224, 143, 0); } }
@@ -791,6 +791,9 @@ h1, h2, h3, h4 { margin: 0; font-family: var(--font-display); letter-spacing: -.
 .shared-settings-host { position: fixed; inset: 0; width: 100%; height: 100dvh; max-width: none; max-height: none; padding: 0; margin: 0; border: 0; background: transparent; }
 .shared-settings-host::backdrop { background: var(--cp-overlay); }
 .shared-settings-host iframe { display: block; width: 100%; height: 100%; border: 0; }
+.samples-tab { position: fixed; right: 0; top: 50%; transform: translateY(-50%); z-index: 20; display: flex; align-items: center; gap: 12px; padding: 16px 10px; border: 1px solid var(--cp-border); border-right: 0; border-radius: 10px 0 0 10px; background: var(--cp-surface); color: var(--cp-text); font: 600 14px/1 var(--font-text); writing-mode: vertical-rl; cursor: pointer; }
+.samples-tab:hover { background: var(--cp-surface-soft); }
+.samples-tab:focus-visible { outline: 2px solid var(--cp-accent); outline-offset: 2px; }
 .settings-panel { display: none; position: fixed; inset: 0 0 0 auto; margin: 0; width: min(380px, 100vw); max-width: 100vw; height: 100dvh; max-height: 100dvh; padding: 0; border: 0; border-left: 1px solid var(--cp-border); background: var(--cp-panel); color: var(--cp-text); box-shadow: var(--cp-shadow); font: 16px/1.4 var(--font-text); }
 .settings-panel[open] { display: flex; flex-direction: column; }
 .settings-panel::backdrop { background: var(--cp-overlay); }
@@ -909,7 +912,7 @@ body.lite .pack-float { transform: rotate(-7deg); }
 }
 
 </style>
-<link rel="stylesheet" href="podcast.css?v=20261122-6">
+<link rel="stylesheet" href="podcast.css?v=20261123-1">
 </head>
 <body data-exp="home">
 <div id="app">
@@ -970,10 +973,10 @@ body.lite .pack-float { transform: rotate(-7deg); }
 </dialog>
 <noscript><div class="noscript">Bu deneyim için JavaScript gereklidir.</div></noscript>
 <script src="samples.js?v=20261123-2"></script>
-<script src="kiosk-engine.js?v=20261123-9"></script>
+<script src="kiosk-engine.js?v=20261123-12"></script>
 <script src="podcast-music.js?v=20261122-2"></script>
 <script src="podcast-video.js?v=20261122-6"></script>
-<script src="podcast.js?v=20261123-9"></script>
+<script src="podcast.js?v=20261123-11"></script>
 <script>boot();</script>
 </body>
 </html>

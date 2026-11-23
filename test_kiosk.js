@@ -359,19 +359,37 @@ function podcastHarness(overrides = {}) {
   return { context, calls, stages, sessions, input, config, sample, mp3 };
 }
 
-test('podcast validates all periods, calendar dates, Other and a single bounded memory', () => {
+test('podcast validates all periods, calendar dates, Other and optional bounded details', () => {
   const { context, input } = podcastHarness();
   assert.match(context.SCREENS['podcast.product'].render(), /data-product="gofret"/);
   assert.match(context.SCREENS['podcast.other'].render(), /data-go="podcast.moment"/);
-  for (const id of ['1960', '1970', '1980', '1990', '2000']) assert.equal(context.validatePodcastInput({ ...input, era: { id } }).era.start, Number(id));
+  for (const id of ['1960', '1970', '1980', '1990', '2000', '2010']) assert.equal(context.validatePodcastInput({ ...input, era: { id } }).era.start, Number(id));
   assert.equal(context.podcastDate('29.02.2004').start, 2004);
   assert.equal(context.podcastDate('23/04/2004').name, '23/04/2004');
   for (const date of ['1943', '2999', '29.02.2003', '31.04.2004', '1.1.2004', '2004-04-23']) assert.throws(() => context.podcastDate(date));
   for (const id of ['school', 'family', 'work', 'travel']) assert.equal(context.validatePodcastInput({ ...input, moment: { id } }).moment.id, id);
   assert.equal(context.validatePodcastInput({ ...input, moment: { id: 'other', name: 'Yaz tatili' } }).moment.name, 'Yaz tatili');
-  for (const memory of ['', 'a'.repeat(241), 'Bir anı. İkinci anı.', 'İlk satır\nİkinci satır']) assert.throws(() => context.validatePodcastInput({ ...input, memory }));
+  for (const memory of ['', '   ', undefined]) assert.equal(context.validatePodcastInput({ ...input, memory }).memory, '');
+  for (const memory of ['Bir detay. İkinci detay.', 'İlk satır\nİkinci satır']) assert.equal(context.validatePodcastInput({ ...input, memory }).memory, memory);
+  for (const memory of ['a'.repeat(241), 123]) assert.throws(() => context.validatePodcastInput({ ...input, memory }));
+  assert.equal(context.validatePodcastInput({ ...input, memory: 'a'.repeat(240) }).memory.length, 240);
+  assert.equal(context.podcastDetailQuestion({ name: 'Okul çıkışı' }), '(An: Okul çıkışı) anın ile ilgili paylaşmak istediğin bir detay var mı?');
   assert.throws(() => context.validatePodcastInput({ ...input, moment: { id: 'other', name: 'a'.repeat(81) } }));
   assert.throws(() => context.validatePodcastInput({ ...input, product: { id: 'unknown' } }));
+});
+
+test('podcast generates without optional details and keeps personal context empty', async () => {
+  const { context, input, calls } = podcastHarness();
+  Object.assign(context.STATE.podcast, context.validatePodcastInput({ ...input, memory: '' }));
+  assert.equal(context.SCREENS['podcast.gen'].guard(), null);
+  assert.equal(context.SCREENS['podcast.memory'].title, 'Detay');
+  assert.match(context.SCREENS['podcast.memory'].render(), /An: Okul çıkışı/);
+  const result = await context.API.podcast.generate({ ...input, memory: '' });
+  assert.equal(result.scenes.length, 3);
+  const story = calls.find(call => call[0] === 'story');
+  assert.equal(JSON.parse(story[2]).memory, '');
+  assert.match(story[1], /Kişisel detay \(memory\) isteğe bağlıdır/);
+  assert.equal(story[4].json_schema.name, 'radio_theater');
 });
 
 test('both new nostalgia products enter the shared story and illustration generation', async () => {

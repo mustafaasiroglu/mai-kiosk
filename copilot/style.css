@@ -173,6 +173,7 @@ h1 { font-weight: 500; font-size: clamp(34px, 4vw, 48px); letter-spacing: -.045e
 .choice-option { min-height: 36px; max-width: 100%; font: inherit; text-align: left; }
 .choice-visual { display: grid; place-items: center; width: 36px; height: 36px; flex: none; }
 .choice-visual img { width: 36px; height: 36px; object-fit: contain; }
+.podcast-choice .choice-visual img { filter: sepia(1); }
 @media (max-width: 640px) {
   .choice-option { min-height: 40px; }
 }
@@ -263,6 +264,9 @@ dialog input { display: block; width: 100%; padding: 8px 10px; border: 1px solid
 .settings-embedded .shell, .settings-embedded .notice { display: none; }
 .settings-embedded body { background: transparent; }
 .settings-embedded .settings-dialog::backdrop { background: transparent; }
+.samples-embedded .sidebar, .samples-embedded .topbar, .samples-embedded .notice, .samples-embedded .library-create { display: none; }
+.samples-embedded #main { width: 100%; }
+.samples-embedded #closeSamples { margin-left: auto; }
 .interface-row { flex-wrap: wrap; padding-block: 16px; gap: 12px; }
 .settings-content { padding-top: 28px; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--cp-border) transparent; }
 #settingsConnections:not([hidden]) { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }

@@ -3,8 +3,13 @@
 
   const el = id => document.getElementById(id);
   const embeddedSettings = window.parent !== window && new URLSearchParams(location.search).get('settings') === 'embedded';
+  const embeddedSamples = window.parent !== window && new URLSearchParams(location.search).get('samples') === 'embedded';
   const fullscreenDocument = embeddedSettings ? window.parent.document : document;
   if (embeddedSettings) document.documentElement.classList.add('settings-embedded');
+  if (embeddedSamples) {
+    document.documentElement.classList.add('samples-embedded');
+    el('closeSamples').hidden = false;
+  }
   function closeSettings(launch = false) {
     el('settings').close();
     if (embeddedSettings) window.parent.postMessage({ type: 'kiosk-settings-close', launch }, location.origin);
@@ -301,7 +306,7 @@
     const current = i === t.messages.length - 1;
     const activeResult = t.result && t.phase === 'finished' && !t.job && !replying(t) && t.messages.some(message => message.result === t.result);
     const options = current ? (entry.options || []).map((o, index) => activeResult && followups.some(item => item.id === o.id) ? '' :
-      `<button type="button" class="pill choice-option${o.image ? ' product-choice' : ''}" data-choice="${index}">${o.image ? `<span class="choice-visual"><img src="${esc(o.image)}" alt=""></span>` : ''}<span>${esc(o.name)}</span></button>`
+      `<button type="button" class="pill choice-option${o.image ? ' product-choice' : ''}${t.agent.id === 'podcast' ? ' podcast-choice' : ''}" data-choice="${index}">${o.image ? `<span class="choice-visual"><img src="${esc(o.image)}" alt=""></span>` : ''}<span>${esc(o.name)}</span></button>`
     ).join('') : '';
     const approval = entry.approval ? `<div class="approval">
       <strong>${current ? 'Approval required' : 'Generation plan'}</strong><p>${esc(entry.approval)}</p>
@@ -335,7 +340,7 @@
     el('message').placeholder = thread.job ? 'Agent is working…' : replying(thread) ? 'Typing…' : thread.phase === 'lab-revision' ? 'What would you like to change?' : `Message ${thread.agent.name}`;
     el('message').readOnly = working;
     el('send').hidden = working;
-    el('send').disabled = !el('message').value.trim() && !draftPhoto;
+    el('send').disabled = !el('message').value.trim() && !draftPhoto && thread.phase !== 'podcast-memory';
     el('stop').hidden = !thread.job;
     el('podcastBack').hidden = working || thread.phase !== 'podcast-other';
     const canAttach = API.live && ['reference', 'podcast-reference'].includes(thread.phase) && !working;
@@ -440,7 +445,7 @@
       'podcast-moment': { options: PODCAST_MOMENTS, phase: 'podcast-other' },
       'lab-note-choice': { options: LAB_NOTE_OPTIONS, phase: 'lab-note' },
     }[t.phase];
-    if (!choice && text.trim() && custom?.options.some(option => ['other', 'custom'].includes(option.id)) &&
+    if (!choice && text.trim() && custom && (t.phase === 'podcast-era' || custom.options.some(option => ['other', 'custom'].includes(option.id))) &&
         (t.phase === 'podcast-era'
           ? !custom.options.some(option => option.id === 'custom' && normalize(option.name) === normalize(text))
           : !matchOptions(custom.options, text).length)) t.phase = custom.phase;
@@ -513,7 +518,7 @@
       }
       case 'podcast-era': {
         const era = choice || matchOptions(PODCAST_ERAS, text)[0];
-        if (!era) return ask(t, 'podcast-era', 'Bir dönem seç. Belirli bir yıl için Özel bir tarih seçeneğini kullan.', PODCAST_ERAS);
+        if (!era) return ask(t, 'podcast-era', 'Bir dönem seç.', PODCAST_ERAS);
         v.era = era;
         if (era.id === 'custom') ask(t, 'podcast-date', '90’lar, Mayıs 1995 veya 23 Nisan 2004 gibi bir tarih yaz.');
         else ask(t, 'podcast-moment', 'O an neredeydin?', PODCAST_MOMENTS);
@@ -542,7 +547,7 @@
         promptPodcastSelfie(t);
         break;
       case 'podcast-memory':
-        v.memory = text;
+        v.memory = choice?.id === 'skip-detail' ? '' : text;
         try { validatePodcastInput(v); }
         catch (error) { return ask(t, 'podcast-memory', error.message); }
         prepare(t, `${v.product.name} · ${v.era.name} · ${v.moment.name}`, API.live
@@ -635,7 +640,7 @@
   const singleFlavor = { id: 'single-flavor', name: 'Tek malzemeyle devam et' };
   function promptPodcastSelfie(t) {
     ask(t, 'podcast-reference', API.live
-      ? 'Anını yazmadan önce selfieni çek. Gönderince fotoğraf geçmişteki halini canlandırmak için Foundry’ye gönderilecek.'
+      ? 'Detay adımından önce selfieni çek. Gönderince fotoğraf geçmişteki halini canlandırmak için Foundry’ye gönderilecek.'
       : 'Demo kamerayı açmaz. Örnek selfieyle akışı keşfet.', referenceOptions());
   }
   async function parsePodcastDate(t, text) {
@@ -663,7 +668,7 @@
       t.values.estimatedAge = age; t.values.currentAge = age;
       t.values.age = podcastAge(t.values.era, age);
       job.status = 'complete'; job.step = 1;
-      ask(t, 'podcast-memory', 'Anını tek cümleyle anlat. Geçmişteki halin radyo tiyatrosunun kahramanı olacak. Hassas kişisel bilgi yazma.');
+      ask(t, 'podcast-memory', `${podcastDetailQuestion(t.values.moment)} İsteğe bağlı; boş bırakarak da devam edebilirsin. Hassas kişisel bilgi yazma.`, [{ id: 'skip-detail', name: 'Detay eklemeden devam et' }]);
     } catch (error) {
       job.status = controller.signal.aborted ? 'stopped' : 'error';
       if (!controller.signal.aborted) console.error('Selfie yaş tahmini başarısız:', error);
@@ -705,10 +710,10 @@
 
   function submit(text, choice = null, photo = null) {
     const t = thread;
-    if (!t || t.job || replying(t) || (!text && !photo)) return;
+    if (!t || t.job || replying(t) || (!text && !photo && t.phase !== 'podcast-memory')) return;
     clearDraft();
     if (!t.messages.length && text) t.title = /\p{L}/u.test(text) ? text.slice(0, 80) : t.agent.name;
-    add(t, { type: 'user', text: [text, photo ? `Ek: ${photo.name}` : ''].filter(Boolean).join('\n') });
+    add(t, { type: 'user', text: [text, photo ? `Ek: ${photo.name}` : ''].filter(Boolean).join('\n') || 'Detay eklemeden devam et' });
     readInput(t, text, choice, photo);
     render({ scroll: true, focus: !compact.matches });
   }
@@ -972,6 +977,9 @@
       case 'kiosk': return location.assign(new URL('.', document.baseURI).href);
       case 'agents': return openCatalog();
       case 'library': return openLibrary();
+      case 'closeSamples':
+        if (embeddedSamples) window.parent.postMessage({ type: 'kiosk-samples-close' }, location.origin);
+        return;
       case 'librarySearch':
       case 'libraryFilter': {
         const box = el(command === 'librarySearch' ? 'librarySearchBox' : 'libraryFilterBox');
@@ -1254,5 +1262,12 @@
       settingsFeedback('Interface preference could not be saved. Check browser storage permissions.', true);
     }
   }));
-  showSettings('general');
+  if (embeddedSamples) {
+    openLibrary();
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && !document.querySelector('dialog[open]')) {
+        window.parent.postMessage({ type: 'kiosk-samples-close' }, location.origin);
+      }
+    });
+  } else showSettings(embeddedSettings && new URLSearchParams(location.search).get('tab') === 'connections' ? 'connections' : 'general');
 })();

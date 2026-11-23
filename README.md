@@ -63,9 +63,12 @@ SAS'ı ve bağlantı alanlarını değiştirmez; devam eden üretim yoksa Voice 
 Home / Code, bu iki akış arasında geçiş anahtarı değildir.
 Sol üstteki Apps ikonu ana root adresindeki klasik Kiosk UI'ı açar;
 Home ve Agents butonları Copilot agent kataloğunda kalır.
-Copilot sağ üstteki **Kiosk Mode** butonuyla da root'a geçer.
+Kiosk'un sağ kenarındaki dikey **Samples** butonu Copilot Library galerisini koyu
+temada açar. Arama, tür filtresi, grid/liste ve görsel/video önizlemeleri aynı
+arayüzü kullanır; kapatınca mevcut kiosk ekranına dönülür.
 Kiosk'un sağ üst Ayarlar ikonu, Copilot ile aynı ayarlar panelini kiosk üzerinde
-açar. Panel aynı Copilot sayfasını aynı kaynaklı bir iframe içinde kullanır;
+açar. Kiosk'taki **Demo Modu** etiketine tıklamak bu panelin Connections sekmesini açar.
+Panel aynı Copilot sayfasını aynı kaynaklı bir iframe içinde kullanır;
 bağlantı, ses, arayüz tercihi ve tam ekran ayarları ortaktır. Kapatmak kiosk
 oturumunu korur; başlatma butonları seçilen arayüzü ve modu uygular.
 Root Kiosk açılışında arayüz seçim popup'ı gösterilmez; ana ekran doğrudan açılır.
@@ -161,8 +164,16 @@ Bir Isırıkla O Yıla Dön** şeklindedir.
 
 ### Nostalji Podcast · Zaman Yolculuğu
 
+Kiosk seçim kartları ortak arka plan kullanır; buton görselleri CSS sepya filtresiyle
+gösterilir. Copilot'taki Zaman Yolculuğu ürün butonlarında da aynı filtre uygulanır;
+kaynak ürün görselleri ve üretime gönderilen referanslar değiştirilmez.
+
 Klasik kiosk, Cowork ve Chat aynı sırayı kullanır:
-**Ülker ürünü → dönem/özel tarih → an → selfie → tek cümlelik anı → üretim**.
+**Ülker ürünü → dönem → an → selfie → isteğe bağlı detay → üretim**.
+Detay adımında seçilen anın adıyla ek bilgi sorulur; boş bırakılarak devam edilebilir.
+En fazla 240 karakterlik detay paylaşılabilir. Detay yoksa seçilen an, dönem ve
+ürün üzerinden kurgusal sahne oluşturulur; paylaşılmamış kişisel bilgi varsayılmaz.
+Dönem butonları 60’lardan 2010’lara uzanır; ayrı “Özel bir tarih” butonu yoktur.
 Ana kartta deneyimin yaklaşık süresi **3 dk** gösterilir.
 Hanımeller ve Çokoprens, bu deneyimdeki ürün seçeneklerine eklidir.
 Ambalaj görselleri yerel `assets/hanimeller.png` ve `assets/cokoprens.png`

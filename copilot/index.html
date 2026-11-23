@@ -13,8 +13,8 @@
     })();
   </script>
   <base href="../">
-  <link rel="stylesheet" href="copilot/style.css?v=20261123-15">
-  <link rel="stylesheet" href="podcast.css?v=20261122-6">
+  <link rel="stylesheet" href="copilot/style.css?v=20261123-17">
+  <link rel="stylesheet" href="podcast.css?v=20261123-1">
 </head>
 <body>
   <div class="shell">
@@ -43,7 +43,6 @@
       <header class="topbar">
         <button type="button" id="openSidebar" class="icon-btn" data-action="sidebar" aria-label="Open navigation" data-icon="layout" hidden></button>
         <span id="topTitle" class="top-title"></span>
-        <button type="button" class="mode-badge" data-action="kiosk">Kiosk Mode</button>
         <button type="button" id="modeBadge" class="mode-badge" data-action="connectionSettings" aria-label="Open connection settings"></button>
         <button type="button" class="icon-btn" data-action="new" aria-label="New chat" data-icon="edit" disabled title="New chats are not available from this control yet"></button>
         <button type="button" id="workspaceButton" class="icon-btn" data-action="workspace" aria-controls="workspace" aria-label="Sources and outputs" data-icon="panel" hidden></button>
@@ -51,7 +50,7 @@
       <section id="catalog" class="catalog"></section>
       <section id="library" class="library" aria-label="Library" hidden>
         <div class="library-inner">
-          <header class="library-heading"><h1>Library</h1><button type="button" class="library-create" data-action="agents">Create something new <span data-icon="chevron"></span></button></header>
+          <header class="library-heading"><h1>Library</h1><button type="button" class="library-create" data-action="agents">Create something new <span data-icon="chevron"></span></button><button type="button" id="closeSamples" class="icon-btn" data-action="closeSamples" aria-label="Back to Kiosk" data-icon="close" hidden></button></header>
           <div class="library-toolbar">
             <div class="library-tabs" aria-label="Library contents">
               <button type="button" class="library-tab" data-library-tab="outputs" aria-pressed="true">Outputs</button>
@@ -178,11 +177,11 @@
   <input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
   <div id="notice" role="status" class="notice" hidden></div>
   <script src="samples.js?v=20261123-2"></script>
-  <script src="kiosk-engine.js?v=20261123-9"></script>
+  <script src="kiosk-engine.js?v=20261123-12"></script>
   <script src="podcast-music.js?v=20261122-2"></script>
   <script src="podcast-video.js?v=20261122-6"></script>
-  <script src="podcast.js?v=20261123-9"></script>
+  <script src="podcast.js?v=20261123-11"></script>
   <script src="copilot/output-library.js?v=20261123-1"></script>
-  <script src="copilot/app.js?v=20261123-23"></script>
+  <script src="copilot/app.js?v=20261123-28"></script>
 </body>
 </html>

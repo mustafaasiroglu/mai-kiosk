@@ -57,7 +57,7 @@ const EXPS = {
   },
   podcast: {
     id: 'podcast', name: 'Zaman Yolculuğu', tag: 'Nostalji Podcast', duration: '≈ 3 dk', start: 'podcast.product',
-    steps: ['Ürün', 'Dönem', 'An', 'Selfie', 'Anı', 'Sonuç'], c1: '#ff9f43', c2: '#ff4d6d',
+    steps: ['Ürün', 'Dönem', 'An', 'Selfie', 'Detay', 'Sonuç'], c1: '#ff9f43', c2: '#ff4d6d',
     desc: 'Selfieni çek; o yaştaki halinle anını fotoğraflı, sepya bir radyo tiyatrosuna dönüştürelim.',
     cta: 'Anını dinle',
   },
@@ -2660,7 +2660,7 @@ const Topbar = {
   el: null,
   init() {
     this.el = $('#topbar');
-    this.el.innerHTML = `<div class="tb-left"><button class="home-btn" data-act="home" aria-label="Ana ekrana dön">${icon('home')}</button><div class="tb-exp"><small>Deneyim</small><b></b></div></div><nav class="steps" aria-label="Adımlar"></nav><div class="tb-right">${brandLockup()}<span class="tb-mode" data-mode-label>${modeLabel()}</span></div>`;
+    this.el.innerHTML = `<div class="tb-left"><button class="home-btn" data-act="home" aria-label="Ana ekrana dön">${icon('home')}</button><div class="tb-exp"><small>Deneyim</small><b></b></div></div><nav class="steps" aria-label="Adımlar"></nav><div class="tb-right">${brandLockup()}<button type="button" class="tb-mode" data-connection-settings data-mode-label aria-label="Bağlantı ayarlarını aç">${modeLabel()}</button></div>`;
     this.el.addEventListener('click', (e) => { if (e.target.closest('[data-act="home"]')) { Sound.tap(); App.home(); } });
   },
   update(def) {
@@ -2688,7 +2688,7 @@ const Idle = {
   reset() { this.last = Date.now(); },
   check() {
     const cur = App.cur;
-    if (!cur || cur.id === 'home' || cur.def.noIdle || this.modal || document.body.classList.contains('is-mobile') || Settings.open || $('#connection-dialog').open) return;
+    if (!cur || cur.id === 'home' || cur.def.noIdle || this.modal || document.body.classList.contains('is-mobile') || Settings.open || Samples.open || $('#connection-dialog').open) return;
     if (Date.now() - this.last > CONFIG.idle.warnAfterSec * 1000) this.warn();
   },
   warn() {
@@ -3011,7 +3011,7 @@ SCREENS.home = {
   title: 'Ana ekran',
   render() {
     return `<div class="home">
-      <header class="home-top rise" style="--i:0">${brandLockup('lg')}<div class="home-mode-actions"><div class="live-chip" data-mode="${CONFIG.ai.mode}"${API.live ? ' hidden' : ''}><span class="dot"></span><span data-mode-label>${modeLabel()}</span></div></div></header>
+      <header class="home-top rise" style="--i:0">${brandLockup('lg')}<div class="home-mode-actions"><button type="button" class="live-chip" data-connection-settings aria-label="Bağlantı ayarlarını aç" data-mode="${CONFIG.ai.mode}"${API.live ? ' hidden' : ''}><span class="dot"></span><span data-mode-label>${modeLabel()}</span></button></div></header>
       <div class="home-hero">
         <div class="eyebrow-chip rise" style="--i:1">${icon('sparkle')} Microsoft yapay zekâ teknolojileriyle</div>
         <h1 class="hero-title rise" style="--i:2">Yapay zekâ ile <span class="grad-text">yıldızını parlat.</span></h1>
@@ -3761,6 +3761,42 @@ const PhonePreview = {
   close: null,
 };
 
+const Samples = {
+  dialog: null,
+  get open() { return !!this.dialog?.open; },
+  init() {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'samples-tab';
+    button.textContent = 'Samples';
+    button.setAttribute('aria-label', 'Örnek tasarımları aç');
+    button.addEventListener('click', () => this.show());
+    document.body.append(button);
+    window.addEventListener('message', event => {
+      const frame = this.dialog?.querySelector('iframe');
+      if (event.origin === location.origin && event.source === frame?.contentWindow && event.data?.type === 'kiosk-samples-close') {
+        this.dialog.close();
+      }
+    });
+  },
+  show() {
+    if (App.cur?.def.noIdle) return Toast.show('Devam eden işlemi tamamla veya durdur; ardından örnekleri aç.');
+    if (!this.dialog) {
+      this.dialog = document.createElement('dialog');
+      this.dialog.className = 'shared-settings-host';
+      this.dialog.setAttribute('aria-label', 'Samples');
+      this.dialog.addEventListener('close', () => { this.dialog.replaceChildren(); Idle.reset(); });
+      document.body.append(this.dialog);
+    }
+    if (this.open) return;
+    const frame = document.createElement('iframe');
+    frame.title = 'Samples';
+    frame.src = 'copilot/?ui=chat&samples=embedded&scoutTheme=dark';
+    this.dialog.replaceChildren(frame);
+    this.dialog.showModal();
+  },
+};
+
 function modeLabel() { return API.live ? '' : 'Demo Modu'; }
 
 const Settings = {
@@ -3788,6 +3824,9 @@ const Settings = {
       </div>`;
     document.body.append(this.fab, this.el);
     this.fab.addEventListener('click', () => this.openShared());
+    document.addEventListener('click', event => {
+      if (event.target.closest('[data-connection-settings]')) this.openShared('connections');
+    });
     window.addEventListener('message', event => {
       const frame = this.shared?.querySelector('iframe');
       if (event.origin !== location.origin || event.source !== frame?.contentWindow) return;
@@ -3820,7 +3859,7 @@ const Settings = {
     document.addEventListener('fullscreenchange', () => this.refresh());
     this.refresh();
   },
-  openShared() {
+  openShared(tab = 'general') {
     if (App.cur?.def.noIdle) return Toast.show('Devam eden işlemi tamamla veya durdur; ardından ayarları aç.');
     if (!this.shared) {
       this.shared = document.createElement('dialog');
@@ -3832,7 +3871,7 @@ const Settings = {
     if (this.shared.open) return;
     const frame = document.createElement('iframe');
     frame.title = 'Settings';
-    frame.src = 'copilot/?ui=chat&settings=embedded';
+    frame.src = `copilot/?ui=chat&settings=embedded&tab=${tab === 'connections' ? 'connections' : 'general'}`;
     this.shared.replaceChildren(frame);
     this.shared.showModal();
   },
@@ -4146,6 +4185,7 @@ function boot() {
   if (m) { MobilePage.boot(m[1]); return; }
   Topbar.init();
   Settings.init();
+  Samples.init();
   Idle.init();
   try {
     if (FoundrySettings.loadMode() === 'live') {
