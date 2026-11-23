@@ -37,8 +37,8 @@ const CONFIG = {
     endpoint: '',          // https://<kaynak-adı>.services.ai.azure.com  (Microsoft Foundry)
     apiKey: '',
     webIQApiKey: '',
-    imageDeployment: '',   // MAI görüntü modeli dağıtım adınız
-    modelLabel: 'MAI-Image',
+    imageDeployment: 'MAI-Image-2.7',
+    modelLabel: 'MAI-Image-2.7',
     photoSize: { w: 896, h: 1120 },  // ≥ 768 px; MAI-Image-2.5 için w×h ≤ 1.048.576
     labDeployment: 'gpt-5.4-mini', // Laboratuvar ve Podcast metin modeli
     speechVoice: 'en-US-Harper:MAI-Voice-2-Flash',

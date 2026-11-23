@@ -300,7 +300,7 @@ GitHub Pages bu yerel ayarları istemez. Bağlantıyı onaylamadan model çağr�
 yapılmaz. HTML'yi doğrudan açarsanız ayarları elle girebilirsiniz.
 
 Canlı mod için Microsoft Foundry kaynak adresini (`https://<kaynak>.services.ai.azure.com`),
-anahtarı ve dağıtım adını girin. Görsel modeli alanı `MAI-Image-2.7-Flash` ile
+anahtarı ve dağıtım adını girin. Görsel modeli alanı `MAI-Image-2.7` ile
 başlar; Foundry’deki gerçek dağıtım adını kullanın. Lezzet Laboratuvarı için
 aynı kaynaktaki `gpt-5.4-mini` dağıtımı varsayılan metin modelidir; bağlantı
 ayarlarından başka bir dağıtım seçilebilir veya adı elle girilebilir.
