@@ -3790,7 +3790,12 @@ const Settings = {
     this.fab.addEventListener('click', () => this.openShared());
     window.addEventListener('message', event => {
       const frame = this.shared?.querySelector('iframe');
-      if (event.origin !== location.origin || event.source !== frame?.contentWindow || event.data?.type !== 'kiosk-settings-close') return;
+      if (event.origin !== location.origin || event.source !== frame?.contentWindow) return;
+      if (event.data?.type === 'kiosk-settings-interface' && event.data.interface === 'copilot' && FoundrySettings.loadInterface() === 'copilot') {
+        location.assign('copilot/?ui=chat');
+        return;
+      }
+      if (event.data?.type !== 'kiosk-settings-close') return;
       this.shared.close();
       frame.remove();
       Idle.reset();
@@ -4162,4 +4167,10 @@ function boot() {
   }
   App.go('home');
   Settings.openConnection = () => Settings.openShared();
+  if (new URLSearchParams(location.search).get('settings') === 'open') {
+    Settings.openShared();
+    const url = new URL(location.href);
+    url.searchParams.delete('settings');
+    history.replaceState(null, '', url.href);
+  }
 }

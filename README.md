@@ -40,7 +40,8 @@ Chat/Cowork açılışında Settings popup'ı **General** seçili açılır;
 solda sırasıyla **General**, **Connections** ve **Voice** bulunur.
 General'ın ilk seçeneği **Preferred Interface: Copilot UI | Dark Kiosk UI**;
 tercih tarayıcıda saklanır ve Apply & Launch / Demo Mode seçilen arayüzü açar.
-Seçeneği değiştirmek tek başına açık sohbeti veya kiosk ekranını değiştirmez.
+Seçeneği değiştirmek anında seçilen arayüze geçer; General ayarları yeni
+arayüzde de açık kalır. Aynı arayüzü tekrar seçmek sayfayı yenilemez.
 Agent kartları, sol menü, sohbet başlığı ve kütüphane aynı gradyan zeminli,
 katmanlı kamera, laboratuvar şişesi ve radyo ikonlarını kullanır.
 Fotoğraf Stüdyosu pembe, Lezzet Laboratuvarı mavi ve Zaman Yolculuğu yeşildir;

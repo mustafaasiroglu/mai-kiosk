@@ -1239,9 +1239,16 @@
   el('settings').addEventListener('cancel', event => { event.preventDefault(); closeSettings(); });
   document.querySelectorAll('[data-interface]').forEach(button => button.addEventListener('click', () => {
     try {
-      FoundrySettings.saveInterface(button.dataset.interface);
+      const preference = button.dataset.interface;
+      FoundrySettings.saveInterface(preference);
       syncSettingsControls();
-      settingsFeedback('Preferred interface saved.');
+      if (embeddedSettings && preference === 'copilot') {
+        window.parent.postMessage({ type: 'kiosk-settings-interface', interface: preference }, location.origin);
+      } else if (!embeddedSettings && preference === 'kiosk') {
+        const destination = new URL('.', document.baseURI);
+        destination.searchParams.set('settings', 'open');
+        location.assign(destination.href);
+      } else settingsFeedback('Preferred interface saved.');
     } catch (error) {
       console.error('Interface preference could not be saved:', error);
       settingsFeedback('Interface preference could not be saved. Check browser storage permissions.', true);
