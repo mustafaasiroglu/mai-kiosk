@@ -245,6 +245,12 @@ Mikrofon açılışı yoktur.
 ayrıca gösterilir; hava, kişisel sahne ve yüz dönüşümü yaratıcı tahmindir.
 Video otomatik başlamaz. İptal veya hata önceki başarılı videoyu değiştirmez.
 Demo yalnızca `samples/podcast/` altındaki gerçek kayıtlı MP4’ü oynatır.
+Kütüphanede ayrıca kullanıcının sağladığı **Zaman Yolculuğu · Bayram Sofrasında
+Biskrem Paylaşımı** videosu bulunur (`bayram-sofrasi-biskrem.mp4`, yaklaşık
+28 saniye). Kapağı aynı videodan alınmıştır; yeniden üretim yapılmamıştır.
+MP4 kapsayıcısı tarayıcıda doğru süre bilgisi için düzenlenmiş, görüntü ve ses
+yeniden kodlanmadan korunmuştur.
+Bu ek örnek varsayılan okul çıkışı Demo kaydını değiştirmez.
 Güncel `radio-theater` kaydı yaklaşık 27 saniyedir: kurgu gazete, okul çıkışı
 anı ve kapanış olmak üzere üç sepya kare, üç cümlelik yeni seslendirme ve
 2000’ler için hazırlanmış özgün müzik içerir. Demo selfie yaş tahmini bu

@@ -86,7 +86,7 @@
   <p id="empty" hidden>Bu filtrelere uygun örnek bulunamadı.</p>
   <noscript><p>Galeriyi görmek için JavaScript'i etkinleştirin. Görseller <a href="samples/reference.jpg">samples klasöründe</a> saklanır.</p></noscript>
 </main>
-<script src="samples.js?v=20261123-1"></script>
+<script src="samples.js?v=20261123-2"></script>
 <script>
   const kind = document.querySelector('#kind');
   const search = document.querySelector('#search');
@@ -129,9 +129,12 @@
       links.className = 'links';
       const output = text('a', 'Kiosk çıktısı');
       output.href = sample.video || `${base}.jpg`;
-      const raw = text('a', 'Ham PNG');
-      raw.href = sample.raw || `${base}-raw.png`;
-      links.append(output, raw);
+      links.append(output);
+      if (sample.raw || !sample.video) {
+        const raw = text('a', 'Ham PNG');
+        raw.href = sample.raw || `${base}-raw.png`;
+        links.append(raw);
+      }
       if (sample.prompt) {
         const prompt = text('a', 'Prompt');
         prompt.href = sample.prompt;
