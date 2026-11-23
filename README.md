@@ -196,7 +196,7 @@ olma garantisi değildir; sonuçtaki bağlantılar bağımsız kontrol için aç
 
 Selfiedeki yaklaşık **2026 yaşı** Foundry’de arka planda tahmin edilir;
 kullanıcıya gösterilmez ve yaş sorusu/onayı yoktur. Seçilen dönemin orta yılı
-ve yaklaşık doğum yılı üzerinden geçmiş görünüm hesaplanır; imkânsız veya
+ve yaklaşık doğum yılı üzerinden anlatım bağlamı için geçmiş yaş hesaplanır; imkânsız veya
 10’dan küçük sonuçlar yaratıcı canlandırma için **10 yaşa** sabitlenir.
 Bu gerçek tarihsel yaş iddiası değildir. Tek ve net bir yüz yoksa yeniden
 selfie istenir; başarısızlıkta sahte yaş tahmini verilmez.
@@ -222,6 +222,11 @@ Görsel promptlarında ürün adı yerine genel bir atıştırmalık tanımı ku
 anlatım ve görsel yönlendirmelerden taşınan seçili ürün adı da temizlenir.
 Anı ve kapanış karelerinin her biri orijinal selfieyi ve seçilen ürünün
 görselini referans alır; ürünün görünümü metinsel adından değil referanstan alınır.
+Bu iki görselde hesaplanan sayısal yaş yerine seçilen yıldan bugüne geçen
+yıl sayısıyla geçmiş görünüm istenir; içinde bulunulan yıl için gençleştirme
+istenmez. Mekân, kıyafetler ve eşlik eden kişiler seçilen anıya göre oluşturulur;
+yüz kimliği korunur. Ambalajın şekli ve oranları ürün referansıyla eşleşirken
+atıştırmalık ve ambalaj sahnenin sıcak analog sepya paletine uyarlanır.
 Üç görsel isteği aynı anda başlatılır; sonuçlar sahne sırasına göre yerleştirilir.
 Chat/Cowork her görsel adımının durumunu ayrı gösterir. Bir istek hata verirse
 diğerleri iptal edilir ve hepsi durmadan ses/video üretimine geçilmez;

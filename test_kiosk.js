@@ -741,6 +741,55 @@ test('newspaper prompt preserves the chosen date and supplies only two news head
   assert.match(prompt, /COMPLETE finished fictional newspaper/);
 });
 
+test('memory photo prompts follow the selected period and personal memory without a numerical age', () => {
+  const { context, input } = podcastHarness();
+  const currentYear = new Date().getFullYear();
+  for (const [era, moment, memory, visualDirection] of [
+    [{ id: 'custom', name: '1992' }, { id: 'school' }, 'Okul kapısında arkadaşlarımla gofretimi paylaşırdım', 'Friends at an iron school gate, modest coats and vintage schoolbags.'],
+    [{ id: '1990' }, { id: 'family' }, 'Aile ziyaretinde hep birlikte bisküvi yerdik', 'Family gathered in a traditional living room, sharing biscuits.'],
+    [{ id: '2000' }, { id: 'work' }, 'İlk iş günümde meslektaşlarımla atıştırmalığımı paylaştım', 'Colleagues in a period office, work clothes and a snack break.'],
+    [{ id: 'custom', name: '2004' }, { id: 'travel' }, 'Tren yolculuğunda yanımdaki arkadaşımın gofretinden bir parça aldım', 'Friends sharing a snack in a period train carriage.'],
+    [{ id: 'custom', name: '1995' }, { id: 'other', name: 'Üniversite mezuniyetim' }, 'Mezuniyet töreninde arkadaşlarımla atıştırmalık yedik', 'Graduates sharing a snack outside their university.'],
+  ]) {
+    const values = context.validatePodcastInput({ ...input, era, moment, memory });
+    const yearsAgo = currentYear - values.age.year;
+    for (const index of [1, 2]) {
+      const entry = { text: memory + '.', visualDirection: index === 1 ? visualDirection : visualDirection + ' A warm farewell.' };
+      const prompt = context.podcastFramePrompt(index, entry, { ...values, memoryVisual: visualDirection }, [], '');
+      assert.ok(prompt.includes(`An original ${values.age.year} sepia-toned vintage photograph from Turkey`));
+      assert.ok(prompt.includes(`appearing as they looked ${yearsAgo} years ago from today`));
+      assert.doesNotMatch(prompt, /\b(?:\d+[\s-]+years?[\s-]+old|(?:age|aged)\s+\d+)\b/i);
+      assert.ok(prompt.includes(JSON.stringify(values.moment.name)));
+      assert.ok(prompt.includes(JSON.stringify(memory)));
+      assert.ok(prompt.includes(JSON.stringify(entry.visualDirection)));
+      assert.match(prompt, /fully preserving their recognizable facial identity and features/);
+      assert.match(prompt, /match the exact packaging, shape, and proportions of Reference 2/);
+      assert.match(prompt, /snack and its wrapper.*same.*warm analog color palette/);
+      if (index === 2) {
+        assert.ok(prompt.includes(`Preceding memory description: ${JSON.stringify(visualDirection)}`));
+        assert.match(prompt, /do not duplicate the previous pose/);
+      } else assert.ok(!prompt.includes('Preceding memory description:'));
+    }
+  }
+});
+
+test('memory photo prompts handle this year and one year ago without forcing a younger present-day face', () => {
+  const { context, input } = podcastHarness();
+  const currentYear = new Date().getFullYear();
+  const entry = { text: input.memory, visualDirection: 'Friends sharing a snack.' };
+  for (const yearsAgo of [0, 1]) {
+    const values = context.validatePodcastInput({ ...input, era: { id: 'custom', name: String(currentYear - yearsAgo) } });
+    for (const index of [1, 2]) {
+      const prompt = context.podcastFramePrompt(index, entry, { ...values, memoryVisual: entry.visualDirection }, [], '');
+      if (yearsAgo) assert.match(prompt, /appearing as they looked 1 year ago from today/);
+      else {
+        assert.match(prompt, /appearing as they look today/);
+        assert.doesNotMatch(prompt, /younger version|0 years ago/);
+      }
+    }
+  }
+});
+
 test('radio theater image prompts remove product names from generated copy and use snack references', () => {
   const { context, input } = podcastHarness();
   const values = context.validatePodcastInput(input);
